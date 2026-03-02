@@ -34,7 +34,7 @@ class SkillGapAnalysis {
                 "readinessLevel": "not-ready|nearly-ready|ready|overqualified",
                 "estimatedTimeToReady": {
                 "weeks": "number",
-                "description": "string"
+                "reason": "string"
                 },
                 "summary": "string (2-3 sentences)"
             },
@@ -57,7 +57,8 @@ class SkillGapAnalysis {
                 "skill": "string",
                 "proficiency": "beginner|intermediate|advanced|expert",
                 "relevance": "how this helps in target role",
-                "uniqueAdvantage": "what makes candidate stand out"
+                "uniqueAdvantage": "what makes candidate stand out",
+                'importance':'Number'
                 }
             ],
             "transferableSkills": [
@@ -114,3 +115,5 @@ class SkillGapAnalysis {
         }
     }
 }
+const skillgapanalysis = new SkillGapAnalysis();
+export default skillgapanalysis;
