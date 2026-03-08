@@ -177,9 +177,9 @@ const analysisSchema = mongoose.Schema(
                 type: Number,
                 default: 1,
               },
-              isPublic: {
+              isActive: {
                 type: Boolean,
-                default: false,
+                default: true,
               },
         }
     }, {
