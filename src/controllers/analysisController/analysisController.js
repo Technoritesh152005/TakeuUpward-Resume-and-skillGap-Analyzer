@@ -1,5 +1,7 @@
 import asyncHandler from "express-async-handler"
 import analysisModel from "../../models/analysis.model"
+import roadmapModel from '../../models/roadmap.model'
+import RoadmapAnalysis from '../../services/ai.services/roadmap_planner'
 import resumeModel from "../../models/resume.model"
 import jobRoleModel from "../../models/jobrole.model"
 import skillgapanalysis from "../../services/ai.services/skill_gap_analysis"
@@ -298,36 +300,63 @@ export const compare_Multiple_Job_Role_With_Resume_And_Get_Analysis = aysncHandl
         'Role comparision completed successfullyy')
 })
 
-export const regenerateAnalysis = asyncHandler(async (req, res) => {
+// analysis.controller.js - CORRECTED
 
-    // with analysis also get the jobrole and resume
-    const analysis = await analysisModel.findOne(
-        {
-            user: req.user._id,
-            _id: req.params.id
-        }
-    ).populate('resume jobRole')
-
+export const c = asyncHandler(async (req, res) => {
+    const { preferences } = req.body;  // ← Get preferences from request
+  
+    const analysis = await Analysis.findOne({
+      _id: req.params.id,
+      user: req.user._id,
+    }).populate('resume jobRole');
+  
     if (!analysis) {
-        throw new ApiError(400, 'No Analysis found of the user')
+      throw new ApiError(404, 'Analysis not found');
     }
-
-    // analysis found so now regenerate the analysis
-    const analyze = await skillgapanalysis.performDeepSkillGapAnalyze(
-        analysis.resume.parsedData,
-        analysis.jobRole
-    )
-    if (!analyze) {
-        throw new ApiError(400, 'Not regenrate analyze performed')
+  
+    logger.info(`Regenerating analysis: ${analysis._id}`);
+  
+    // Re-run gap analysis
+    const gapAnalysis = await claudeService.performGapAnalysis(
+      analysis.resume.parsedData,
+      analysis.jobRole
+    );
+    
+    // ✅ FIX: If preferences provided, generate NEW roadmap with them
+    if (preferences) {
+      const roadmap = await roadmapModel.findOne({ analysis: analysis._id });
+      
+      if (roadmap) {
+        // Update roadmap preferences
+        roadmap.userPreferences = {
+          hoursPerWeek: preferences.hoursPerWeek || roadmap.userPreferences.hoursPerWeek,
+          budget: preferences.budget || roadmap.userPreferences.budget,
+          learningStyle: preferences.learningStyle || roadmap.userPreferences.learningStyle,
+        };
+        
+        // Regenerate roadmap with new preferences
+        const newRoadmapData = await RoadmapAnalysis.performRoadmap(
+          gapAnalysis,
+          roadmap.userPreferences  // ← Use updated preferences
+        );
+        
+        // Update roadmap phases
+        roadmap.phases = newRoadmapData.phases;
+        roadmap.quickWins = newRoadmapData.quickWins;
+        roadmap.portfolioProjects = newRoadmapData.portfolioProjects;
+        
+        await roadmap.save();
+      }
     }
-    analysis.skillGaps = analyze.skillGaps,
-        analysis.candidateStrength = analyze.strengths,
-        analysis.matchscore = analyze.overallAssessment.matchPercentage,
-        analysis.readinessLevel = analyze.overallAssessment.readinessLevel;
+  
+    // Update analysis
+    analysis.matchScore = gapAnalysis.overallAssessment.matchPercentage;
+    analysis.skillGaps = gapAnalysis.skillGaps;
+    analysis.strengths = gapAnalysis.strengths;
+    analysis.readinessLevel = gapAnalysis.overallAssessment.readinessLevel;
     analysis.version += 1;
-
-    await analysis.save()
-
-    res.status(200)
-        .json(new ApiResponse(200, 'User succcesfully regenerated analysis', analysis))
-})
+  
+    await analysis.save();
+  
+    res.json(new ApiResponse(200, analysis, 'Analysis regenerated successfully'));
+  });

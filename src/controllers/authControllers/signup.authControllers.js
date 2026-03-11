@@ -4,7 +4,7 @@ import userModel from "../../models/user.model"
 import logger from "../../utils/logs"
 import refreshTokenModel from "../../models/refreshToken"
 
-const signup = asyncHandler(async (req, res) => {
+export const signup = asyncHandler(async (req, res) => {
 
     const { email, password, phonenumber, location, name } = req.body
 

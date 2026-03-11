@@ -123,7 +123,7 @@ const handleUploadResumeError = (uploadFunction)=>{
 // use next(err ) when there is async operation
 // when there is sync operation when we throw error express catches that error and transfer to error jander
 
-const validateAfterUpload = (req,res,next)=>{
+const validateBeforeUpload = (req,res,next)=>{
     if (!req.file) {
         throw new ApiError(400, 'No file uploaded');
       }

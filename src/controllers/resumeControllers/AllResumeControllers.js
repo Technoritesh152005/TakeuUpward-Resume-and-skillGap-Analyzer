@@ -138,3 +138,40 @@ export const getResumeSkill = asyncHandler(async (req, res, next) => {
     res.status(200)
         .json(201, 'Resume skill of user fetched succesfully', resumeSkill)
 })
+
+export const reparseResume = asyncHandler(async(req,res)=>{
+
+    const resume = await resumeModel.findOne({
+        _id: req.params.id,
+        user: req.user._id,
+      });
+    
+      if (!resume) {
+        throw new ApiError(404, 'Resume not found');
+      }
+    
+      if (!resume.rawText) {
+        throw new ApiError(400, 'Original resume text not available for re-parsing');
+      }
+    
+      logger.info(`Re-parsing resume: ${resume._id}`);
+    
+      try {
+        // Parse again using Claude
+        const claudeService = require('../services/ai/claude.service');
+        const structuredData = await claudeService.analyzeResumeStructure(resume.rawText);
+    
+        // Update parsed data
+        resume.parsedData = structuredData;
+        resume.processingStatus = 'completed';
+        resume.version += 1;
+        await resume.save();
+    
+        logger.info(`Resume re-parsed successfully: ${resume._id}`);
+    
+        res.json(new ApiResponse(200, resume, 'Resume re-parsed successfully'));
+      } catch (error) {
+        logger.error(`Re-parsing failed: ${error.message}`);
+        throw new ApiError(500, 'Failed to re-parse resume');
+      }
+})

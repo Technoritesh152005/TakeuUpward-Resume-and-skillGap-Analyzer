@@ -79,7 +79,7 @@ const roadmapSchema = mongoose.Schema({
         }
     ],
 
-    Projects: [
+    projects: [
         {
             title: String,
             description: String,

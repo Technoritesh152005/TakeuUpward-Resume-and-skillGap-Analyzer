@@ -4,7 +4,7 @@ import logger from "../../../utils/logs"
 class RoadmapAnalysis {
 
     // we pass userpreference as empty object if user didnt provide antyhing, we use default value
-    async performRoadmap(skillsgap, userpreference = {}) {
+    async performRoadmap(gapAnalysis, userpreference = {}) {
 
         try {
             const {
@@ -24,9 +24,9 @@ class RoadmapAnalysis {
             ${JSON.stringify(gapAnalysis.strengths, null, 2)}
 
             USER PREFERENCES:
-            - Time available: ${hoursPerWeek} hours per week
-            - Budget: ${budget} (free/low/medium/high)
-            - Learning style: ${learningStyle}
+            - Time available: ${userpreference.hoursPerWeek} hours per week
+            - Budget: ${userpreference.budget} (free/low/medium/high)
+            - Learning style: ${userpreference.learningStyle}
 
             Create a detailed 90-day roadmap. Return ONLY valid JSON:
 

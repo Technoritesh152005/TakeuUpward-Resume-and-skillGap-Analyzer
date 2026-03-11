@@ -5,7 +5,7 @@ import logger from "../../utils/logs"
 import jwt from 'jwt'
 import refreshTokenModel from "../../models/refreshToken"
 
-const refreshToken = asyncHandler(async(req,res,next)=>{
+export const refreshToken = asyncHandler(async(req,res,next)=>{
 
     const {refreshToken} = req.body;
 
