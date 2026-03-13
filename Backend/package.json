@@ -1,0 +1,53 @@
+{
+  "name": "resume-analyzer-backend",
+  "version": "1.0.0",
+  "description": "AI-powered resume analysis and career guidance platform",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "test": "jest --coverage",
+    "seed:roles": "node src/scripts/seed-job-roles.js",
+    "seed:resources": "node src/scripts/seed-resources.js",
+    "seed:all": "npm run seed:roles && npm run seed:resources"
+  },
+  "keywords": [
+    "resume",
+    "analyzer",
+    "career",
+    "ai",
+    "claude",
+    "skill-gap"
+  ],
+  "author": "Ritesh Khilari",
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.27.0",
+    "bcrypt": "^6.0.0",
+    "bcryptjs": "^2.4.3",
+    "compression": "^1.7.4",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.18.2",
+    "express-mongo-sanitize": "^2.2.0",
+    "helmet": "^7.1.0",
+    "joi": "^17.12.0",
+    "jsonwebtoken": "^9.0.3",
+    "mammoth": "^1.6.0",
+    "mongoose": "^8.1.0",
+    "mongoose-paginate-v2": "^1.8.0",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "pdf-parse": "^1.1.1",
+    "winston": "^3.11.0",
+    "winston-daily-rotate-file": "^5.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}

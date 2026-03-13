@@ -1,0 +1,66 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
+import app from './app.js';
+import {connectDb} from './db/db.connect.js'
+import logger from './utils/logs.js';
+import mongoose from 'mongoose';
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+  console.error(err)
+  logger.error('UNCAUGHT EXCEPTION! 💥 Shutting down...');
+  logger.error(`Error: ${err.name} - ${err.message}`);
+  logger.error(err.stack);
+  process.exit(1);
+});
+
+// Connect to database
+connectDb();
+
+// Start server
+const PORT = process.env.PORT || 5000;
+const server = app.listen(PORT, () => {
+  logger.info(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+  logger.info(`API documentation: http://localhost:${PORT}/api/${process.env.API_VERSION || 'v1'}`);
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (err) => {
+  console.error(err)
+  logger.error('UNHANDLED REJECTION! 💥 Shutting down...');
+  logger.error(`Error: ${err.name} - ${err.message}`);
+  logger.error(err.stack);
+  
+  // Close server gracefully
+  server.close(() => {
+    process.exit(1);
+  });
+});
+
+// Graceful shutdown
+const gracefulShutdown = (signal) => {
+  logger.info(`${signal} received. Starting graceful shutdown...`);
+  
+  server.close(() => {
+    logger.info('HTTP server closed');
+    
+    // Close database connection
+    mongoose.connection.close(false, () => {
+      logger.info('MongoDB connection closed');
+      process.exit(0);
+    });
+  });
+  
+  // Force shutdown after 10 seconds
+  setTimeout(() => {
+    logger.error('Forced shutdown after timeout');
+    process.exit(1);
+  }, 10000);
+};
+
+// Listen for shutdown signals
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+export default server;
