@@ -17,7 +17,7 @@ export const login = asyncHandler(async(req,res,next)=>{
     console.log(user)
 
     if(!user){
-        throw new ApiError(40,'No Account found . Please Login')
+        throw new ApiError(404, 'No account found. Please sign up.')
     }
     if(!user.isActive){
         throw new ApiError(401,'Your account has been deactivated.Please contact "khilariritesh61@gmail.com" ')
@@ -47,19 +47,19 @@ export const login = asyncHandler(async(req,res,next)=>{
     }
 
     // after sometime see diff bwn new Date and Date.now()
-    userModel.lastLogin = new Date()
+    user.lastLogin = new Date()
     await user.save({validateBeforeSave:false})
 
     const userresponse = user.toObject()
     delete userresponse.password
     console.log(userresponse)
     logger.info(`User has been succesfully login of email ${user.email}`)
-
-    res.status(200)
-    .json(new ApiResponse(201, 
-        'User has been successfully Login',
-        {userresponse,refreshToken,accessToken}
-    ))
-
+    res.status(200).json(
+        new ApiResponse(
+          200,
+          { user: userresponse, accessToken, refreshToken },  // data
+          'User has been successfully login'                  // message
+        )
+      );
     // never use next in controller and they r end of chainflow
 })

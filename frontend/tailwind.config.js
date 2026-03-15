@@ -58,6 +58,7 @@ export default {
         'slide-down': 'slideDown 0.4s ease-out',
         'scale-in': 'scaleIn 0.3s ease-out',
         'pulse-soft': 'pulseSoft 3s ease-in-out infinite',
+        'float': 'float 6s ease-in-out infinite',
       },
       keyframes: {
         fadeIn: {
@@ -79,6 +80,10 @@ export default {
         pulseSoft: {
           '0%, 100%': { opacity: '1', transform: 'scale(1)' },
           '50%': { opacity: '0.95', transform: 'scale(1.02)' },
+        },
+        float: {
+          '0%, 100%': { transform: 'translateY(0px)' },
+          '50%': { transform: 'translateY(-20px)' },
         },
       },
     },

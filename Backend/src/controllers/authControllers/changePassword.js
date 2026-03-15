@@ -4,7 +4,7 @@ import { userModel } from '../../models/user.model.js';
 
 
 import { ApiError } from '../../utils/apiError.js';
-
+import { ApiResponse } from '../../utils/apiResponse.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import logger from '../../utils/logs.js';
 
@@ -55,11 +55,11 @@ export const changePassword = asyncHandler(async (req, res, next) => {
 export const getCurrentUser = asyncHandler(async (req, res, next) => {
 
     // get current user will only be available when u pass through protect middleware . means u need to be authenticated to get ur current user
-    const user = await userModel.getById({ id: req.user._id }).select('-password')
+    const user = await userModel.findById(req.user._id).select('-password')
 
     if (!user) {
         throw new ApiError(400, "Failed to fetch current User")
     }
-    res.status(200)
-        .json(201, 'User Fetched Succesffully ........', user)
+
+    res.status(200).json(new ApiResponse(200, user, 'User fetched successfully'))
 })

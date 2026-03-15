@@ -24,14 +24,14 @@ const protectAccess = asyncHandler(async (req, res, next) => {
 
     try {
         // it sends an object
-        const verifiedToken = await jwt.verify(token, process.env.JWT_SECRET_KEY)
+        const verifiedToken =  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET)
 
         if (!verifiedToken) {
             logger.error(`Invalid token send by user: ${req.ip}`)
             throw new ApiError('Invalid Token send by user')
         }
 
-        const user = await userModel.findById(verifiedToken.id).select('-password')
+        const user = await userModel.findById(verifiedToken._id).select('-password')
 
         if (!user) {
             throw new ApiError("User not found... Invalid login")
@@ -73,8 +73,8 @@ const optionalAuth = asyncHandler(async (req, res, next) => {
 
     if (token) {
         try {
-            const decoded = jwt.verify(token, process.env.JWT_SECRET);
-            const user = await userModel.findById(decoded.id).select('-password');
+            const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+            const user = await userModel.findById(decoded._id).select('-password');
 
             if (user && user.isActive) {
                 req.user = user;

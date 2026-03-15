@@ -63,11 +63,3 @@ const Button = ({
 };
 
 export default Button;
-
-// 1. Button.jsx 🔘
-// What it does:
-
-// Reusable button component for entire app
-// Different styles (primary, secondary, outline, etc.)
-// Loading states (shows spinner while processing)
-// // Icon support (left/right icons)

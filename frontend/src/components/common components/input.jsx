@@ -24,10 +24,12 @@ const Input = ({
   const inputClasses = clsx(
     'w-full px-4 py-3 rounded-lg border transition-all duration-200',
     'focus:outline-none focus:ring-2 focus:border-transparent',
-    'placeholder:text-neutral-400 disabled:bg-neutral-100 disabled:cursor-not-allowed',
+    'bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white',
+    'placeholder:text-neutral-400 dark:placeholder:text-neutral-500',
+    'disabled:bg-neutral-100 dark:disabled:bg-neutral-700 disabled:cursor-not-allowed',
     error
-      ? 'border-red-500 focus:ring-red-500'
-      : 'border-neutral-300 focus:ring-primary-500',
+      ? 'border-red-500 focus:ring-red-500 dark:border-red-600 dark:focus:ring-red-600'
+      : 'border-neutral-300 dark:border-neutral-600 focus:ring-primary-500 dark:focus:ring-primary-600',
     leftIcon && 'pl-11',
     rightIcon && 'pr-11',
     className
@@ -47,7 +49,7 @@ const Input = ({
       
       <div className="relative">
         {leftIcon && (
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400">
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 dark:text-neutral-500">
             {leftIcon}
           </div>
         )}
@@ -67,13 +69,13 @@ const Input = ({
         />
         
         {rightIcon && !error && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400">
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 dark:text-neutral-500">
             {rightIcon}
           </div>
         )}
         
         {error && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-red-500">
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-red-500 dark:text-red-400">
             <AlertCircle className="w-5 h-5" />
           </div>
         )}

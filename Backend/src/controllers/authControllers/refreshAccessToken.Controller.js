@@ -13,7 +13,7 @@ export const refreshToken = asyncHandler(async(req,res,next)=>{
         throw new ApiError(401,'No Refresh Token Found')
     }
     // to generate access token first we need to check whether that refresh token is of user
-    const token = await refreshTokenModel.find({token:refreshToken}).populate('user')
+    const token = await refreshTokenModel.findOne({token:refreshToken}).populate('user')
     console.log(token)
     if(!token){
         throw new ApiError(401,"This is not refresh Token Of this user")
@@ -59,5 +59,5 @@ export const refreshToken = asyncHandler(async(req,res,next)=>{
     logger.info(`New refresh Token has been created for this email: ${user.email}`)
 
     res.status(200)
-    .json(201,'New refresh Token has been generated Succesfully' , {refreshToken:finalrefreshToken, aceessToken:newaccessToken})
+    .json(201,'New refresh Token has been generated Succesfully' , {refreshToken:finalrefreshToken, accessToken:newaccessToken})
 })

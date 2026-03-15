@@ -18,10 +18,11 @@ const useAuthStore = create((set, get) => ({
         try {
             // response will be only send when everything is good
             const response = await authService.login(credentials)
+            console.log(response)
             set(
                 {
                     isLoading: false,
-                    user: response.data.user,
+                    user: response.data.data.user,
                     error: null,
                     isAuthenticated: true
                 }
@@ -50,7 +51,7 @@ const useAuthStore = create((set, get) => ({
             set(
                 {
                     isLoading: false,
-                    user: response.data,
+                    user: resp.data.data.user,
                     error: null,
                     isAuthenticated: true
                 }
@@ -62,7 +63,7 @@ const useAuthStore = create((set, get) => ({
                     user: null,
                     isAuthenticated: false,
                     isLoading: false,
-                    error: error.message || 'Signup Login'
+                    error: error.message || 'Signup Failed'
                 }
             )
             throw error;
@@ -92,13 +93,45 @@ const useAuthStore = create((set, get) => ({
         }
     },
 
-    // clean error if one error appeared clean it before using next service
-    cleanError: () => set({ error: null }),
+    
+   
 
-    // Update user profile
-    updateUser: (userData) => {
-        set({ user: { ...get().user, ...userData } });
-    },
+      // Clear error
+  clearError: () => set({ error: null }),
+ 
+  // Update user profile
+  updateUser: (userData) => {
+    set({ user: { ...get().user, ...userData } });
+  },
+
+  // Load user from token (check if already logged in)
+  loadUser: async () => {
+    // Check if token exists
+    if (!authService.isAuthenticated()) {
+      set({ isAuthenticated: false, user: null, isLoading: false });
+      return;
+    }
+
+    set({ isLoading: true });
+    try {
+      const response = await authService.getCurrentUser();
+      // Backend returns ApiResponse: { data, message, success, statusCode } -> user is in data
+      const userData = response.data?.data ?? response.data;
+      set({
+        user: userData,
+        isAuthenticated: true,
+        isLoading: false,
+        error: null,
+      });
+    } catch (error) {
+      set({
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+        error: null,
+      });
+    }
+  },
 }))
 
 export default useAuthStore;

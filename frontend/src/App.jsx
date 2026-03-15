@@ -1,7 +1,13 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
-import LandingPage from './pages/landingPage.jsx'
+
+// Pages
+import LandingPage from './pages/landingPage.jsx';
+import LoginPage from './pages/loginPage.jsx';
+import SignupPage from './pages/signupPages';
+import DashboardPage from './pages/dashboardPage.jsx';
+import ProtectedRoute from './components/auth/ProtectedRoute.jsx';
 
 // Create a client for React Query
 const queryClient = new QueryClient({
@@ -19,19 +25,36 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
+          {/* Public Routes */}
           <Route path="/" element={<LandingPage />} />
-          {/* More routes will be added here */}
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
+
+          {/* Protected: Dashboard */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Catch all - redirect to home */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         
         {/* Toast notifications */}
         <Toaster
           position="top-right"
           toastOptions={{
-            duration: 3000,
+            duration: 4000,
             style: {
               background: '#fff',
               color: '#0f172a',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+              borderRadius: '12px',
+              padding: '16px',
             },
             success: {
               iconTheme: {

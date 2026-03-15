@@ -12,7 +12,7 @@ class AuthService {
                 localStorage.setItem('refreshToken', response.data.data.refreshToken)
             }
 
-            return response.data
+            return response
         } catch (err) {
             console.log(err)
             throw err.response?.data || err
@@ -29,7 +29,7 @@ class AuthService {
                 localStorage.setItem('refreshToken', response.data.data.refreshToken);
             }
 
-            return response.data;
+            return response
         } catch (error) {
             throw error.response?.data || error
         }
@@ -51,7 +51,7 @@ class AuthService {
         try{
             // there is a route as /auth/me in auth routes which calls get current user method controller
             const response = await api.get('/auth/me')
-            return response.data
+            return response
         }catch(error){
             throw error.response?.data || error
         }
