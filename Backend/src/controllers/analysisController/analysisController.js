@@ -7,6 +7,7 @@ import jobRoleModel from "../../models/jobrole.model.js"
 import skillgapanalysis from "../../services/ai.services/skill_gap_analysis.js"
 import ApiResponse from '../../utils/apiResponse.js'
 import generateAtsScore from "../../services/ai.services/ats_score_generator.js"
+import redisClient from '../../config/redis.js'
 
 // first create a analysis controller
 /*
@@ -45,6 +46,9 @@ export const createAnalysis = asyncHandler(async (req, res) => {
         jobRole: jobRoleId,
         status: 'processing',
     })
+
+    // after creating new analysis , redis have old data so we remove it
+    await redisClient.del(`analysis:${req.user._id}`);
 
     // this gets all data of analysis from claude api and store it in skillGapAnalysisData
     try {
@@ -109,7 +113,7 @@ export const createAnalysis = asyncHandler(async (req, res) => {
         await analysis.populate('jobRoleModel', 'title category experienceLevel salaryRange');
 
         res.status(200)
-            .json(201, new ApiResponse(201, 'Analysis created succesfully', analysis))
+        .json(new ApiResponse(201,analysis,'Analysis created successfully'))
     } catch (error) {
         analysis.error = error.message
         analysis.status = 'failed'
@@ -137,7 +141,19 @@ export const getMyAnalysis = asyncHandler(async (req, res) => {
         isActive
     } = req.query
 
-    const filter = { user: req.user._id }
+    const userId = req.user._id
+    const cacheKey =`analysis:${userId}`
+
+    const cachedData = await redisClient.get(cacheKey)
+
+    if(cachedData){
+        const parsed =  JSON.parse(cachedData)
+        return res.status(200).json(
+            new ApiResponse(200, parsed, 'Fetched from cache')
+          );
+    }
+
+    const filter = { user: userId }
 
     if (resumeId) filter.resume = resumeId
     if (jobRoleId) filter.jobRole = jobRoleId
@@ -149,7 +165,7 @@ export const getMyAnalysis = asyncHandler(async (req, res) => {
         if (minMatchScore) filter.matchScore.$gte = parseFloat(minMatchScore);
         if (maxMatchScore) filter.matchScore.$lte = parseFloat(maxMatchScore);
     }
-
+    
     const analyses = await analysisModel.paginate(filter, {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -159,16 +175,33 @@ export const getMyAnalysis = asyncHandler(async (req, res) => {
             { path: 'jobRoleModel', select: 'title category experienceLevel salaryRange' },
         ]
     })
+    // let in cache for 5 minutes
+    await redisClient.setEx(cacheKey,300,JSON.stringify(analyses))
     if (!analyses) {
         throw new ApiError(401, 'Analysis not found')
     }
-    res.json(new ApiResponse(200, analyses, 'Analyses fetched successfully'));
+    res.status(200).json(
+        new ApiResponse(200, analysed, 'Analysis Fetched successfully')
+      );
 })
 
 export const getAnalysisById = asyncHandler(async (req, res) => {
 
-    const analysis = analysisModel.findOne({
-        user: req.user._id,
+    // caching the get analysis first with key
+    // analysis:analysisId
+    // cause each analysis is of some id
+    const userId = req.user._id
+    const cacheKey = `analysis:${req.params.id}`
+
+    const cachedData = await redisClient.get(cacheKey)
+    if(cachedData){
+        const parsed = JSON.parse(cachedData)
+        return res.status(200)
+        .json(new ApiResponse(201,parsed,'Cached data fetched succesfully'))
+    }
+
+    const analysis = await analysisModel.findOne({
+        user: userId,
         _id: req.params.id,
         isActive: true
     })
@@ -177,13 +210,14 @@ export const getAnalysisById = asyncHandler(async (req, res) => {
         .populate('resume', 'fileName , originalFileName , parsedData uploadedAt')
         .populate('jobRole')
 
+    await redisClient.setEx(cacheKey,300,JSON.stringify(analysis))
     // thid will get that analysis document and also give resume of which analaysis is created with their
     // parsed data and also jobRole target
     if (!analysis) {
         throw new ApiError(401, 'No analysis found of user')
     }
-    res.json(200)
-        .json(201, 'Successfully fetched analysis for user :'`${req.user.email}`, analysis)
+    res.status(200)
+        .json(new ApiResponse(201, 'Successfully fetched analysis for user :'`${req.user.email}`, analysis))
 })
 
 export const deleteAnalysis = asyncHandler(async (req, res) => {
@@ -191,8 +225,12 @@ export const deleteAnalysis = asyncHandler(async (req, res) => {
     const userId = req.user._id
     const analysisId = req.params.id
 
-    const analaysis = analysisModel.findOne(
-        { userId, analysisId }, { isActive: true }
+    const analaysis = await analysisModel.findOne(
+        {
+            user:userId,
+            _id:analysisId,
+            isActive:true
+        }
     )
     if (!analaysis) {
         throw new ApiError(400, 'No analysis Model Found')
@@ -203,8 +241,8 @@ export const deleteAnalysis = asyncHandler(async (req, res) => {
 
     logger.info(201, 'User succesfuly deleted his analysis . user is :'`${req.user.email}`)
 
-    res.json(200)
-        .json(201, 'Analysis succesfully deleted')
+    res.status(200)
+        .json(new ApiResponse(201,'User deleted succesfully'))
 })
 
 export const compare_Multiple_Job_Role_With_Resume_And_Get_Analysis = asyncHandler(async (req, res) => {
@@ -284,6 +322,7 @@ export const compare_Multiple_Job_Role_With_Resume_And_Get_Analysis = asyncHandl
     });
 
     res.status(200)
+    .json(
     new ApiResponse(200,
         {
             comparisons: sortedComparisons,
@@ -298,11 +337,13 @@ export const compare_Multiple_Job_Role_With_Resume_And_Get_Analysis = asyncHandl
             },
         },
         'Role comparision completed successfullyy')
+    )
 })
 
 // analysis.controller.js - CORRECTED
 
 export const regenerateAnalysis = asyncHandler(async (req, res) => {
+
     const { preferences } = req.body;  // ← Get preferences from request
   
     const analysis = await Analysis.findOne({
@@ -357,6 +398,11 @@ export const regenerateAnalysis = asyncHandler(async (req, res) => {
     analysis.version += 1;
   
     await analysis.save();
+
+    // after regenerating user cache may have old cache of analysis
+    
+    await redisClient.del(`analysis:${analysis._id}`);
+    await redisClient.del(`analysis:${req.user._id}`);
   
-    res.json(new ApiResponse(200, analysis, 'Analysis regenerated successfully'));
+    res.status(200).json(new ApiResponse(200, analysis, 'Analysis regenerated successfully'));
   });

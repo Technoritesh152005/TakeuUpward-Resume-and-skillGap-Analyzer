@@ -1,12 +1,17 @@
 import asyncHandler from '../../utils/asyncHandler.js'
 import ApiError from '../../utils/apiError.js'
 import jobRoleModel from '../../models/jobrole.model.js'
+import redisClient from '../../config/redis.js'
+import ApiResponse from '../../utils/apiResponse.js'
 
 // 
 export const getAllJobRoles = asyncHandler(async (req, res) => {
 
     // to get all job roles we fill use paginate method where we will create a filter object
     const { page = 2, limit = 10, sort = '-views', category, experienceLevel, industryTrend } = req.query
+
+    const cacheKey = `jobRole:list:${JSON.stringify(req.query)}`
+    const cachedData = await redisClient.get(cacheKey)
 
     const filter = { isActive: true }
 
@@ -23,6 +28,11 @@ export const getAllJobRoles = asyncHandler(async (req, res) => {
         filter.industryTrend = industryTrend === true || industryTrend === 'true'
     }
 
+    if (cachedData) {
+        const cachedData = JSON.parse(cachedData)
+        return res.status(200)
+            .json(new ApiResponse(201, cachedData, 'cached data of jobrole fetched succesfully'))
+    }
     const jobRoles = await jobRoleModel.paginate(filter, {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -33,6 +43,7 @@ export const getAllJobRoles = asyncHandler(async (req, res) => {
     if (!jobRoles || jobRoles.length == 0) {
         throw new ApiError(401, 'No Job roles found')
     }
+    await redisClient.setEx(cacheKey, 600, JSON.stringify(jobRoles))
     // u should not increment views here cause u r just viewing it in homepage
 
     res.status(200)
@@ -43,7 +54,15 @@ export const getAllJobRoles = asyncHandler(async (req, res) => {
 // we will get job roles is from params
 export const getJobRolesFromId = asyncHandler(async (req, res, next) => {
 
-    const jobRoleId = req.params.industryTrend
+    const jobRoleId = req.params.id
+
+    const cacheKey = `jobRole:${jobRoleId}`
+    const cachedData = await redisClient.get(cacheKey)
+    if (cachedData) {
+        const cachedData = JSON.parse(cachedData)
+        return res.status(200)
+            .json(new ApiResponse(201, cachedData, 'Cached data of job role by id succesfully fetched'))
+    }
     const getSingleJobRole = await jobRoleModel.findOne({
         _id: jobRoleId,
         isActive: true,
@@ -56,6 +75,8 @@ export const getJobRolesFromId = asyncHandler(async (req, res, next) => {
     getSingleJobRole.views = views + 1
     await getSingleJobRole.save({ validateBeforeSave: false })
 
+    await redisClient.setEx(cacheKey, 500, JSON.stringify(cacheKey))
+
     res.status(200)
         .json(201, 'Job role fetched successfully for this ID', getSingleJobRole)
 })
@@ -65,8 +86,17 @@ export const getJobRoleFromSlug = asyncHandler(async (req, res, next) => {
     const slug = req.params.slug
     // slug return software-enginnering like this
     // we will also return similar job roles
+
+    const cacheKey = `jobRole:${slug}`
+    const cachedData = await redisClient.get(cacheKey)
+
+    if (cachedData) {
+        const cache = JSON.parse(cachedData)
+        return res.status(200)
+            .json(new ApiResponse(201, cache, 'Cache data succesfully fetchhed for job role from slug'))
+    }
     const jobRole = await jobRoleModel.findOne({
-        slug: req.params.slug,
+        slug: slug,
         isActive: true
     }).populate('relatedRoles', 'title', 'description', 'category', 'experienceLevel')
 
@@ -76,12 +106,13 @@ export const getJobRoleFromSlug = asyncHandler(async (req, res, next) => {
     jobRole.views = views + 1
     await jobRole.save({ validateBeforeSave: false })
 
+    await redisClient.setEx(cacheKey, 300, JSON.stringify(jobRole))
     res.status(200)
         .json(201, 'Jobs role is fetched from the required slug successfully', jobRole)
 })
 
 export const searchJobRoles = asyncHandler(async (req, res, next) => {
-
+    // no need to cache -- to many variations
     const { q, category, experienceLevel, limit = 10 } = req.query
 
 
@@ -115,6 +146,15 @@ export const getTrendingJobRoles = asyncHandler(async (req, res, next) => {
     // to get trending job roles we must specify filter
     const { limit = 10 } = req.query
 
+    const cacheKey = `jobRoleTrending:${limit}`
+    const cachedData = await redisClient.getEx(cacheKey)
+    console.log(cachedData)
+
+    if (cachedData) {
+        const data = JSON.parse(cachedData)
+        return res.status(200)
+            .json(new ApiResponse(201, data, 'Cached data of trending job roles fetched succesfully'))
+    }
     const trendingJobRole = await jobRoleModel.find({
         industryTrend: true,
         isActive: true
@@ -127,6 +167,7 @@ export const getTrendingJobRoles = asyncHandler(async (req, res, next) => {
         throw new ApiError(400, 'No Trending Role Found')
     }
 
+    await redisClient.setEx(cacheKey, 300, trendingJobRole)
     res.status(200)
         .json(201, 'All trending Job roles gave successfukky', trendingJobRole)
 })
@@ -191,8 +232,19 @@ export const getAllJobCategory = asyncHandler(async (req, res, next) => {
 export const getSimilarJobRoles = asyncHandler(async (req, res, next) => {
 
     // we will first fetch the job
-    const job = await jobRoleModel.find(req.params.id)
+
+
+    const job = await jobRoleModel.findOne({ _id: req.params.id })
     const { limit = 10, experienceLevel } = req.query
+
+    const cacheKey = `SimilarJobRoles:${req.params.id}:limit:${limit}`
+    const cachedData = await redisClient.getEx(cacheKey)
+
+    if (cachedData) {
+        const data = JSON.parse(cachedData)
+        return res.status(200)
+            .json(new ApiResponse(201, data, 'Cached data of get similar job roles fetched'))
+    }
 
     const similarJob = await job.getSimilarJobRoles(job.category, limit, job.experienceLevel)
 
@@ -201,10 +253,11 @@ export const getSimilarJobRoles = asyncHandler(async (req, res, next) => {
     }
 
     // getting filtered means dont show current job roles
-    const filtered = similarRoles.filter(
+    const filtered = similarJob.filter(
         (role) => role._id.toString() !== jobRole._id.toString()
     );
 
+    await redisClient.setEx(cacheKey, 500, JSON.stringify(filtered));
     res.status(200)
-        .json(201, 'All similar job roles fetched succesfully for this job', filtered)
+        .json(new ApiResponse(201, filtered, 'All similar job roles fetched succesfully for this job'))
 })

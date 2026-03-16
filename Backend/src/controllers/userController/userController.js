@@ -16,7 +16,7 @@ combine multiple resume and analysis and sort them in latest
 5. Delete account - 
 also soft delete all their resume and analysis
 */
-
+import redisClient from '../../config/redis.js'
 import asyncHandler from '../../utils/asyncHandler.js'
 import ApiError from '../../utils/apiError.js'
 import ApiResponse from '../../utils/apiResponse.js'
@@ -70,6 +70,16 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
     // for dashboard stats u need first user? no dont need
     // gets first get count of how much resume and analysis u created and show them their analysis
     // promise . all runs all query at once 
+
+    const cacheKey = `Dashboard:user:${req.user._id}`
+    const cachedData = await redisClient.get(cacheKey)
+
+    if (cachedData) {
+        const data = JSON.parse(cachedData)
+        return res.status(200)
+            .json(new ApiResponse(201, data, 'Dashboard cache data fetched succesfully'))
+    }
+
     const [resumeCount, analysisCount, analysis] = await Promise.all(
         [
             resumeModel.countDocuments({ user: req.user._id, isActive: true }),
@@ -111,6 +121,14 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
             (skill.tools?.length || 0)
     }
 
+    const data = {
+        resumeUploadedCount: resumeCount,
+        analysisUploadedCount: analysisCount,
+        rececntAnalysis: analysis,
+        averageMatchScore: avgMatchScore,
+        skillsCount: skillCount
+    }
+    await redisClient.setEx(cacheKey,1200,JSON.stringify(data))
     res.status(200)
         .json(201,
             {
@@ -127,6 +145,14 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
 export const getUserActivity = asyncHandler(async (req, res) => {
     const { limit = 10 } = req.query
 
+    const cacheKey = `userActivity:user:${req.user._id}:limit:${limit}`
+    const cachedData = await redisClient.get(cacheKey)
+
+    if(cachedData){
+        const data = await JSON.parse(cachedData)
+        return res.status(200)
+        .json(new ApiResponse(201,data,'User activity cached data fetched succesfully'))
+    }
     const [resume, analysis] = await Promise.all(
         [
             await resumeModel.find({
@@ -161,6 +187,7 @@ export const getUserActivity = asyncHandler(async (req, res) => {
         })),
     ].sort((a, b) => b.timestamp - a.timestamp);
 
+    await redisClient.setEx(cacheKey,300, JSON.stringify(activities))
     res.status(200)
         .json(new ApiResponse(201, activities, 'Sucesfully got the user activity'))
 })
@@ -212,35 +239,35 @@ export const exportUserData = asyncHandler(async (req, res) => {
     ])
 
     const exportData = {
-        userData : user,
-        resumeData:resumedata,
-        analysisData:analysisdata,
-        exportedAt:new Date()
+        userData: user,
+        resumeData: resumedata,
+        analysisData: analysisdata,
+        exportedAt: new Date()
     }
 
     res.status(200)
-    .json(201,exportData,'User data has been successfully exported')
+        .json(201, exportData, 'User data has been successfully exported')
 
 })
 
-export const updateNotificationPreference = asyncHandler(async(req,res)=>{
+export const updateNotificationPreference = asyncHandler(async (req, res) => {
 
-    const {email , roadMapUpdates , weeklyProgess} = req.body
+    const { email, roadMapUpdates, weeklyProgess } = req.body
 
     const user = await resumeModel.findById(req.user._id).select('-password')
     console.log(user)
 
-    if(email){
+    if (email) {
         user.preference.notification.email = email
     }
-    if(roadMapUpdates){
+    if (roadMapUpdates) {
         user.preference.notification.roadMapUpdates = roadMapUpdates
     }
-    if(weeklyProgess){
+    if (weeklyProgess) {
         user.preference.notification.weeklyProgess = weeklyProgess
     }
 
     await user.save()
     res.status(200)
-    .json(new ApiResponse (201,user,'user notification succesfully updated'))
+        .json(new ApiResponse(201, user, 'user notification succesfully updated'))
 })

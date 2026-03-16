@@ -6,15 +6,17 @@ import performRoadmapInstance from '../../services/ai.services/roadmap_planner.j
 import logger from '../../utils/logs.js'
 import resourceModel from '../../models/resources.model.js'
 import progressModel from '../../models/progress.model.js'
+import roadmapModel from '../../models/roadmap.model.js'
+import redisClient from '../../config/redis.js'
 
 export const createRoadmap = asyncHandler(async (req, res) => {
 
     // to create roadmap first we need to check whether aalysis is there of user
-    const { analaysisId, preferences } = req.query
+    const { analysisId, preferences } = req.query
 
     const analysis = await analysisModel.findOne(
         {
-            _id: analaysisId,
+            _id: analysisId,
             user: req.user._id
         }
     )
@@ -28,7 +30,7 @@ export const createRoadmap = asyncHandler(async (req, res) => {
     }
 
     // also check if analysis already have roadmap created
-    const existingRoadmap = await roadmapModel.find({
+    const existingRoadmap = await roadmapModel.findOne({
         analysis: analysis._id,
         isActive: true
     })
@@ -61,13 +63,13 @@ export const createRoadmap = asyncHandler(async (req, res) => {
     // each learning item u need to provide resource from your resources model
 
     for(const phase of roadmapData.phases){
-        for (const week of roadmapData.weeklyBreakdown){
-            for(const item of roadmapData.learningItems){
+        for (const week of phase.weeklyBreakdown){
+            for(const item of week.learningItems){
                 // u will get an array of resource for the item
                 const learningResource = await resourceModel.find(
                     {
                         skillsCovered:{$in: item.skillsCovered},
-                        resourcType: item.type,
+                        resourceType: item.type,
                         title:item.title,
                         isPremium: preferences?.budget ==='free'? false : undefined,
                         isActive:true
@@ -88,7 +90,7 @@ export const createRoadmap = asyncHandler(async (req, res) => {
     const roadmap = await roadmapModel.create(
         {
             user:req.user._id,
-            analaysis:analaysisId,
+            analysis:analysisId,
             duration:roadmapData.duration,
             phases:roadmapData.phases,
             quickWins:roadmapData.quickWins,
@@ -118,27 +120,38 @@ export const createRoadmap = asyncHandler(async (req, res) => {
         }
     )
 
+    await redisClient.del(`roadmap:${analysisId}`);
+    await redisClient.del(`analysis:${req.user._id}`);
+    
     res.status(200)
-    .json(new ApiResponse(201,'User successfully created roadmap',roadmap))
+    .json(new ApiResponse(201,roadmap,'User successfully created roadmap'))
    
 })
 
 export const getRoadmapByAnalysis = asyncHandler(async(req,res)=>{
 
     // of one analysis there can be 1 roadmap only
+    const cacheKey = `roadmap:${req.params.analysisId}`
 
+    const cachedData = await redisClient.get(cacheKey)
+    if(cachedData){
+        return res.status(200)
+        .json(new ApiResponse(200,JSON.parse(cachedData),'Roadmap fetched from cache successfully'))
+    }
     const roadmap = await roadmapModel.findOne(
         {
-            analysis:req.params.analaysisId,
-            user:req.user._id
+            analysis: req.params.analysisId,
+            user: req.user._id
         }
     )
+
     if(!roadmap){
         throw new ApiError(400,'No roadmap found')
     }
+    await redisClient.setEx(cacheKey,300,JSON.stringify(roadmap))
 
-    res.status(200)
-    new ApiResponse(200, roadmap, 'Clearly got roadmap from analysis')
+    res.status(200).json(
+    new ApiResponse(200, roadmap, 'Clearly got roadmap from analysis'))
 })
 
 export const getRoadmapById = asyncHandler(async(req,res)=>{
@@ -164,7 +177,7 @@ export const markItemComplete = asyncHandler(async(req,res)=>{
     const roadmap = await roadmapModel.findOne(
         {
             _id:req.params.id,
-            user:req.user_id
+            user:req.user._id
         }
     )
     if(!roadmap){
@@ -172,9 +185,13 @@ export const markItemComplete = asyncHandler(async(req,res)=>{
     }
 
     // validate the index provided
-    if(phaseIndex >= roadmap.phases.length || weekIndex >= roadmap.weeklyBreakdown.length || itemIndex >= roadmap.learningItems.length ){
-        throw new ApiError(400,'The index provided are invalid')
-    }
+    if (
+  phaseIndex >= roadmap.phases.length ||
+  weekIndex >= roadmap.phases[phaseIndex].weeklyBreakdown.length ||
+  itemIndex >= roadmap.phases[phaseIndex].weeklyBreakdown[weekIndex].learningItems.length
+){
+    throw new ApiError(400,'Index is wrong')
+}
 
     const item = roadmap.phases[phaseIndex].weeklyBreakdown[weekIndex].learningItems[itemIndex]
 
@@ -182,6 +199,8 @@ export const markItemComplete = asyncHandler(async(req,res)=>{
     item.completed = true
 
     // update user progress
+    await roadmap.save();
+
     const progress = await progressModel.findOne({
         user:req.user._id,
         roadmap:roadmap._id
@@ -203,8 +222,9 @@ export const markItemComplete = asyncHandler(async(req,res)=>{
             })
         }
     }
-    res.status(200)
-    new ApiResponse(201,roadmap,'Item Marked completed')
+    
+    res.status(200).json(
+    new ApiResponse(201,roadmap,'Item Marked completed'))
 })
 
 export const updateReference = asyncHandler(async(req,res)=>{
@@ -218,7 +238,7 @@ export const updateReference = asyncHandler(async(req,res)=>{
     })
 
     if(!roadmap){
-        throw new ApiError(200,'No roadmap found to update user preference')
+        throw new ApiError(400,'No roadmap found to update user preference')
     }
 
     if(hoursPerWeek) roadmap.userPreferences.hoursPerWeek = hoursPerWeek
@@ -226,8 +246,8 @@ export const updateReference = asyncHandler(async(req,res)=>{
     if(learningStyle) roadmap.userPreferences.learningStyle = learningStyle
 
     await roadmap.save()
-    res.status(200)
-    new ApiResponse(201,roadmap,'User preferne updated succesfully')
+    res.status(200).json(
+    new ApiResponse(201,roadmap,'User preferne updated succesfully'))
 })
 
 export const getProgressOfUser = asyncHandler(async(req,res)=>{
@@ -245,7 +265,7 @@ export const getProgressOfUser = asyncHandler(async(req,res)=>{
     }
 
     const progress = await progressModel.findOne({
-        user:req.user.id,
+        user:req.user._id,
         roadmap:roadmap._id
     })
 

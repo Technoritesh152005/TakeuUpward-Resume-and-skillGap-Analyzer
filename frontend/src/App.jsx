@@ -6,7 +6,7 @@ import { Toaster } from 'react-hot-toast';
 import LandingPage from './pages/landingPage.jsx';
 import LoginPage from './pages/loginPage.jsx';
 import SignupPage from './pages/signupPages';
-import DashboardPage from './pages/dashboardPage.jsx';
+// import DashboardPages from './pages/dashboardPage.jsx';
 import ProtectedRoute from './components/auth/ProtectedRoute.jsx';
 
 // Create a client for React Query
@@ -31,14 +31,14 @@ function App() {
           <Route path="/signup" element={<SignupPage />} />
 
           {/* Protected: Dashboard */}
-          <Route
+          {/* <Route
             path="/dashboard"
             element={
               <ProtectedRoute>
-                <DashboardPage />
+                <DashboardPages />
               </ProtectedRoute>
             }
-          />
+          /> */}
 
           {/* Catch all - redirect to home */}
           <Route path="*" element={<Navigate to="/" replace />} />
