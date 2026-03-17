@@ -156,7 +156,7 @@ export const getRoadmapByAnalysis = asyncHandler(async(req,res)=>{
 
 export const getRoadmapById = asyncHandler(async(req,res)=>{
 
-    const roadmapId = req.params._id
+    const roadmapId = req.params.id
 
     const roadmap = await roadmapModel.findOne({
         _id:roadmapId,
@@ -211,7 +211,7 @@ export const markItemComplete = asyncHandler(async(req,res)=>{
     // if progress present update tje mark completeion or maintain streak
     if(progress){
         progress.lastActivityDate = new Date()
-        await progress.updateStreak
+        await progress.updateStreak()
 
         // add to progress learned resource that what did he learned and resource used
         console.log(item.resource)

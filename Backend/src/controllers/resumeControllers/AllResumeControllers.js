@@ -13,8 +13,7 @@ import logger from '../../utils/logs.js'
 import resumeParserInstance from '../../services/parser/resume.parser.js'
 import redisClient from '../../config/redis.js'
 import ApiResponse from '../../utils/apiResponse.js'
-import claudeService from '../../services/ai.services/skill_gap_analysis.js'
-
+import resumeStructureInstance from '../../services/ai.services/analyze_resume_structure.js'
 
 
 export const uploadResume = asyncHandler(async (req, res, next) => {
@@ -55,9 +54,9 @@ export const uploadResume = asyncHandler(async (req, res, next) => {
 
     // once a new resume is uploaded deleted the old cache
     await redisClient.del(`Resume:user:${req.user._id}`)
-   
+
     res.status(200)
-        .json(new ApiResponse(201, resume,'Resume uploaded Succesfully'))
+        .json(new ApiResponse(201, resume, 'Resume uploaded Succesfully'))
 })
 
 export const getMyResume = asyncHandler(async (req, res, next) => {
@@ -76,13 +75,13 @@ export const getMyResume = asyncHandler(async (req, res, next) => {
 
     const { limit = 10, page = 1 } = req.query
 
-const cacheKey = `Resume:user:${req.user._id}:limit:${limit}:page:${page}`
+    const cacheKey = `Resume:user:${req.user._id}:limit:${limit}:page:${page}`
     const cachedData = await redisClient.get(cacheKey)
 
     if (cachedData) {
         const data = JSON.parse(cachedData)
         return res.status(200)
-            .json( new ApiResponse(201, data, 'Resume of user fetched from cache successfuly'))
+            .json(new ApiResponse(201, data, 'Resume of user fetched from cache successfuly'))
     }
     const resume = await resumeModel.paginate(
         { user: req.user._id, isActive: true }, {
@@ -93,9 +92,9 @@ const cacheKey = `Resume:user:${req.user._id}:limit:${limit}:page:${page}`
     }
     )
 
-    await redisClient.setEx(cacheKey,300,JSON.stringify(resume))
+    await redisClient.setEx(cacheKey, 300, JSON.stringify(resume))
     res.status(200)
-        .json(new ApiResponse(201,resume ,'resume of user fetched succesfully'))
+        .json(new ApiResponse(201, resume, 'resume of user fetched succesfully'))
 })
 
 export const getResumeById = asyncHandler(async (req, res, next) => {
@@ -106,10 +105,10 @@ export const getResumeById = asyncHandler(async (req, res, next) => {
     const cacheKey = `Resume:id:${req.params.id}`
     const cachedData = await redisClient.get(cacheKey)
 
-    if(cachedData){
+    if (cachedData) {
         const data = JSON.parse(cachedData)
         return res.status(200)
-        .json(new ApiResponse(201,data, 'Resume fetched successfully from cache'))
+            .json(new ApiResponse(201, data, 'Resume fetched successfully from cache'))
     }
     const resume = await resumeModel.findOne({ _id: req.params.id, user: req.user._id })
 
@@ -122,7 +121,7 @@ export const getResumeById = asyncHandler(async (req, res, next) => {
 
     await redisClient.setEx(cacheKey, 900, JSON.stringify(resume))
     res.status(200)
-        .json( new ApiResponse(201,resume, 'Resume fetched of user succesfully'))
+        .json(new ApiResponse(201, resume, 'Resume fetched of user succesfully'))
 })
 
 // delete resume
@@ -155,10 +154,10 @@ export const getResumeSkill = asyncHandler(async (req, res, next) => {
     const cacheKey = `ResumeSkill:resume:${req.params.id}:user:${req.user._id}`
     const cachedData = await redisClient.get(cacheKey)
 
-    if(cachedData){
+    if (cachedData) {
         const data = JSON.parse(cachedData)
         return res.status(200)
-        .json(new ApiResponse(201, data , 'Resume skill of user fetched from cache'))
+            .json(new ApiResponse(201, data, 'Resume skill of user fetched from cache'))
     }
     const resume = await resumeModel.findOne({ _id: req.params.id, user: req.user._id })
 
@@ -167,8 +166,8 @@ export const getResumeSkill = asyncHandler(async (req, res, next) => {
     }
 
     const resumeSkill = await resume.getSkillSummary()
-    
-    await redisClient.setEx(cacheKey, 300 , JSON.stringify(resumeSkill))
+
+    await redisClient.setEx(cacheKey, 300, JSON.stringify(resumeSkill))
 
     res.status(200)
         .json(201, 'Resume skill of user fetched succesfully', resumeSkill)
@@ -193,16 +192,19 @@ export const reparseResume = asyncHandler(async (req, res) => {
 
     try {
         // Parse again using Claude
-        const claudeService = require('../services/ai/claude.service');
-        const structuredData = await claudeService.analyzeResumeStructure(resume.rawText);
+
+        const structuredData = await resumeStructureInstance(resume.rawText);
 
         // Update parsed data
         resume.parsedData = structuredData;
         resume.processingStatus = 'completed';
         resume.version += 1;
         await resume.save();
-
+        await redisClient.del(`Resume:id:${req.params.id}:user:${req.user._id}`)
+        await redisClient.del(`ResumeSkill:resume:${req.params.id}:user:${req.user._id}`)
+        await redisClient.del(`Resume:user:${req.user._id}`)
         logger.info(`Resume re-parsed successfully: ${resume._id}`);
+
 
         res.json(new ApiResponse(200, resume, 'Resume re-parsed successfully'));
     } catch (error) {

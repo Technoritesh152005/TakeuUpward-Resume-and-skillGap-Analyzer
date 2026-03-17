@@ -23,7 +23,6 @@ const api = axios.create({
     // “Include cookies when sending requests to the server.”
     // default it dont send bcz of cross origin request cookies so we tell them
 })
-
 // handling axios for every request
 api.interceptors.request.use(
     // config has all details of the request

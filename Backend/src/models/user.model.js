@@ -45,8 +45,13 @@ const userSchema = mongoose.Schema(
         avatar: {
             type: String,
         },
+        googleId: {
+            type: String,
+            unique: true,
+            sparse: true
+        },
         phone: {
-            required:true,
+            
             type: Number,
             maxLength: [12, "Phone number must be 12 or less than 12 number"]
         },
