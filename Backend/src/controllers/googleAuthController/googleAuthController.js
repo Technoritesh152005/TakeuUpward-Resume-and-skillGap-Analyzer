@@ -9,6 +9,7 @@ import refreshTokenModel from '../../models/refreshToken.js'
 export const googleSignIn = asyncHandler(async (req, res) => {
     // when user clicks login it gives back a token
     const { token } = req.body
+    console.log(token)
     if (!token) {
         throw new ApiError(401, 'Token of google not provided')
     }
