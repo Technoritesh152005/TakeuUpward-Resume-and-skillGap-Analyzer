@@ -339,7 +339,7 @@ This project is licensed under the MIT License.
 
 ## 📧 Support
 
-For support, email riteshkhilari@example.com or open an issue in the repository.
+For support, email riteshkhilari4@example.com or open an issue in the repository.
 
 ---
 
