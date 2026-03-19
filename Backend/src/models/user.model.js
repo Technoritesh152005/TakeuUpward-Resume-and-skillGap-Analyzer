@@ -27,7 +27,7 @@ const userSchema = mongoose.Schema(
         },
         password: {
             type: String,
-            required: [true, "Please ensure to fill your Password"],
+            // required: [true, "Please ensure to fill your Password"],
             minLength: [8, "Size cannot be less than 8 Characters"],
             // anyone should not be able to sleect this
             select: false,
@@ -47,9 +47,20 @@ const userSchema = mongoose.Schema(
         },
         googleId: {
             type: String,
+            sparse: true,
             unique: true,
-            sparse: true
-        },
+          },
+          
+          profilePicture: {
+            type: String,
+          },
+          
+          authProvider: {
+            type: String,
+            enum: ['local', 'google'],
+            default: 'local',
+          },
+          
         phone: {
             
             type: Number,

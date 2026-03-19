@@ -1,78 +1,138 @@
 import { Link } from 'react-router-dom';
-import { ArrowLeft, FileText, Sparkles, Zap, Shield } from 'lucide-react';
+import { ArrowLeft, FileText, Sparkles, Zap, Shield, Target, Map, TrendingUp } from 'lucide-react';
 import SignupForm from '../components/auth/signupForm.jsx'
 
 const SignupPage = () => {
-  
   return (
-    
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 flex">
-      {/* Left Side - Branding (Hidden on mobile) */}
+      {/* Left Side - Animated Showcase */}
       <div className="hidden lg:flex lg:flex-1 bg-gradient-to-br from-primary-600 via-blue-600 to-blue-700 dark:from-primary-700 dark:via-blue-700 dark:to-blue-800 relative overflow-hidden">
-        {/* Decorative Blobs */}
-        <div className="absolute top-0 left-0 w-96 h-96 bg-white/10 rounded-full -ml-48 -mt-48"></div>
-        <div className="absolute bottom-0 right-0 w-96 h-96 bg-white/10 rounded-full -mr-48 -mb-48"></div>
+        {/* Animated Background Elements */}
+        <div className="absolute inset-0">
+          {/* Floating Gradient Orbs */}
+          <div className="absolute top-40 left-20 w-72 h-72 bg-white/10 rounded-full blur-3xl animate-pulse-soft"></div>
+          <div className="absolute bottom-40 right-20 w-96 h-96 bg-primary-500/20 rounded-full blur-3xl animate-pulse-soft" style={{ animationDelay: '1.5s' }}></div>
+          
+          {/* Floating Feature Cards */}
+          <div className="absolute top-20 left-16 animate-float">
+            <div className="bg-white/20 backdrop-blur-md rounded-2xl p-5 border border-white/30 shadow-2xl transform -rotate-6 hover:rotate-0 transition-all duration-500">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-yellow-400 rounded-xl flex items-center justify-center">
+                  <Sparkles className="w-7 h-7 text-white" />
+                </div>
+                <div>
+                  <div className="text-white font-semibold">AI Analysis</div>
+                  <div className="text-white/70 text-sm">60 seconds</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="absolute top-64 left-32 animate-float" style={{ animationDelay: '0.5s' }}>
+            <div className="bg-white/20 backdrop-blur-md rounded-xl p-4 border border-white/30 shadow-2xl transform rotate-3 hover:rotate-0 transition-all duration-500">
+              <div className="flex items-center gap-2">
+                <Target className="w-5 h-5 text-green-300" />
+                <span className="text-white font-medium">Gap Analysis</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="absolute bottom-32 left-24 animate-float" style={{ animationDelay: '1s' }}>
+            <div className="bg-white/20 backdrop-blur-md rounded-2xl p-5 border border-white/30 shadow-2xl transform rotate-6 hover:rotate-0 transition-all duration-500">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-400 rounded-lg flex items-center justify-center">
+                  <Map className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-white">90</div>
+                  <div className="text-white/80 text-xs">Day Roadmap</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Skill Progress Bars */}
+          <div className="absolute bottom-48 left-20 animate-float" style={{ animationDelay: '1.5s' }}>
+            <div className="bg-white/20 backdrop-blur-md rounded-xl p-4 border border-white/30 shadow-2xl w-64">
+              <div className="space-y-3">
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-white text-sm font-medium">React</span>
+                    <span className="text-white/90 text-sm">85%</span>
+                  </div>
+                  <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-green-400 to-green-500 rounded-full" style={{ width: '85%' }}></div>
+                  </div>
+                </div>
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-white text-sm font-medium">Node.js</span>
+                    <span className="text-white/90 text-sm">72%</span>
+                  </div>
+                  <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-blue-400 to-blue-500 rounded-full" style={{ width: '72%' }}></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         
         {/* Content */}
         <div className="relative z-10 flex flex-col justify-center px-16 text-white">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full mb-6 self-start border border-white/30">
-            <Sparkles className="w-4 h-4" />
-            <span className="text-sm font-semibold">100% Free for Students</span>
+            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+            <span className="text-sm font-semibold">Join Free Today</span>
           </div>
 
-          <h2 className="text-4xl font-bold mb-6 leading-tight">
-            Start Your Journey to Your Dream Job Today
+          <h2 className="text-4xl lg:text-5xl font-bold mb-6 leading-tight">
+            Start Your Journey to{' '}
+            <span className="inline-block relative">
+              Your Dream Job
+              <svg className="absolute -bottom-2 left-0 w-full" height="12" viewBox="0 0 300 12" fill="none">
+                <path d="M2 10C80 3 220 3 298 10" stroke="white" strokeWidth="3" strokeLinecap="round" className="opacity-50" />
+              </svg>
+            </span>
           </h2>
-          <p className="text-xl text-white/90 mb-12">
-            Join thousands of students who've discovered their skill gaps and built successful careers.
+          
+          <p className="text-xl text-white/90 mb-12 max-w-md">
+            Get instant AI-powered insights, personalized roadmaps, and track your progress—all for free.
           </p>
 
-          {/* Features */}
-          <div className="space-y-6">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center flex-shrink-0">
-                <Zap className="w-6 h-6" />
+          {/* Animated Feature List */}
+          <div className="space-y-4 mb-12">
+            <div className="flex items-center gap-3 group">
+              <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Zap className="w-5 h-5" />
               </div>
-              <div>
-                <h3 className="font-semibold text-lg mb-1">Instant Analysis</h3>
-                <p className="text-white/80">Get your resume analyzed and skill gaps identified in 60 seconds</p>
-              </div>
+              <span className="font-medium">Instant resume analysis in 60 seconds</span>
             </div>
-
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center flex-shrink-0">
-                <FileText className="w-6 h-6" />
+            <div className="flex items-center gap-3 group">
+              <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                <TrendingUp className="w-5 h-5" />
               </div>
-              <div>
-                <h3 className="font-semibold text-lg mb-1">Personalized Roadmap</h3>
-                <p className="text-white/80">90-day learning path tailored to your target job role</p>
-              </div>
+              <span className="font-medium">Personalized 90-day learning roadmap</span>
             </div>
-
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center flex-shrink-0">
-                <Shield className="w-6 h-6" />
+            <div className="flex items-center gap-3 group">
+              <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Shield className="w-5 h-5" />
               </div>
-              <div>
-                <h3 className="font-semibold text-lg mb-1">Privacy First</h3>
-                <p className="text-white/80">Your data is secure and never shared with third parties</p>
-              </div>
+              <span className="font-medium">Your data stays private & secure</span>
             </div>
           </div>
 
-          {/* Testimonial */}
-          <div className="mt-12 bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
+          {/* Success Story */}
+          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
             <p className="text-white/90 mb-4 italic">
-              "TakeUUpward helped me identify exactly what I needed to learn to become a full-stack developer. 
-              Got my dream job in 3 months!"
+              "Landed my dream role in just 3 months! The personalized roadmap was a game-changer."
             </p>
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-white/30 rounded-full flex items-center justify-center">
-                <span className="text-sm font-bold">PR</span>
+              <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
+                <span className="text-white font-bold text-lg">AK</span>
               </div>
               <div>
-                <div className="font-semibold">Priya Sharma</div>
-                <div className="text-sm text-white/70">Full Stack Developer</div>
+                <div className="font-semibold">Arjun Kumar</div>
+                <div className="text-sm text-white/70">Full Stack Developer @ Amazon</div>
               </div>
             </div>
           </div>
@@ -94,7 +154,7 @@ const SignupPage = () => {
         <div className="w-full max-w-md">
           {/* Logo */}
           <div className="flex items-center gap-2 mb-8">
-            <div className="w-12 h-12 rounded-xl bg-primary-600 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-600 to-primary-700 flex items-center justify-center shadow-lg">
               <FileText className="w-7 h-7 text-white" />
             </div>
             <span className="text-2xl font-bold text-neutral-900 dark:text-white">

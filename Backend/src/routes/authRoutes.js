@@ -14,7 +14,7 @@ import {changePassword, getCurrentUser} from '../controllers/authControllers/cha
 import { protectAccess } from '../middleware/authMiddleware.js'
 import { refreshToken } from '../controllers/authControllers/refreshAccessToken.Controller.js'
 import {validateSignUp,validateLogin, validatePasswordChange} from '../validation/auth.validation.js'
-import {googleSignIn} from '../controllers/googleAuthController/googleAuthController.js'
+
 
 /**
  * @route   POST /api/v1/auth/signup
@@ -59,6 +59,6 @@ router.post('/change-password',protectAccess,validatePasswordChange,changePasswo
  */
 router.get('/me',protectAccess,getCurrentUser)
 
-router.post('/google-sign-in',googleSignIn)
+
 
 export default router

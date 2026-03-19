@@ -1,16 +1,11 @@
-// this will simply call ai and pass text and get proper structured format dteials from it
-import logger from '../../utils/logs.js'
+// this will simply call ai and pass text and get proper structured format details from it
+import logger from '../../utils/logs.js';
+import { claude, CLAUDE_CONFIG } from '../../config/claude.js';
 
-import { claude, CLAUDE_CONFIG } from "../../config/claude.js"
-
-class analyzeResumeStructure {
-
-    async analyzeResumeStructure(resumeText) {
-
-        try {
-
-            const prompt =
-                `
+class AnalyzeResumeStructure {
+  async analyzeResumeStructure(resumeText) {
+    try {
+      const prompt = `
         You are an expert resume analyzer. Extract structured information from this resume.
 
 RESUME TEXT:
@@ -99,44 +94,40 @@ IMPORTANT:
 - Use null for missing fields
 - Keep all arrays even if empty []
 - Be thorough in extraction
-        `
-            const response = await claude.messages.create(
-                {
-                    model: CLAUDE_CONFIG.model,
-                    temperature: CLAUDE_CONFIG.temperature,
-                    maxTokens: CLAUDE_CONFIG.maxTokens,
-                    messages: [
-                        {
-                            role: "user",
-                            content: prompt
-                        }
-                    ]
-                }
-            )
+        `;
 
-            console.log(result)
-            const result = response.content[0].text
+      const response = await claude.messages.create({
+        model: CLAUDE_CONFIG.model,
+        temperature: CLAUDE_CONFIG.temperature,
+        maxTokens: CLAUDE_CONFIG.maxTokens,
+        messages: [
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+      });
 
+      const result = response.content[0].text;
 
-
-            // converts or remove those json backticks
-            const cleanedContent = result
-                .replace(/```json\n?/g, '')
-                .replace(/```\n?/g, '')
-                .trim();
-            // this converts string to js object
-            const structuredData = JSON.parse(cleanedContent);
-            if (structuredData) {
-                logger.info(`Successfully analyzed resume structure ${result}`)
-                return structuredData
-            }
-
-        } catch (err) {
-            logger.error(`Failed to analyze resume structure ${err.message}`)
-            throw new Error("Failed to analyze resume structure")
-        }
+      // converts or remove those json backticks
+      const cleanedContent = result
+        .replace(/```json\n?/g, '')
+        .replace(/```\n?/g, '')
+        .trim();
+      // this converts string to js object
+      const structuredData = JSON.parse(cleanedContent);
+      if (structuredData) {
+        logger.info(`Successfully analyzed resume structure ${result}`);
+        return structuredData;
+      }
+    } catch (err) {
+      logger.error(`Failed to analyze resume structure ${err.message}`);
+      throw new Error('Failed to analyze resume structure');
     }
+  }
 }
 
-const resumeStructureInstance = new analyzeResumeStructure()
-export {resumeStructureInstance}
+const resumeStructureInstance = new AnalyzeResumeStructure();
+
+export default resumeStructureInstance;

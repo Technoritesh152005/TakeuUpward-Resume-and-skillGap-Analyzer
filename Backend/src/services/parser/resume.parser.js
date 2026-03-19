@@ -1,6 +1,6 @@
 import logger from '../../utils/logs.js';
 import textextractor from './text_extractor.parser.js';
-import { resumeStructureInstance } from '../ai.services/analyze_resume_structure.js';
+import resumeStructureInstance from '../ai.services/analyze_resume_structure.js';
 
 class resumeParser {
 

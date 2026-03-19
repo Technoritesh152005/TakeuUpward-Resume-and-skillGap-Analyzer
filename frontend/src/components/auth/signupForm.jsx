@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import Button from '../common components/Button';
 import Input from '../common components/input';
 import useAuthStore from '../../services/authStore'
+import GoogleSignInButton from '../common components/googleSignInButton.jsx'
 
 const SignupForm = () => {
   const navigate = useNavigate();
@@ -19,7 +20,6 @@ const SignupForm = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    phone:'',
     acceptTerms: false,
   });
 
@@ -72,11 +72,7 @@ const SignupForm = () => {
       errors.confirmPassword = 'Passwords do not match';
     }
 
-    if (!formData.phone) {
-        errors.phone = 'Please provide your phone number';
-      } else if (!/^[6-9]\d{9}$/.test(formData.phone)) {
-        errors.phone = 'Enter valid 10-digit phone number';
-      }
+   
 
     // Terms validation
     if (!formData.acceptTerms) {
@@ -99,7 +95,7 @@ const SignupForm = () => {
         name: formData.name.trim(),
         email: formData.email,
         password: formData.password,
-        phone:formData.phone
+       
       });
 
       toast.success('Account created successfully! 🎉');
@@ -236,22 +232,7 @@ const SignupForm = () => {
         />
       </div>
 
-      <div>
-        <label htmlFor="phone" className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
-          Phone Number
-        </label>
-        <Input
-          id="phone"
-          name="phone"
-          type="tel"
-          value={formData.phone}
-          onChange={handleChange}
-          placeholder="Place Your Phone-Number"
-          leftIcon={<Mail className="w-5 h-5" />}
-          error={validationErrors.phone}
-          disabled={isLoading}
-        />
-      </div>
+      
 
       {/* Terms Checkbox */}
       <div>
@@ -280,6 +261,19 @@ const SignupForm = () => {
         )}
       </div>
 
+      <GoogleSignInButton text="Sign up with Google" />
+
+{/* OR Divider */}
+<div className="relative my-6">
+  <div className="absolute inset-0 flex items-center">
+    <div className="w-full border-t border-neutral-300 dark:border-neutral-700"></div>
+  </div>
+  <div className="relative flex justify-center text-sm">
+    <span className="px-4 bg-white dark:bg-neutral-900 text-neutral-500 dark:text-neutral-400">
+      Or sign up with email
+    </span>
+  </div>
+</div>
       {/* Error Message */}
       {error && (
         <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">

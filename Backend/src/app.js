@@ -7,6 +7,10 @@ import morgan from 'morgan';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import passport from './config/passport.js'
+import googleAuthRoutes from './routes/googleAuthRoutes.js'
+
+
 
 // ES6 module __dirname fix
 const __filename = fileURLToPath(import.meta.url);
@@ -19,6 +23,9 @@ import {
   handleMongodbError,
   handleJwtError,
 } from './middleware/errorHandler.js';
+
+// Initialize Passport
+
 
 // Import routes
 import authRoutes from './routes/authRoutes.js'
@@ -33,6 +40,7 @@ import logger from './utils/logs.js';
 
 // Create Express app
 const app = express();
+
 
 // Trust proxy (for rate limiting, IP detection)
 app.set('trust proxy', 1);
@@ -69,7 +77,7 @@ if (process.env.NODE_ENV === 'development') {
     })
   );
 }
-
+app.use(passport.initialize());
 // Serve static files (uploads folder)
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
@@ -93,6 +101,7 @@ app.use(`/api/${API_VERSION}/job-roles`, jobRoleRoutes);
 app.use(`/api/${API_VERSION}/analysis`, analysisRoutes);
 app.use(`/api/${API_VERSION}/roadmap`, roadmapRoutes);
 app.use(`/api/${API_VERSION}/user`, userRoutes);
+app.use(`/api/${API_VERSION}/auth`, googleAuthRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {

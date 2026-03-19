@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import Button from '../common components/Button.jsx';
 import Input from '../common components/input.jsx';
 import useAuthStore from '../../services/authStore.js'
+import GoogleSignInButton from '../common components/googleSignInButton.jsx';
 
 const LoginForm = () => {
   const navigate = useNavigate();
@@ -183,6 +184,20 @@ const LoginForm = () => {
           Sign up for free
         </Link>
       </p>
+
+      <div className="relative my-6">
+  <div className="absolute inset-0 flex items-center">
+    <div className="w-full border-t border-neutral-300 dark:border-neutral-700"></div>
+  </div>
+  <div className="relative flex justify-center text-sm">
+    <span className="px-4 bg-white dark:bg-neutral-900 text-neutral-500 dark:text-neutral-400">
+      Or continue with
+    </span>
+  </div>
+</div>
+
+{/* Google Sign In */}
+<GoogleSignInButton text="Sign in with Google" />
     </form>
   );
 };

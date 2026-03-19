@@ -1,5 +1,5 @@
 import {createClient} from 'redis'
-import logger from '../utils/logs' 
+import logger from '../utils/logs.js' 
 
 const redisClient = createClient(
     {

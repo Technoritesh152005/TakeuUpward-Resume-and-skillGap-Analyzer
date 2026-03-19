@@ -13,7 +13,12 @@ import logger from '../../utils/logs.js'
 import resumeParserInstance from '../../services/parser/resume.parser.js'
 import redisClient from '../../config/redis.js'
 import ApiResponse from '../../utils/apiResponse.js'
-import resumeStructureInstance from '../../services/ai.services/analyze_resume_structure.js'
+import resumeStructureInstance from '../../services/ai.services/analyze_resume_structure.js';
+
+// ...
+
+// inside reparseResume:
+
 
 
 export const uploadResume = asyncHandler(async (req, res, next) => {
@@ -192,8 +197,7 @@ export const reparseResume = asyncHandler(async (req, res) => {
 
     try {
         // Parse again using Claude
-
-        const structuredData = await resumeStructureInstance(resume.rawText);
+        const structuredData = await resumeStructureInstance.analyzeResumeStructure(resume.rawText);
 
         // Update parsed data
         resume.parsedData = structuredData;
