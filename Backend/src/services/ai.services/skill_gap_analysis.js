@@ -1,119 +1,126 @@
-import { claude, CLAUDE_CONFIG } from '../../config/claude.js'
-import logger from '../../utils/logs.js'
-
+import { claude, CLAUDE_CONFIG } from '../../config/claude.js';
+import logger from '../../utils/logs.js';
 
 class SkillGapAnalysis {
-
-    //  in this we provide the resume data that we had extracted from resume parser and target job role he needs
-    // so u must analyze the gaps between both which provide them a clear path and let them know how behind r they
+    /**
+     * Perform deep skill gap analysis
+     * @param {Object} resumeData - Parsed resume data
+     * @param {Object} jobRole - Target job role
+     * @returns {Object} - Structured analysis data
+     */
     async performDeepSkillGapAnalyze(resumeData, jobRole) {
-
         try {
+            const prompt = `
+You are an expert career coach analyzing a candidate's fit for a job role.
 
-            const prompt =
-                `
-            You are an expert career coach analyzing a candidate's fit for a job role.
+CANDIDATE PROFILE:
+${JSON.stringify(resumeData, null, 2)}
 
-            CANDIDATE PROFILE:
-            ${JSON.stringify(resumeData)}
+TARGET JOB ROLE: ${jobRole.title}
+CATEGORY: ${jobRole.category}
+EXPERIENCE LEVEL: ${jobRole.experienceLevel}
 
-            TARGET JOB ROLE: ${jobRole.title}
-            CATEGORY: ${jobRole.category}
-            EXPERIENCE LEVEL: ${jobRole.experienceLevel}
+REQUIRED SKILLS:
+Critical: ${JSON.stringify(jobRole.requiredSkills.critical)}
+Important: ${JSON.stringify(jobRole.requiredSkills.important)}
+Nice-to-Have: ${JSON.stringify(jobRole.requiredSkills.niceToHave)}
 
-            REQUIRED SKILLS:
-            Critical: ${JSON.stringify(jobRole.requiredSkills.critical)}
-            Important: ${JSON.stringify(jobRole.requiredSkills.important)}
-            Nice-to-Have: ${JSON.stringify(jobRole.requiredSkills.niceToHave)}
+Perform comprehensive gap analysis and return ONLY valid JSON:
 
-            Perform comprehensive gap analysis and return ONLY valid JSON:
+{
+  "overallAssessment": {
+    "matchPercentage": 85,
+    "readinessLevel": "nearly-ready",
+    "estimatedTimeToReady": {
+      "weeks": 12,
+      "reason": "Need to learn 3 critical skills"
+    },
+    "summary": "Strong foundation with gaps in deployment tools"
+  },
+  "skillGaps": {
+    "critical": [
+      {
+        "skill": "Docker",
+        "importance": 9,
+        "reason": "Essential for containerization",
+        "learningTime": "4-6 weeks",
+        "difficulty": "intermediate",
+        "prerequisites": ["Linux basics", "CLI"]
+      }
+    ],
+    "important": [],
+    "niceToHave": []
+  },
+  "strengths": [
+    {
+      "skill": "React",
+      "proficiency": "advanced",
+      "relevance": "Core requirement for frontend",
+      "uniqueAdvantage": "3 years production experience",
+      "importance": 9
+    }
+  ],
+  "transferableSkills": [
+    {
+      "skill": "JavaScript",
+      "relatesTo": ["TypeScript", "Node.js"],
+      "explanation": "Strong JS foundation helps learn TS quickly"
+    }
+  ],
+  "experienceGap": {
+    "candidateYears": 3,
+    "typicalRequirement": 5,
+    "assessment": "Slightly below typical requirement but skills compensate"
+  },
+  "recommendations": [
+    "Focus on Docker and Kubernetes first",
+    "Build 2-3 full-stack projects",
+    "Get AWS certification"
+  ]
+}
 
-            {
-            "overallAssessment": {
-                "matchPercentage": "number 0-100",
-                "readinessLevel": "not-ready|nearly-ready|ready|overqualified",
-                "estimatedTimeToReady": {
-                "weeks": "number",
-                "reason": "string"
-                },
-                "summary": "string (2-3 sentences)"
-            },
-            "skillGaps": {
-                "critical": [
-                {
-                    "skill": "string",
-                    "importance": "number 1-10",
-                    "reason": "why this skill matters for this role",
-                    "learningTime": "e.g., 2-3 weeks",
-                    "difficulty": "beginner|intermediate|advanced",
-                    "prerequisites": ["string"]
-                }
-                ],
-                "important": [],
-                "niceToHave": []
-            },
-            "strengths": [
-                {
-                "skill": "string",
-                "proficiency": "beginner|intermediate|advanced|expert",
-                "relevance": "how this helps in target role",
-                "uniqueAdvantage": "what makes candidate stand out",
-                'importance':'Number'
-                }
-            ],
-            "transferableSkills": [
-                {
-                "skill": "string",
-                "relatesTo": ["required skills this connects to"],
-                "explanation": "how to leverage this"
-                }
-            ],
-            "experienceGap": {
-                "candidateYears": "number",
-                "typicalRequirement": "number",
-                "assessment": "string"
-            },
-            "recommendations": [
-                "specific actionable recommendation"
-            ]
-            }
+Be honest but encouraging. Focus on actionable insights.
+Return ONLY the JSON object, no markdown formatting.
+`;
 
-            Be honest but encouraging. Focus on actionable insights.
-            `
-            const response = await claude.messages.create(
-                {
-                    model: CLAUDE_CONFIG.model,
-                    max_tokens: CLAUDE_CONFIG.maxTokens,
-                    temperature: CLAUDE_CONFIG.temperature,
-                    messages: [
-                        {
-                            role: 'user',
-                            content: prompt
-                        }
-                    ]
-                }
-            )
+            const response = await claude.messages.create({
+                model: CLAUDE_CONFIG.model,
+                max_tokens: CLAUDE_CONFIG.maxTokens,
+                temperature: CLAUDE_CONFIG.temperature,
+                messages: [
+                    {
+                        role: 'user',
+                        content: prompt
+                    }
+                ]
+            });
 
-            const cleanedContent = response
+            // ✅ FIX: Extract text from response properly
+            const rawText = response.content[0].text;
+
+            // Clean the response
+            const cleanedContent = rawText
                 .replace(/```json\n?/g, '')
                 .replace(/```\n?/g, '')
                 .trim();
-            // this converts string to js object
+
+            // Parse JSON
             const structuredData = JSON.parse(cleanedContent);
 
-            if (!structuredData) {
-                logger.error(`Failed to get response from claude ai for perform deep skill gap analysis.. `)
-                throw new Error(`ERROR caused to fetch response for analysis skill gap`);
-
+            if (!structuredData || !structuredData.overallAssessment) {
+                logger.error('Invalid response structure from Claude AI');
+                throw new Error('Failed to get valid analysis from AI');
             }
-            logger.info("Deep skill gap analysis done")
-            return structuredData
+
+            logger.info('Deep skill gap analysis completed successfully');
+            return structuredData;
 
         } catch (error) {
-            logger.error(`Failed to perform skill gap analysis of the user`)
-            throw new Error("Failed to perform skill gap analysis")
+            logger.error(`Failed to perform skill gap analysis: ${error.message}`);
+            throw new Error(`Failed to perform skill gap analysis: ${error.message}`);
         }
     }
 }
+
 const skillgapanalysis = new SkillGapAnalysis();
 export default skillgapanalysis;

@@ -3,15 +3,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 
 // Pages
-import LandingPage from './pages/landingPage.jsx';
-import LoginPage from './pages/loginPage.jsx';
-import SignupPage from './pages/signupPages';
-import OAuthCallback from './components/auth/oAuthCallback.jsx';
+import LandingPage from './pages/landingPage.jsx'
+import LoginPage from './pages/loginPage.jsx'
+import SignupPage from './pages/signupPages.jsx';
+import OAuthCallback from './components/auth/OAuthCallback.jsx'
+import DashboardPage from './pages/dashBoardPage.jsx'
 
-// ...
-
-// import DashboardPages from './pages/dashboardPage.jsx';
-import ProtectedRoute from './components/auth/ProtectedRoute.jsx';
+// Protected Route Component
+import ProtectedRoute from './components/auth/ProtectedRoute';
 
 // Create a client for React Query
 const queryClient = new QueryClient({
@@ -34,7 +33,186 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/auth/callback" element={<OAuthCallback />} />
+
+          {/* Protected Routes */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Placeholder Routes - To be built */}
+          <Route
+            path="/resumes"
+            element={
+              <ProtectedRoute>
+                <div className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-neutral-900">
+                  <div className="text-center">
+                    <h1 className="text-3xl font-bold text-neutral-900 dark:text-white mb-4">
+                      📄 Resumes Page
+                    </h1>
+                    <p className="text-neutral-600 dark:text-neutral-400 mb-4">
+                      Coming soon! Upload and manage your resumes here.
+                    </p>
+                    <a
+                      href="/dashboard"
+                      className="inline-block px-6 py-3 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors"
+                    >
+                      Back to Dashboard
+                    </a>
+                  </div>
+                </div>
+              </ProtectedRoute>
+            }
+          />
           
+          <Route
+            path="/analysis"
+            element={
+              <ProtectedRoute>
+                <div className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-neutral-900">
+                  <div className="text-center">
+                    <h1 className="text-3xl font-bold text-neutral-900 dark:text-white mb-4">
+                      🎯 Analysis Page
+                    </h1>
+                    <p className="text-neutral-600 dark:text-neutral-400 mb-4">
+                      Coming soon! View your resume analysis here.
+                    </p>
+                    <a
+                      href="/dashboard"
+                      className="inline-block px-6 py-3 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors"
+                    >
+                      Back to Dashboard
+                    </a>
+                  </div>
+                </div>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/roadmap"
+            element={
+              <ProtectedRoute>
+                <div className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-neutral-900">
+                  <div className="text-center">
+                    <h1 className="text-3xl font-bold text-neutral-900 dark:text-white mb-4">
+                      🗺️ Roadmap Page
+                    </h1>
+                    <p className="text-neutral-600 dark:text-neutral-400 mb-4">
+                      Coming soon! Track your learning roadmap here.
+                    </p>
+                    <a
+                      href="/dashboard"
+                      className="inline-block px-6 py-3 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors"
+                    >
+                      Back to Dashboard
+                    </a>
+                  </div>
+                </div>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/job-roles"
+            element={
+              <ProtectedRoute>
+                <div className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-neutral-900">
+                  <div className="text-center">
+                    <h1 className="text-3xl font-bold text-neutral-900 dark:text-white mb-4">
+                      💼 Job Roles Page
+                    </h1>
+                    <p className="text-neutral-600 dark:text-neutral-400 mb-4">
+                      Coming soon! Browse 50+ job roles here.
+                    </p>
+                    <a
+                      href="/dashboard"
+                      className="inline-block px-6 py-3 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors"
+                    >
+                      Back to Dashboard
+                    </a>
+                  </div>
+                </div>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <div className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-neutral-900">
+                  <div className="text-center">
+                    <h1 className="text-3xl font-bold text-neutral-900 dark:text-white mb-4">
+                      👤 Profile Page
+                    </h1>
+                    <p className="text-neutral-600 dark:text-neutral-400 mb-4">
+                      Coming soon! Manage your profile here.
+                    </p>
+                    <a
+                      href="/dashboard"
+                      className="inline-block px-6 py-3 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors"
+                    >
+                      Back to Dashboard
+                    </a>
+                  </div>
+                </div>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <div className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-neutral-900">
+                  <div className="text-center">
+                    <h1 className="text-3xl font-bold text-neutral-900 dark:text-white mb-4">
+                      ⚙️ Settings Page
+                    </h1>
+                    <p className="text-neutral-600 dark:text-neutral-400 mb-4">
+                      Coming soon! Manage your settings here.
+                    </p>
+                    <a
+                      href="/dashboard"
+                      className="inline-block px-6 py-3 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors"
+                    >
+                      Back to Dashboard
+                    </a>
+                  </div>
+                </div>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/upload"
+            element={
+              <ProtectedRoute>
+                <div className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-neutral-900">
+                  <div className="text-center">
+                    <h1 className="text-3xl font-bold text-neutral-900 dark:text-white mb-4">
+                      📤 Upload Resume
+                    </h1>
+                    <p className="text-neutral-600 dark:text-neutral-400 mb-4">
+                      Coming soon! Upload your resume here.
+                    </p>
+                    <a
+                      href="/dashboard"
+                      className="inline-block px-6 py-3 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors"
+                    >
+                      Back to Dashboard
+                    </a>
+                  </div>
+                </div>
+              </ProtectedRoute>
+            }
+          />
+
           {/* Catch all - redirect to home */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
@@ -71,3 +249,4 @@ function App() {
 }
 
 export default App;
+

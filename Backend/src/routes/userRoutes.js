@@ -11,6 +11,7 @@ import {
     updateNotificationPreference
 }
 from '../controllers/userController/userController.js'
+import { getDashboardData } from '../controllers/dashboardController/dashboardController.js'
 import {validateUpdateProfile} from '../validation/auth.validation.js'
 
 // routes in user
@@ -26,6 +27,9 @@ router.get('/stats',protectAccess,getDashboardStats)
 
 // 4.get user activity
 router.get('/activity',protectAccess,getUserActivity)
+
+// 4.5 get full dashboard data (stats + skills + roadmap + activities)
+router.get('/dashboard',protectAccess,getDashboardData)
 
 // 5.update notification prefrence
 router.put('/update-notifications',protectAccess,updateNotificationPreference)

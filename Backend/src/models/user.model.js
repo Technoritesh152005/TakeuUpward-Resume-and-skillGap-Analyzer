@@ -140,6 +140,12 @@ userSchema.virtual("resumes", {
     foreignField: 'user'
 })
 
+// Frontend dashboard welcome banner expects `fullName`.
+// Backend stores the name as `user.name`, so expose a virtual alias.
+userSchema.virtual('fullName').get(function () {
+    return this.name;
+});
+
 
 // pre is a middleware before svaing to db and 'save is a hook'
 

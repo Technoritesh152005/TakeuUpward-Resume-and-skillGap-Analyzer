@@ -15,115 +15,240 @@ then take resume id and job role id
 check whether this resume and job role id exist and to crea
 */
 
+// ADD THIS CODE TO YOUR EXISTING analysis.controller.js
+// Replace the entire createAnalysis function with this:
+
 export const createAnalysis = asyncHandler(async (req, res) => {
+    const { resumeId, jobRoleId } = req.body;
 
-    const { resumeId, jobRoleId } = req.body
-
-    // first verify that atleast resume exist of the user
-    const resume = await resumeModel.findOne({ _id: resumeId, user: req.user._id })
+    // Verify resume exists
+    const resume = await resumeModel.findOne({ 
+        _id: resumeId, 
+        user: req.user._id 
+    });
 
     if (!resume) {
-        throw new ApiError(400, 'Resume not found to create analysis')
+        throw new ApiError(400, 'Resume not found to create analysis');
     }
     if (resume.isActive === false) {
-        throw new ApiError(400, 'Ur resume is inActive')
+        throw new ApiError(400, 'Your resume is inactive');
     }
     if (!resume.parsedData) {
-        throw new ApiError(400, 'Resume is not parsed yet')
+        throw new ApiError(400, 'Resume is not parsed yet');
     }
 
-    const jobRole = await jobRoleModel.find({ _id: jobRoleId })
+    // Verify job role exists
+    const jobRole = await jobRoleModel.findOne({ _id: jobRoleId });
     if (!jobRole) {
-        throw new ApiError(400, 'Job Role not found')
+        throw new ApiError(400, 'Job Role not found');
     }
 
-    // now we have both seen that resume and job role exist
-    //so now we create analysis and call our services
-
+    // Create analysis document
     const analysis = await analysisModel.create({
         resume: resumeId,
         user: req.user._id,
         jobRole: jobRoleId,
         status: 'processing',
-    })
+    });
 
-    // after creating new analysis , redis have old data so we remove it
+    // Clear old cache
     await redisClient.del(`analysis:${req.user._id}`);
 
-    // this gets all data of analysis from claude api and store it in skillGapAnalysisData
     try {
-        const skillGapAnalysisData = await skillgapanalysis.performDeepSkillGapAnalyze(resume.parsedData, jobRole)
+        // Get skill gap analysis from Claude
+        const skillGapAnalysisData = await skillgapanalysis.performDeepSkillGapAnalyze(
+            resume.parsedData, 
+            jobRole
+        );
 
-        const atsScore = await generateAtsScore.getAtsScore(resume.parsedData, jobRole)
+        // Get ATS score
+        const atsScore = await generateAtsScore.getAtsScore(
+            resume.parsedData, 
+            jobRole
+        );
 
-        analysis.matchScore = skillGapAnalysisData.overallAssessment.matchPercentage
+        // ========== POPULATE BASIC FIELDS ==========
+        analysis.matchScore = skillGapAnalysisData.overallAssessment.matchPercentage;
+
+        // Calculate match breakdown
+        // it checks how much ur critical skill gaps matched
+        const criticalMatched = jobRole.requiredSkills.critical.length - 
+            (skillGapAnalysisData.skillGaps.critical?.length || 0);
+        const criticalTotal = jobRole.requiredSkills.critical.length;
+
+        const importantMatched = jobRole.requiredSkills.important.length - 
+            (skillGapAnalysisData.skillGaps.important?.length || 0);
+        const importantTotal = jobRole.requiredSkills.important.length;
+
+        const niceToHaveMatched = jobRole.requiredSkills.niceToHave.length - 
+            (skillGapAnalysisData.skillGaps.niceToHave?.length || 0);
+        const niceToHaveTotal = jobRole.requiredSkills.niceToHave.length;
+
+        // summary of ur skills matched
         analysis.matchBreakDown = {
             criticalSkills: {
-                // matched skills will be total skills in job role - missing skills in resume
-                matched: jobRole.requiredSkills.critical.length - skillGapAnalysisData.skillGaps.critical.length,
-                total: jobRole.requiredSkills.critical.length,
-                percentage: total > 0 ? Math.round(matched / total * 100) : 0
+                matched: criticalMatched,
+                total: criticalTotal,
+                percentage: criticalTotal > 0 ? Math.round((criticalMatched / criticalTotal) * 100) : 0
             },
             importantSkills: {
-                matched: jobRole.requiredSkills.important.length - skillGapAnalysisData.skillGaps.important.length,
-                total: jobRole.requiredSkills.important.length,
-                percentage: total > 0 ? Math.round(matched / total * 100) : 0
+                matched: importantMatched,
+                total: importantTotal,
+                percentage: importantTotal > 0 ? Math.round((importantMatched / importantTotal) * 100) : 0
             },
             niceToHaveSkills: {
-                matched: jobRole.requiredSkills.niceToHave.length - skillGapAnalysisData.skillGaps.niceToHave.length,
-                total: jobRole.requiredSkills.niceToHave.length,
-                percentage: total > 0 ? Math.round(matched / total * 100) : 0
+                matched: niceToHaveMatched,
+                total: niceToHaveTotal,
+                percentage: niceToHaveTotal > 0 ? Math.round((niceToHaveMatched / niceToHaveTotal) * 100) : 0
             }
-        }
+        };
 
-        analysis.skillGaps = skillGapAnalysisData.skillGaps
-        analysis.transfearableSkills = skillGapAnalysisData.transfearableSkills
+        //  setting Skill gaps
+        analysis.skillGaps = skillGapAnalysisData.skillGaps;
+
+        // ✅ NEW: Populate extractedSkills
+        // extractedskills contains both skill which r present and also which r not means they r required
+        const extractedSkills = new Set();
+
+        // Add from skill gaps (skills they're MISSING)
+        // pushing every skills which r not present or they r skill gaps
+        skillGapAnalysisData.skillGaps.critical?.forEach(item => {
+            if (item.skill) extractedSkills.add(item.skill);
+        });
+        skillGapAnalysisData.skillGaps.important?.forEach(item => {
+            if (item.skill) extractedSkills.add(item.skill);
+        });
+        skillGapAnalysisData.skillGaps.niceToHave?.forEach(item => {
+            if (item.skill) extractedSkills.add(item.skill);
+        });
+
+        // Add from strengths (skills they HAVE)
+        // u r adding the skills u have
+        skillGapAnalysisData.strengths?.forEach(item => {
+            if (item.skill) extractedSkills.add(item.skill);
+        });
+
+        // adding all extracted skills in model fields
+        analysis.extractedSkills = Array.from(extractedSkills);
+
+        // ✅ NEW: Create skillBreakdown
+        // Detailed progress of each skill → current level vs required level vs gap
+        const skillBreakdown = [];
+
+        // Proficiency level mapping
+        const levelMap = {
+            'beginner': 30,
+            'intermediate': 60,
+            'advanced': 85,
+            'expert': 95
+        };
+
+        // Add skills from strengths (skills they HAVE)
+        skillGapAnalysisData.strengths?.forEach(strength => {
+            // means it take score of ur analysis and map with levelMap
+            const currentLevel = levelMap[strength.proficiency] || 50;
+            const targetLevel = 95;
+            // we will later change the target level based on the importance of skill
+
+            skillBreakdown.push({
+                skillName: strength.skill,
+                currentLevel: currentLevel,
+                targetLevel: targetLevel,
+                gap: Math.max(0, targetLevel - currentLevel)
+            });
+        });
+
+        // Add critical skill gaps (skills they DON'T have)
+        skillGapAnalysisData.skillGaps.critical?.forEach(gap => {
+            // Don't add if already exists from strengths
+            const exists = skillBreakdown.some(s => s.skillName === gap.skill);
+            if (!exists) {
+                skillBreakdown.push({
+                    skillName: gap.skill,
+                    currentLevel: 0,
+                    targetLevel: gap.importance * 10, // 1-10 → 10-100
+                    gap: gap.importance * 10
+                });
+            }
+        });
+
+        // Add important skill gaps
+        skillGapAnalysisData.skillGaps.important?.forEach(gap => {
+            const exists = skillBreakdown.some(s => s.skillName === gap.skill);
+            if (!exists) {
+                skillBreakdown.push({
+                    skillName: gap.skill,
+                    currentLevel: 0,
+                    targetLevel: gap.importance * 10,
+                    gap: gap.importance * 10
+                });
+            }
+        });
+        
+        analysis.skillBreakdown = skillBreakdown;
+
+        // Other fields
+        analysis.candidateStrength = skillGapAnalysisData.strengths;
+        analysis.transferrableSkills = skillGapAnalysisData.transferableSkills;
+
+        // Experience analysis
+        const candidateYears = skillGapAnalysisData.experienceGap?.candidateYears || 0;
+        const requiredYears = skillGapAnalysisData.experienceGap?.typicalRequirement || 0;
+
+        analysis.experienceAnalysis = {
+            candidateYears: candidateYears,
+            requiredYears: requiredYears,
+            gap: Math.max(0, requiredYears - candidateYears),
+            assessment: skillGapAnalysisData.experienceGap?.assessment || ''
+        };
+
+        analysis.readinessLevel = skillGapAnalysisData.overallAssessment.readinessLevel;
+        analysis.estimatedTimeToReady = skillGapAnalysisData.overallAssessment.estimatedTimeToReady;
+
+        // ATS Score
         analysis.atsScore = {
             overall: atsScore.overallScore,
+            formatting: atsScore.breakdown.formatting,
             keywords: {
                 score: atsScore.breakdown.keywords.score,
-                isMatched: atsScore.breakdown.keywords.matched,
+                matched: atsScore.breakdown.keywords.matched,
                 missing: atsScore.breakdown.keywords.missing
-            }
-        }
-        analysis.candidateStrength = skillGapAnalysisData.strengths,
-            analysis.transferrableSkills = skillGapAnalysisData.transferableSkills,
-            analysis.experienceAnalysis = {
-                candidateYears: skillGapAnalysisData.experienceGap.candidateYears,
-                requiredYears: skillGapAnalysisData.experienceGap.typicalRequirment,
-                gap: requiredYears - candidateYears,
-                assessment: skillGapAnalysisData.experienceGap.assessment,
-            }
-        analysis.readinessLevel = skillGapAnalysisData.overallAssessment.readinessLevel
-        analysis.estimatedTimeToReady = skillGapAnalysisData.estimatedTimeToReady
+            },
+            structure: atsScore.breakdown.structure,
+            content: atsScore.breakdown.content
+        };
+
+        // AI Suggestions
         analysis.aiSuggestion = {
             summary: skillGapAnalysisData.overallAssessment.summary,
-            recommendation: skillGapAnalysisData.recommendations
-        }
-        analysis.status = 'completed',
-            analysis.processingTime = Date.now() - analysis.createdAt;
+            recommendations: skillGapAnalysisData.recommendations
+        };
 
-        await analysis.save()
+        // Mark as completed
+        analysis.status = 'completed';
+        analysis.processingTime = Date.now() - analysis.createdAt;
 
-        logger.info(200, 'Analysis generated succesfully for the user :'`${req.user._id}`)
+        await analysis.save();
 
-        // analysis have only reference of resume and job role like their id
-        // so we take some necessary details to show on what resume and job role analysis is done
-        await analysis.populate('resumeModel', 'fileName,originalFileName,uploadedAt')
-        await analysis.populate('jobRoleModel', 'title category experienceLevel salaryRange');
+        logger.info(`Analysis generated successfully for user: ${req.user._id}`);
 
-        res.status(200)
-        .json(new ApiResponse(201,analysis,'Analysis created successfully'))
+        // Populate references
+        await analysis.populate('resume', 'fileName originalFileName createdAt');
+        await analysis.populate('jobRole', 'title category experienceLevel salaryRange');
+
+        res.status(200).json(
+            new ApiResponse(201, analysis, 'Analysis created successfully')
+        );
+
     } catch (error) {
-        analysis.error = error.message
-        analysis.status = 'failed'
-        await analysis.save()
-        logger.error(201, 'Error occured while generating analysis')
-
-        throw new ApiError(401, 'Failed to generate analysis')
+        analysis.error = error.message;
+        analysis.status = 'failed';
+        await analysis.save();
+        
+        logger.error(`Error while generating analysis: ${error.message}`);
+        throw new ApiError(401, 'Failed to generate analysis');
     }
-
-})
+});
 
 // a user  can have multiple analysis so we will use paginate technique
 

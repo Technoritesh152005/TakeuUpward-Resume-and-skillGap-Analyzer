@@ -34,6 +34,7 @@ import jobRoleRoutes from './routes/jobRoleRoutes.js';
 import analysisRoutes from './routes/analysisRoutes.js';
 import roadmapRoutes from './routes/roadmapRoutes.js';
 import userRoutes from './routes/userRoutes.js';
+import dashboardRoutes from './routes/dashboardRoutes.js'
 
 // Import logger
 import logger from './utils/logs.js';
@@ -102,6 +103,7 @@ app.use(`/api/${API_VERSION}/analysis`, analysisRoutes);
 app.use(`/api/${API_VERSION}/roadmap`, roadmapRoutes);
 app.use(`/api/${API_VERSION}/user`, userRoutes);
 app.use(`/api/${API_VERSION}/auth`, googleAuthRoutes);
+app.use(`/api/${API_VERSION}/dashboard`, dashboardRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {

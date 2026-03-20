@@ -16,6 +16,12 @@ const roadmapSchema = mongoose.Schema({
         unique: true,
     },
 
+    // Dashboard UI shows a roadmap title
+    title: {
+        type: String,
+        default: 'Your Roadmap',
+    },
+
     // Roadmap structure
     duration: {
         weeks: Number,

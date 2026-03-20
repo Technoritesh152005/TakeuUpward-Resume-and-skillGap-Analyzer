@@ -14,12 +14,9 @@ export const createRoadmap = asyncHandler(async (req, res) => {
     // to create roadmap first we need to check whether aalysis is there of user
     const { analysisId, preferences } = req.query
 
-    const analysis = await analysisModel.findOne(
-        {
-            _id: analysisId,
-            user: req.user._id
-        }
-    )
+    const analysis = await analysisModel
+        .findOne({ _id: analysisId, user: req.user._id })
+        .populate('jobRole', 'title')
 
     if (!analysis) {
         throw new ApiError(400, 'No analysis found only of user to create a roadmap')
@@ -91,6 +88,7 @@ export const createRoadmap = asyncHandler(async (req, res) => {
         {
             user:req.user._id,
             analysis:analysisId,
+            title: analysis?.jobRole?.title || 'Your Roadmap',
             duration:roadmapData.duration,
             phases:roadmapData.phases,
             quickWins:roadmapData.quickWins,

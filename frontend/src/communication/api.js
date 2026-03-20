@@ -28,6 +28,7 @@ api.interceptors.request.use(
     // config has all details of the request
     (config) => {
         console.log(config)
+        // before sending every req check whether token is present and sent in header
         const token = localStorage.getItem('accessToken')
 
         if (token) {

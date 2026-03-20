@@ -28,7 +28,8 @@ const analysisSchema = mongoose.Schema(
             min: 1,
             max: 100
         },
-        // summar of ur skills matched
+        
+        // Summary of skills matched
         matchBreakDown: {
             criticalSkills: {
                 matched: Number,
@@ -47,20 +48,50 @@ const analysisSchema = mongoose.Schema(
             }
         },
 
-        // skill gaps
+        // ✅ NEW: Extracted skills for dashboard stats
+        extractedSkills: {
+            type: [String],
+            default: [],
+            index: true
+        },
+
+        // ✅ NEW: Skill breakdown for dashboard charts
+        skillBreakdown: [{
+            skillName: {
+                type: String,
+                required: true
+            },
+            currentLevel: {
+                type: Number,
+                min: 0,
+                max: 100,
+                required: true
+            },
+            targetLevel: {
+                type: Number,
+                min: 0,
+                max: 100,
+                required: true
+            },
+            gap: {
+                type: Number,
+                required: true
+            }
+        }],
+
+        // Skill gaps
         skillGaps: {
             critical: [
                 {
                     skill: String,
                     importance: Number,
                     reason: String,
-                    learningTime: Number,
+                    learningTime: String,
                     difficulty: {
                         type: String,
-                        enum: ['begineer', 'intermediate', 'advanced']
-                    }
-                    ,
-                    prerequiristes: [String]
+                        enum: ['beginner', 'intermediate', 'advanced']
+                    },
+                    prerequisites: [String]
                 }
             ],
             important: [
@@ -68,13 +99,12 @@ const analysisSchema = mongoose.Schema(
                     skill: String,
                     importance: Number,
                     reason: String,
-                    learningTime: Number,
+                    learningTime: String,
                     difficulty: {
                         type: String,
-                        enum: ['begineer', 'intermediate', 'advanced']
-                    }
-                    ,
-                    prerequiristes: [String]
+                        enum: ['beginner', 'intermediate', 'advanced']
+                    },
+                    prerequisites: [String]
                 }
             ],
             niceToHave: [
@@ -82,131 +112,137 @@ const analysisSchema = mongoose.Schema(
                     skill: String,
                     importance: Number,
                     reason: String,
-                    learningTime: Number,
+                    learningTime: String,
                     difficulty: {
-                        type: String,
-                        enum: ['begineer', 'intermediate', 'advanced']
-                    }
-                    ,
-                    prerequiristes: [String]
-                }
-            ],
-
-            // candidate Strength
-            candidateStrength: [
-                {
-                    skill: Number,
-                    importance: Number,
-                    proficiency: {
                         type: String,
                         enum: ['beginner', 'intermediate', 'advanced']
                     },
-                    relevance: [String],
-                    uniqueAdvantages: [String]
+                    prerequisites: [String]
                 }
-            ],
+            ]
+        },
 
-            // transferring skills used in other job roles
-            transferrableSkills: {
+        // Candidate strengths
+        candidateStrength: [
+            {
                 skill: String,
-                relatesTo: [String],
-                explanation: String
-            },
-
-            // experienceAnalysis
-            experienceAnalysis: {
-                candidateYears: Number,
-                requiredYears: Number,
-                gap: Number,
-                assessment: String
-            },
-            // readiniess level
-            readinessLevel: {
-                type: String,
-                enum: ['not-ready', 'nearly-ready', 'ready', 'overqualified'],
-                default: 'nearly-ready'
-            },
-            estimatedTimeToReady: {
-                weeks: Number,
-                reason: String
-            },
-
-            // ats score
-            atsScore: {
-                overall: Number,
-                formating: {
-                    score: Number,
-                    issues: [String],
-
+                importance: Number,
+                proficiency: {
+                    type: String,
+                    enum: ['beginner', 'intermediate', 'advanced', 'expert']
                 },
-                keywords: {
-                    score: Number,
-                    isMatched: [String],
-                    missing: [String],
+                relevance: String,
+                uniqueAdvantage: String
+            }
+        ],
 
-                },
-                structure: {
-                    score: Number,
-                    issues: [String]
-                },
-                content: {
-                    score: Number,
-                    issues: [String]
-                }
+        // Transferable skills
+        transferrableSkills: {
+            skill: String,
+            relatesTo: [String],
+            explanation: String
+        },
+
+        // Experience analysis
+        experienceAnalysis: {
+            candidateYears: Number,
+            requiredYears: Number,
+            gap: Number,
+            assessment: String
+        },
+
+        // Readiness level
+        readinessLevel: {
+            type: String,
+            enum: ['not-ready', 'nearly-ready', 'ready', 'overqualified'],
+            default: 'nearly-ready'
+        },
+
+        estimatedTimeToReady: {
+            weeks: Number,
+            reason: String
+        },
+
+        // ATS score
+        atsScore: {
+            overall: Number,
+            formatting: {
+                score: Number,
+                issues: [String],
             },
-
-            aiSuggestion: {
-                summary: String,
-                recommendation: [String],
-                carrerAdvice: String,
-                competitiveAnalysis: {
-                    percentileRank: Number,
-                    comparisonNotes: String,
-                },
+            keywords: {
+                score: Number,
+                matched: [String],
+                missing: [String],
             },
+            structure: {
+                score: Number,
+                issues: [String]
+            },
+            content: {
+                score: Number,
+                issues: [String]
+            }
+        },
 
-            // proccessing
-            status: {
-                type: String,
-                enum: Object.values(ANALYSIS_STATUS),
-                default: ANALYSIS_STATUS.PENDING,
-                index: true,
-              },
-              processingTime: Number, // in milliseconds
-              error: String,
-              // Metadata
-              version: {
-                type: Number,
-                default: 1,
-              },
-              isActive: {
-                type: Boolean,
-                default: true,
-              },
-        }
-    }, {
-    timestamps: true,
-    toJson:{virtuals:true},
-    toObject:{virtuals:true}
-}
-)
+        // AI suggestions
+        aiSuggestion: {
+            summary: String,
+            recommendations: [String],
+            careerAdvice: String,
+            competitiveAnalysis: {
+                percentileRank: Number,
+                comparisonNotes: String,
+            },
+        },
+
+        // Processing status
+        status: {
+            type: String,
+            enum: Object.values(ANALYSIS_STATUS),
+            default: ANALYSIS_STATUS.PENDING,
+            index: true,
+        },
+        processingTime: Number,
+        error: String,
+        
+        // Metadata
+        version: {
+            type: Number,
+            default: 1,
+        },
+        isActive: {
+            type: Boolean,
+            default: true,
+        },
+    }, 
+    {
+        timestamps: true,
+        toJSON: { virtuals: true },
+        toObject: { virtuals: true }
+    }
+);
 
 analysisSchema.plugin(mongoosePaginate);
 
-// calculating total skill gaps
-analysisSchema.methods.SkillGaps = function(){
-    const critical = SkillGaps.critical?.length || 0
-    const important = SkillGaps.important?.length || 0
-    const niceToHave = SkillGaps.niceToHave?.length ||0
-    const total = critical + important + niceToHave
+// Index for dashboard queries
+analysisSchema.index({ user: 1, createdAt: -1 });
+analysisSchema.index({ user: 1, status: 1 });
 
-    return (
+// Method to calculate total skill gaps
+analysisSchema.methods.getTotalSkillGaps = function() {
+    const critical = this.skillGaps?.critical?.length || 0;
+    const important = this.skillGaps?.important?.length || 0;
+    const niceToHave = this.skillGaps?.niceToHave?.length || 0;
+    const total = critical + important + niceToHave;
+
+    return {
         critical,
         important,
         niceToHave,
         total
-    )
-}
+    };
+};
 
 const analysisModel = mongoose.model('analysisModel', analysisSchema);
 
