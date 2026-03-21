@@ -8,6 +8,8 @@ import LoginPage from './pages/loginPage.jsx'
 import SignupPage from './pages/signupPages.jsx';
 import OAuthCallback from './components/auth/OAuthCallback.jsx'
 import DashboardPage from './pages/dashBoardPage.jsx'
+import ResumeUpload from './pages/uploadResume.jsx'
+import resumePage from './pages/resumePage.jsx'
 
 // Protected Route Component
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -44,30 +46,24 @@ function App() {
             }
           />
 
-          {/* Placeholder Routes - To be built */}
-          <Route
-            path="/resumes"
+            <Route
+            path="/resume"
             element={
               <ProtectedRoute>
-                <div className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-neutral-900">
-                  <div className="text-center">
-                    <h1 className="text-3xl font-bold text-neutral-900 dark:text-white mb-4">
-                      📄 Resumes Page
-                    </h1>
-                    <p className="text-neutral-600 dark:text-neutral-400 mb-4">
-                      Coming soon! Upload and manage your resumes here.
-                    </p>
-                    <a
-                      href="/dashboard"
-                      className="inline-block px-6 py-3 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors"
-                    >
-                      Back to Dashboard
-                    </a>
-                  </div>
-                </div>
+                <resumePage />
               </ProtectedRoute>
             }
           />
+
+<Route
+            path="/upload"
+            element={
+              <ProtectedRoute>
+                <ResumeUpload />
+              </ProtectedRoute>
+            }
+          />
+
           
           <Route
             path="/analysis"

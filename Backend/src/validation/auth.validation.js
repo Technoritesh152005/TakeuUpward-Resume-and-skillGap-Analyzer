@@ -48,7 +48,7 @@ const validateSignUp = (req, res, next) => {
 
         phone: joi.string()
             .pattern(/^[6-9]\d{9}$/)
-            .required()
+            
             .messages(
                 {
                     'phone.empty': 'Phone number cannot be emppty. please provide it will be safe',

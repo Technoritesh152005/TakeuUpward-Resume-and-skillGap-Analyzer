@@ -12,6 +12,7 @@ const dashboardService = {
     const response = await api.get(`/dashboard/activities?limit=${limit}`);
     return response.data;
   },
+
 };
 
 export default dashboardService;

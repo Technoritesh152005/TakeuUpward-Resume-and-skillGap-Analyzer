@@ -7,7 +7,7 @@ import {ApiResponse} from '../../utils/apiResponse.js'
 
 export const signup = asyncHandler(async (req, res) => {
 
-    const { email, password, phone, location, name } = req.body
+    const { email, password,  location, name } = req.body
 
     console.log(req.body)
     if (!email) {
@@ -25,7 +25,7 @@ export const signup = asyncHandler(async (req, res) => {
             name: name,
             email: email,
             password: password,
-            phone: phone,
+        
             location: location,
             isActive:true,
         }
