@@ -22,10 +22,9 @@ const resumePage = ()=> {
 
         try{
             setLoading(true)
-            const response =  resumeService.getMyResume(page,9)
-            console.log(response)
-            setResume(response.data.docs || [])
-            setTotalPage(response.data.totalPage || 1)
+            const response = await resumeService.getMyResume(page, 9)
+            setResume(response.data?.docs || [])
+            setTotalPage(response.data?.totalPages || 1)
         }catch(error){
             console.error('Failed to fetch resumes:', error);
             toast.error('Failed to load resumes');
@@ -34,7 +33,7 @@ const resumePage = ()=> {
         }
     }
 
-    const handleDelete = async()=>{
+    const handleDelete = async (id) => {
         try{
             setLoading(true)
             await resumeService.deleteResume(id)
@@ -120,38 +119,38 @@ const resumePage = ()=> {
             {!loading && resume.length > 0 && (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {resumes.map((resume) => (
+                  {resume.map((item) => (
                     <div
-                      key={resume._id}
+                      key={item._id}
                       className="group bg-white dark:bg-neutral-800 rounded-2xl p-6 border border-neutral-200 dark:border-neutral-700 hover:shadow-xl hover:shadow-neutral-200/50 dark:hover:shadow-neutral-900/50 transition-all duration-300 hover:-translate-y-1"
                     >
                       {/* File Icon */}
                       <div className="w-20 h-20 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
-                        <span className="text-4xl">{getFileIcon(resume.mimeType)}</span>
+                        <span className="text-4xl">{getFileIcon(item.mimeType)}</span>
                       </div>
     
                       {/* Resume Info */}
                       <div className="mb-4">
                         <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-1 truncate">
-                          {resume.originalFileName}
+                          {item.originalFileName}
                         </h3>
                         <div className="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-400 mb-2">
                           <Calendar className="w-4 h-4" />
                           <span>
-                            {resume.createdAt
-                              ? formatDistanceToNow(new Date(resume.createdAt), { addSuffix: true })
+                            {item.createdAt
+                              ? formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })
                               : 'Recently'}
                           </span>
                         </div>
                         <div className="flex items-center gap-2 text-xs text-neutral-500 dark:text-neutral-500">
-                          <span>{(resume.fileSize / 1024 / 1024).toFixed(2)} MB</span>
+                          <span>{(Number(item.fileSize) / 1024 / 1024).toFixed(2)} MB</span>
                           <span>•</span>
                           <span className={`px-2 py-0.5 rounded-full ${
-                            resume.parsedData?.processingStatus === 'completed'
+                            item.parsedData?.processingStatus === 'completed'
                               ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
                               : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
                           }`}>
-                            {resume.parsedData?.processingStatus || 'Processing'}
+                            {item.parsedData?.processingStatus || 'Processing'}
                           </span>
                         </div>
                       </div>
@@ -159,7 +158,7 @@ const resumePage = ()=> {
                       {/* Actions */}
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => navigate(`/resumes/${resume._id}`)}
+                          onClick={() => navigate(`/resumes/${item._id}`)}
                           className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
                         >
                           <Eye className="w-4 h-4" />
@@ -167,7 +166,7 @@ const resumePage = ()=> {
                         </button>
                         
                         <button
-                          onClick={() => setDeleteConfirm(resume._id)}
+                          onClick={() => setDeleteConfirm(item._id)}
                           className="p-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
                           title="Delete"
                         >
@@ -179,7 +178,7 @@ const resumePage = ()=> {
                 </div>
     
                 {/* Pagination */}
-                {totalPages > 1 && (
+                {totalPage > 1 && (
                   <div className="flex items-center justify-center gap-2">
                     <button
                       onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -190,7 +189,7 @@ const resumePage = ()=> {
                     </button>
                     
                     <span className="text-sm text-neutral-600 dark:text-neutral-400">
-                      Page {page} of {totalPages}
+                      Page {page} of {totalPage}
                     </span>
                     
                     <button

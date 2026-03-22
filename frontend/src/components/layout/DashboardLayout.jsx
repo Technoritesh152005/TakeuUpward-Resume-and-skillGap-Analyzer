@@ -39,7 +39,15 @@ const DashboardLayout = ({ children }) => {
     { name: 'Profile', path: '/profile', icon: User },
   ];
 
-  const isActivePath = (path) => location.pathname === path;
+  const isActivePath = (path) => {
+    if (path === '/resumes') {
+      return (
+        location.pathname === '/resumes' ||
+        /^\/resumes\/[^/]+/.test(location.pathname)
+      );
+    }
+    return location.pathname === path;
+  };
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900">

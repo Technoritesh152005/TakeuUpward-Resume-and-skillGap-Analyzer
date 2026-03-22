@@ -9,7 +9,8 @@ import SignupPage from './pages/signupPages.jsx';
 import OAuthCallback from './components/auth/OAuthCallback.jsx'
 import DashboardPage from './pages/dashBoardPage.jsx'
 import ResumeUpload from './pages/uploadResume.jsx'
-import resumePage from './pages/resumePage.jsx'
+import MyResumesPage from './pages/resumePage.jsx'
+import DetailedResumeOverviewPage from './pages/detailedResumeOverviewPage.jsx'
 
 // Protected Route Component
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -46,11 +47,11 @@ function App() {
             }
           />
 
-            <Route
-            path="/resume"
+          <Route
+            path="/resumes"
             element={
               <ProtectedRoute>
-                <resumePage />
+                <MyResumesPage />
               </ProtectedRoute>
             }
           />
@@ -205,6 +206,15 @@ function App() {
                     </a>
                   </div>
                 </div>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/resumes/:id"
+            element={
+              <ProtectedRoute>
+                <DetailedResumeOverviewPage />
               </ProtectedRoute>
             }
           />

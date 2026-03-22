@@ -13,7 +13,7 @@ const resumeService = {
     },
 
     getMyResume:async(page = 1 , limit = 10)=>{
-        const response = await api.get(`/resumes?page=${page}%limit=${limit}`)
+        const response = await api.get(`/resumes?page=${page}&limit=${limit}`)
         return response.data;
     },
 

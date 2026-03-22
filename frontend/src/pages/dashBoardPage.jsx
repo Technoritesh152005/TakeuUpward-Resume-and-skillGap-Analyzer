@@ -200,7 +200,7 @@ const DashboardPage = () => {
                     Complete an analysis to generate your learning roadmap
                   </p>
                   <button
-                    onClick={() => window.location.href = '/resumes'}
+                    onClick={() => { window.location.href = '/upload'; }}
                     className="px-4 py-2 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700 transition-colors"
                   >
                     Upload Resume
