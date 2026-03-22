@@ -27,20 +27,32 @@ const ResumeDetailPage = () => {
     projects: false,
     certifications: false,
   });
+  const [loadError, setLoadError] = useState(null);
 
   useEffect(() => {
     fetchResume();
   }, [id]);
 
   const fetchResume = async () => {
+    if (!id) {
+      setLoadError('missing_id');
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
-      const response = await resumeService.getResumeById(id);
-      setResume(response.data);
+      setLoadError(null);
+      const payload = await resumeService.getResumeById(id);
+      const doc = payload?.data ?? null;
+      if (!doc || typeof doc !== 'object') {
+        throw new Error('Invalid resume payload');
+      }
+      setResume(doc);
     } catch (error) {
       console.error('Failed to fetch resume:', error);
+      setResume(null);
+      setLoadError('fetch_failed');
       toast.error('Failed to load resume');
-      navigate('/resumes');
     } finally {
       setLoading(false);
     }
@@ -94,7 +106,29 @@ const ResumeDetailPage = () => {
     );
   }
 
-  if (!resume) return null;
+  if (!resume) {
+    return (
+      <DashboardLayout>
+        <div className="max-w-lg mx-auto mt-16 rounded-2xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-8 text-center space-y-4">
+          <h1 className="text-xl font-semibold text-neutral-900 dark:text-white">
+            {loadError === 'missing_id' ? 'Invalid link' : 'Could not load resume'}
+          </h1>
+          <p className="text-sm text-neutral-600 dark:text-neutral-400">
+            {loadError === 'missing_id'
+              ? 'This page needs a valid resume id in the URL.'
+              : 'The resume may have been removed, or you may need to sign in again.'}
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate('/resumes')}
+            className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700"
+          >
+            Back to My Resumes
+          </button>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   const parsedData = resume.parsedData || {};
 

@@ -7,7 +7,7 @@ import mongoose from 'mongoose'
 // helpers = Joi internal object used to throw errors
 // joi provide value and helpers to handle error
 const validateObjectId = (value, helpers) => {
-    if (!mongoose.Types.ObejctId.isValid(value)) {
+    if (!mongoose.Types.ObjectId.isValid(value)) {
         return helpers.error('any.valid')
     }
 }
@@ -61,7 +61,7 @@ const validateGetResumeQuery = (req, res, next) => {
                 .min(1)
                 .max(12)
                 .optional()
-                .default(1),
+                .default(10),
 
             sort: joi.string()
                 // - means descending order = newest first
@@ -80,7 +80,7 @@ const validateGetResumeQuery = (req, res, next) => {
     // express gives {page:2}
     // joi gives {page:2,limiy:10,sort:createdAt}
     // so here we modify the query we get with the final query from joi
-    const { error, value } = schema.validate(req.query)
+    const { error, value } = schema.validate(req.query, { stripUnknown: true })
 
     if (error) {
         throw new ApiError(401, error.details[0].message)

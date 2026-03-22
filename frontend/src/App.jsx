@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 
@@ -51,12 +51,15 @@ function App() {
             path="/resumes"
             element={
               <ProtectedRoute>
-                <MyResumesPage />
+                <Outlet />
               </ProtectedRoute>
             }
-          />
+          >
+            <Route index element={<MyResumesPage />} />
+            <Route path=":id" element={<DetailedResumeOverviewPage />} />
+          </Route>
 
-<Route
+          <Route
             path="/upload"
             element={
               <ProtectedRoute>
@@ -182,39 +185,6 @@ function App() {
                     </a>
                   </div>
                 </div>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/upload"
-            element={
-              <ProtectedRoute>
-                <div className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-neutral-900">
-                  <div className="text-center">
-                    <h1 className="text-3xl font-bold text-neutral-900 dark:text-white mb-4">
-                      📤 Upload Resume
-                    </h1>
-                    <p className="text-neutral-600 dark:text-neutral-400 mb-4">
-                      Coming soon! Upload your resume here.
-                    </p>
-                    <a
-                      href="/dashboard"
-                      className="inline-block px-6 py-3 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors"
-                    >
-                      Back to Dashboard
-                    </a>
-                  </div>
-                </div>
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/resumes/:id"
-            element={
-              <ProtectedRoute>
-                <DetailedResumeOverviewPage />
               </ProtectedRoute>
             }
           />

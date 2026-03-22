@@ -120,11 +120,11 @@ export const getResumeById = asyncHandler(async (req, res, next) => {
     }
     const resume = await resumeModel.findOne({ _id: req.params.id, user: req.user._id })
 
+    if (!resume) {
+        throw new ApiError(404, 'Resume not found')
+    }
     if (resume.isActive === false) {
         throw new ApiError(400, 'Resume is not active... u cannot get it')
-    }
-    if (!resume) {
-        throw new ApiError(401, 'Resume not found')
     }
 
     await redisClient.setEx(cacheKey, 900, JSON.stringify(resume))

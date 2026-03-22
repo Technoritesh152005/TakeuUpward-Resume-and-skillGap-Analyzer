@@ -32,9 +32,9 @@ const resumeService = {
         return response.data
     },
 
-    reparseResume:async(id)=>{
-        const response = api.post(`/resumes/${id}/reparse-resume`)
+    reparseResume: async (id) => {
+        const response = await api.put(`/resumes/${id}/resume-reparse`)
         return response.data
-    }
+    },
 }
 export default resumeService
