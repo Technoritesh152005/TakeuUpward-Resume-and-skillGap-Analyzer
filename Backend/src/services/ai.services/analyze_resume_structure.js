@@ -1,12 +1,70 @@
-// this will simply call ai and pass text and get proper structured format details from it
 import logger from '../../utils/logs.js';
-import { claude, CLAUDE_CONFIG } from '../../config/claude.js';
+import { getModel } from '../../config/gemini.js';
 
 class AnalyzeResumeStructure {
+
+
+  extractJsonBlock(content) {
+    const firstBrace = content.indexOf('{');
+    const lastBrace = content.lastIndexOf('}');
+
+    if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
+      return content;
+    }
+
+    return content.slice(firstBrace, lastBrace + 1);
+  }
+
+  normalizeJsonString(content) {
+    return content
+      .replace(/```json\n?/gi, '')
+      .replace(/```\n?/g, '')
+      .replace(/[“”]/g, '"')
+      .replace(/[‘’]/g, "'")
+      .replace(/,\s*([}\]])/g, '$1')
+      .trim();
+  }
+
+  async repairJsonWithGemini(invalidJson) {
+    const repairPrompt = `
+  You are a JSON repair tool.
+  Return ONLY valid JSON with double-quoted keys and strings.
+  Do not add commentary. Do not wrap in markdown.
+  
+  INVALID JSON:
+  ${invalidJson}
+  `;
+  
+    const model = getModel();
+    const result = await model.generateContent(repairPrompt);
+    const response = await result.response;
+    const text = response.text();
+  
+    return this.normalizeJsonString(text);
+  }
+
+
+  async parseStructuredJson(rawContent) {
+    // remove trailling commas
+  const normalized = this.normalizeJsonString(rawContent);
+  // take content of json only
+  const extracted = this.extractJsonBlock(normalized);
+
+  try {
+    return JSON.parse(extracted);
+  } catch (firstError) {
+    logger.error(`Primary JSON parse failed: ${firstError.message}`);
+
+    const repaired = await this.repairJsonWithGemini(extracted);
+    const repairedExtract = this.extractJsonBlock(repaired);
+    return JSON.parse(repairedExtract);
+  }
+}
+
   async analyzeResumeStructure(resumeText) {
     try {
       const prompt = `
-        You are an expert resume analyzer. Extract structured information from this resume.
+You are an expert resume analyzer. Extract structured information from this resume.
 
 RESUME TEXT:
 ${resumeText}
@@ -94,40 +152,27 @@ IMPORTANT:
 - Use null for missing fields
 - Keep all arrays even if empty []
 - Be thorough in extraction
-        `;
+`;
 
-      const response = await claude.messages.create({
-        model: CLAUDE_CONFIG.model,
-        temperature: CLAUDE_CONFIG.temperature,
-        maxTokens: CLAUDE_CONFIG.maxTokens,
-        messages: [
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-      });
+// configuration to set our prompt to gemini
+      const model = getModel();
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const rawText = response.text();
 
-      const result = response.content[0].text;
+      // usually llm model structure are not proper
+      const structuredData = await this.parseStructuredJson(rawText);
 
-      // converts or remove those json backticks
-      const cleanedContent = result
-        .replace(/```json\n?/g, '')
-        .replace(/```\n?/g, '')
-        .trim();
-      // this converts string to js object
-      const structuredData = JSON.parse(cleanedContent);
       if (structuredData) {
-        logger.info(`Successfully analyzed resume structure ${result}`);
+        logger.info('Resume structure analyzed successfully with Gemini');
         return structuredData;
       }
     } catch (err) {
-      logger.error(`Failed to analyze resume structure ${err.message}`);
+      logger.error(`Failed to analyze resume structure: ${err.message}`);
       throw new Error('Failed to analyze resume structure');
     }
   }
 }
 
 const resumeStructureInstance = new AnalyzeResumeStructure();
-
 export default resumeStructureInstance;

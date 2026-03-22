@@ -35,27 +35,30 @@ export const uploadResume = asyncHandler(async (req, res, next) => {
         throw new ApiError(401, 'Faced difficulty to parse data from resume')
     }
 
+    const storedFileName = `${Date.now()}-${originalname}`
+
     const resume = await resumeModel.create({
         user: req.user._id,
-        filename: `${Date.now()}-${originalname}`,
+        fileName: storedFileName,
         originalFileName: originalname,
-        fileurl: `/uploads/resumes/${Date.now()}-${originalname}`,
-        fileSize: size,
+        fileUrl: `/uploads/resumes/${storedFileName}`,
+        fileSize: String(size),
         mimeType: mimetype,
-        storageType: 'local',
-        parsedData: parsedData,
-        processingStatus: 'completed',
-        rawText: rawText,
-        wordCount: wordCount,
-        pageCount: pageCount
-
+        storagetType: 'local',
+        parsedData: {
+            ...parsedData,
+            processingStatus: 'completed',
+            rawText,
+            wordCount,
+            pageCount,
+        },
     })
 
     if (!resume) {
         throw new ApiError(401, 'Failed to upload resume')
     }
 
-    logger.info('Resume uploaded successfully .... for email: '`${req.user.email}`)
+    logger.info(`Resume uploaded successfully .... for email: ${req.user.email}`)
 
     // once a new resume is uploaded deleted the old cache
     await redisClient.del(`Resume:user:${req.user._id}`)
@@ -183,26 +186,30 @@ export const reparseResume = asyncHandler(async (req, res) => {
     const resume = await resumeModel.findOne({
         _id: req.params.id,
         user: req.user._id,
-    });
+    }).select('+parsedData.rawText');
 
     if (!resume) {
         throw new ApiError(404, 'Resume not found');
     }
 
-    if (!resume.rawText) {
+    const existingRaw = resume.parsedData?.rawText;
+    if (!existingRaw) {
         throw new ApiError(400, 'Original resume text not available for re-parsing');
     }
 
     logger.info(`Re-parsing resume: ${resume._id}`);
 
     try {
-        // Parse again using Claude
-        const structuredData = await resumeStructureInstance.analyzeResumeStructure(resume.rawText);
+        const structuredData = await resumeStructureInstance.analyzeResumeStructure(existingRaw);
 
-        // Update parsed data
-        resume.parsedData = structuredData;
-        resume.processingStatus = 'completed';
-        resume.version += 1;
+        const prev = resume.parsedData?.toObject?.() ?? { ...resume.parsedData };
+        resume.parsedData = {
+            ...prev,
+            ...structuredData,
+            rawText: existingRaw,
+            processingStatus: 'completed',
+            version: (prev.version ?? 1) + 1,
+        };
         await resume.save();
         await redisClient.del(`Resume:id:${req.params.id}:user:${req.user._id}`)
         await redisClient.del(`ResumeSkill:resume:${req.params.id}:user:${req.user._id}`)

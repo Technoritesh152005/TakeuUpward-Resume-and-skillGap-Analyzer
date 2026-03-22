@@ -1,16 +1,9 @@
-import { claude, CLAUDE_CONFIG } from '../../config/claude.js';
+import { getModel } from '../../config/gemini.js';
 import logger from '../../utils/logs.js';
 
 class AtsScoreGenerator {
-    /**
-     * Generate ATS score for resume
-     * @param {Object} resumeData - Parsed resume data
-     * @param {Object} jobRole - Target job role
-     * @returns {Object} - ATS score breakdown
-     */
     async getAtsScore(resumeData, jobRole) {
         try {
-            // Convert resume data to text format
             const resumeText = JSON.stringify(resumeData, null, 2);
 
             const prompt = `
@@ -79,46 +72,32 @@ Return ONLY valid JSON:
 Return ONLY the JSON object, no markdown formatting.
 `;
 
-            const response = await claude.messages.create({
-                model: CLAUDE_CONFIG.model,
-                max_tokens: CLAUDE_CONFIG.maxTokens,
-                temperature: CLAUDE_CONFIG.temperature,
-                messages: [
-                    {
-                        role: 'user',
-                        content: prompt
-                    }
-                ]
-            });
+            const model = getModel();
+            const result = await model.generateContent(prompt);
+            const response = await result.response;
+            const rawText = response.text();
 
-            // ✅ FIX: Extract text from response properly
-            const rawText = response.content[0].text;
-
-            // Clean the response
             const cleanedContent = rawText
                 .replace(/```json\n?/g, '')
                 .replace(/```\n?/g, '')
                 .trim();
 
-            // Parse JSON
             const properData = JSON.parse(cleanedContent);
 
             if (!properData || !properData.overallScore) {
-                logger.error('Invalid ATS score response from Claude AI');
-                throw new Error('Failed to get valid ATS score from AI');
+                throw new Error('Invalid ATS score response from AI');
             }
 
-            logger.info('Successfully generated ATS score from Claude API');
+            logger.info('ATS score generated successfully with Gemini');
             return properData;
 
         } catch (error) {
-            logger.error(`Failed to generate ATS score: ${error.message}`);
+            logger.error(`ATS score generation failed: ${error.message}`);
             throw new Error(`Failed to generate ATS score: ${error.message}`);
         }
     }
 }
 
 const generateAtsScore = new AtsScoreGenerator();
-
 export default generateAtsScore;
 export { generateAtsScore };
