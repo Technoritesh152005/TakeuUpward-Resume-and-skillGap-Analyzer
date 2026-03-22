@@ -17,6 +17,12 @@ const jobRoleSchema = mongoose.Schema(
             unique: true,
             lowercase: true,
         },
+        // Add this field to your jobRoleSchema
+isActive: {
+    type: Boolean,
+    default: true,
+    index: true
+},
         category: {
             type: String,
             required: true,

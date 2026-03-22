@@ -19,7 +19,12 @@ import resumeStructureInstance from '../../services/ai.services/analyze_resume_s
 
 // inside reparseResume:
 
-
+const clearResumeUserCaches = async (userId) => {
+    const keys = await redisClient.keys(`Resume:user:${userId}*`);
+    if (keys.length > 0) {
+        await redisClient.del(...keys);
+    }
+};
 
 export const uploadResume = asyncHandler(async (req, res, next) => {
 
@@ -61,7 +66,7 @@ export const uploadResume = asyncHandler(async (req, res, next) => {
     logger.info(`Resume uploaded successfully .... for email: ${req.user.email}`)
 
     // once a new resume is uploaded deleted the old cache
-    await redisClient.del(`Resume:user:${req.user._id}`)
+    await clearResumeUserCaches(req.user._id)
 
     res.status(200)
         .json(new ApiResponse(201, resume, 'Resume uploaded Succesfully'))
@@ -92,11 +97,14 @@ export const getMyResume = asyncHandler(async (req, res, next) => {
             .json(new ApiResponse(201, data, 'Resume of user fetched from cache successfuly'))
     }
     const resume = await resumeModel.paginate(
-        { user: req.user._id, isActive: true }, {
+        {
+            user: req.user._id,
+            $or: [{ isActive: true }, { isActive: { $exists: false } }]
+        }, {
         page: page,
         limit,
         sort: { createdAt: -1 },
-        select: '-rawtext',
+        select: '-rawText',
     }
     )
 
@@ -149,9 +157,15 @@ export const deleteResume = asyncHandler(async (req, res, next) => {
     // soft delete
     resumeData.isActive = false;
 
-    logger.error('Resume deleted successfully for : '`${user.email}`)
-    await resumeData.save()
+    logger.info(`Resume deleted successfully for :${user.email}`)
 
+    await resumeData.save()
+    await clearResumeUserCaches(user._id)
+    await redisClient.del(`Resume:id:${resume}`)
+    await redisClient.del(`ResumeSkill:resume:${resume}:user:${user._id}`)
+
+    res.status(200)
+        .json(new ApiResponse(200, null, 'Resume deleted successfully'))
 
 })
 
@@ -213,7 +227,7 @@ export const reparseResume = asyncHandler(async (req, res) => {
         await resume.save();
         await redisClient.del(`Resume:id:${req.params.id}:user:${req.user._id}`)
         await redisClient.del(`ResumeSkill:resume:${req.params.id}:user:${req.user._id}`)
-        await redisClient.del(`Resume:user:${req.user._id}`)
+        await clearResumeUserCaches(req.user._id)
         logger.info(`Resume re-parsed successfully: ${resume._id}`);
 
 

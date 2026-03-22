@@ -41,6 +41,7 @@ const resumePage = ()=> {
             setDeleteConfirm(null)
             // aftee deleting fetch the new resume list
             fetchResume()
+            await fetchResume()
         }catch(error){
             console.error('Failed to delete resume:', error);
       toast.error('Failed to delete resume');

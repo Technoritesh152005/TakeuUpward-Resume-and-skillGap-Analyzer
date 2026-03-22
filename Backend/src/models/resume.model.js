@@ -31,7 +31,7 @@ const resumeSchema = mongoose.Schema(
             type:String,
             required:true,
         },
-        storagetType:{
+        storageType:{
             type:String,
             enum:['local','s3'],
             default:'local'
@@ -144,7 +144,7 @@ const resumeSchema = mongoose.Schema(
 // sort this user resume in newest form
 resumeSchema.index({ user: 1, createdAt: -1 });
 // finding pending resumes
-resumeSchema.index({ 'parsedData.processingStatus': 1 });
+resumeSchema.index({ processingStatus: 1 });
 resumeSchema.index({ 'parsedData.skills.technical': 1 });
 
 resumeSchema.plugin(mongoosePaginate);
@@ -160,7 +160,10 @@ resumeSchema.methods.getSkillSummary = function () {
 
     const technical = this.parsedData?.skills?.technical?.length || 0;
     const tools = this.parsedData?.skills?.tools?.length || 0;
-    const languages = this.parsedData?.skills?.languages?.length || 0;
+    const languages =
+        this.parsedData?.skills?.languages?.length ||
+        this.parsedData?.skills?.language?.length ||
+        0;
 
     return {
         technical,

@@ -1,7 +1,10 @@
 import { FileText, Target, Clock } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 
 const RecentActivity = ({ activities = [], loading = false }) => {
+
+  const navigate = useNavigate()
   const getActivityIcon = (type) => {
     switch (type) {
       case 'resume_upload':
@@ -24,6 +27,16 @@ const RecentActivity = ({ activities = [], loading = false }) => {
     }
   };
 
+  const handleActivityClick = (activity) => {
+    if (activity.type === 'resume_upload' && activity.id) {
+      navigate(`/resumes/${activity.id}`);
+      return;
+    }
+
+    if (activity.type === 'analysis_complete') {
+      navigate('/analysis');
+    }
+  };
   if (loading) {
     return (
       <div className="bg-white dark:bg-neutral-800 rounded-2xl p-6 border border-neutral-200 dark:border-neutral-700">
@@ -69,7 +82,10 @@ const RecentActivity = ({ activities = [], loading = false }) => {
         <h2 className="text-lg font-bold text-neutral-900 dark:text-white">
           Recent Activity
         </h2>
-        <button className="text-sm text-primary-600 dark:text-primary-400 hover:underline">
+        <button
+          onClick={() => navigate('/resumes')}
+          className="text-sm text-primary-600 dark:text-primary-400 hover:underline"
+        >
           View All
         </button>
       </div>
@@ -82,7 +98,8 @@ const RecentActivity = ({ activities = [], loading = false }) => {
           return (
             <div 
               key={activity.id || index} 
-              className="flex gap-4 items-start group hover:bg-neutral-50 dark:hover:bg-neutral-700/50 p-3 rounded-xl -mx-3 transition-colors duration-200"
+              onClick={() => handleActivityClick(activity)}
+              className="flex gap-4 items-start group hover:bg-neutral-50 dark:hover:bg-neutral-700/50 p-3 rounded-xl -mx-3 transition-colors duration-200 cursor-pointer"
             >
               {/* Icon */}
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${colorClass} group-hover:scale-110 transition-transform duration-200`}>
