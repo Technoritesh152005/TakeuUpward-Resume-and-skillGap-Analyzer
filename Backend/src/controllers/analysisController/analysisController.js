@@ -8,6 +8,8 @@ import skillgapanalysis from "../../services/ai.services/skill_gap_analysis.js"
 import ApiResponse from '../../utils/apiResponse.js'
 import generateAtsScore from "../../services/ai.services/ats_score_generator.js"
 import redisClient from '../../config/redis.js'
+import ApiError from '../../utils/apiError.js'
+import logger from '../../utils/logs.js'
 
 // first create a analysis controller
 /*
@@ -255,9 +257,9 @@ export const createAnalysis = asyncHandler(async (req, res) => {
 export const getMyAnalysis = asyncHandler(async (req, res) => {
 
     const {
-        page,
-        limit,
-        sort,
+        page = 1,
+        limit = 10,
+        sort = '-createdAt',
         status,
         resumeId,
         jobRoleId,
@@ -296,8 +298,8 @@ export const getMyAnalysis = asyncHandler(async (req, res) => {
         limit: parseInt(limit),
         sort: sort,
         populate: [
-            { path: 'resumeModel', select: 'filename originalName uploadedAt' },
-            { path: 'jobRoleModel', select: 'title category experienceLevel salaryRange' },
+            { path: 'resume', select: 'fileName originalFileName uploadedAt' },
+            { path: 'jobRole', select: 'title category experienceLevel salaryRange' },
         ]
     })
     // let in cache for 5 minutes
@@ -306,7 +308,7 @@ export const getMyAnalysis = asyncHandler(async (req, res) => {
         throw new ApiError(401, 'Analysis not found')
     }
     res.status(200).json(
-        new ApiResponse(200, analysed, 'Analysis Fetched successfully')
+        new ApiResponse(200, analyses, 'Analysis Fetched successfully')
       );
 })
 
@@ -322,7 +324,7 @@ export const getAnalysisById = asyncHandler(async (req, res) => {
     if(cachedData){
         const parsed = JSON.parse(cachedData)
         return res.status(200)
-        .json(new ApiResponse(201,parsed,'Cached data fetched succesfully'))
+        .json(new ApiResponse(200,parsed,'Cached data fetched succesfully'))
     }
 
     const analysis = await analysisModel.findOne({
@@ -342,7 +344,13 @@ export const getAnalysisById = asyncHandler(async (req, res) => {
         throw new ApiError(401, 'No analysis found of user')
     }
     res.status(200)
-        .json(new ApiResponse(201, 'Successfully fetched analysis for user :'`${req.user.email}`, analysis))
+        .json(
+            new ApiResponse(
+                200,
+                analysis,
+                `Successfully fetched analysis for user: ${req.user.email}`
+            )
+        )
 })
 
 export const deleteAnalysis = asyncHandler(async (req, res) => {

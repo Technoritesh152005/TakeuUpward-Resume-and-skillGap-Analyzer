@@ -37,7 +37,7 @@ const createAnalysisPage = ()=>{
 
     useEffect(()=>{
         fetchJobRoles()
-    })
+    },[])
 
     const fetchResumes = async()=>{
 
@@ -77,7 +77,7 @@ const createAnalysisPage = ()=>{
         const matchesSearch =
             !searchQuery ||
             // in all the job this must include this
-            job.tile?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            job.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             job.description?.toLowerCase().includes(searchQuery.toLowerCase())
 
         return matchesCategory && matchesExperienceLevel && matchesSearch
@@ -91,9 +91,11 @@ const createAnalysisPage = ()=>{
 
     if(!selectedJobRole){
         toast.error('Job Role choose kar bhosdike')
+        return;
     }
     if(!selectedResume){
         toast.error('Tu bacchha hai mera par resume toh choose karna padega')
+        return;
 
     }
 
@@ -105,11 +107,11 @@ const createAnalysisPage = ()=>{
             {
                 resumeId : selectedResume._id,
                 jobRoleId: selectedJobRole._id,
-                userPreference : preferneces
+                preference : preferneces
             }
         )
         console.log(response)
-        const analysisId = response.data.analysisId
+        const analysisId = response.data._id
 
         // Simulate progress
       const progressInterval = setInterval(() => {
