@@ -19,6 +19,7 @@ const errorHandler = (err, req, res, next) => {
     ip: req.ip,
     user: req.user?._id || null,
     method: req.method,
+    stack: error?.stack,
   });
 
   res.status(statusCode).json({

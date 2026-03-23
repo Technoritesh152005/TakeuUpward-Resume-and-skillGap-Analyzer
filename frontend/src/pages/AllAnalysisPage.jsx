@@ -1,55 +1,53 @@
-import {toast} from 'react-hot-toast'
-import {useState , useEffect} from 'react'
-import {useNavigate} from 'react-router-dom'
-import {getMyAnalysis, deleteAnalysis} from '../services/analysisService'
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
+import { getMyAnalyses, deleteAnalysis } from '../services/analysisService.js';
+import { formatDistanceToNow } from 'date-fns';
 
-const allAnalysisPage = ()=>{
-
-    const navigate = useNavigate()
-    const [loading, setLoading] = useState(true)
-    const [analyses, setAnalyses] = useState([])
-    const [filter, setFilter] = useState('all')
-
-
-    useEffect(()=>{
-        fetchAllAnalysis()
-    },[])
-    const fetchAllAnalysis = async()=>{
-
-        try{
-            setLoading(true)
-            const result = await getMyAnalysis()
-            setAnalyses(result.data || [])
-        }catch(error){
-            toast.error('Failed to fetch ur analysis')
-        }finally{
-            setLoading(false)
-        }
+const AnalysisListPage = () => {
+  const navigate = useNavigate();
+  
+  const [analyses, setAnalyses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('all');
+  
+  useEffect(() => {
+    fetchAnalyses();
+  }, []);
+  
+  const fetchAnalyses = async () => {
+    try {
+      setLoading(true);
+      const response = await getMyAnalyses();
+      console.log('hey i am here',response)
+      setAnalyses(response.data.docs || []);
+    } catch (error) {
+      toast.error('Failed to load analyses');
+    } finally {
+      setLoading(false);
     }
-
-    const handleDelete = async(id)=>{
-
-       if(window.confirm('Are u sure u want to delete the analysis')){
-
-        try{
-            await deleteAnalysis(id)
-            toast.success('Analysis deleted successfully')
-            fetchAllAnalysis()
-        }catch(error){
-            toast.error('Failed to delete')
-        }
-       }
-    }
-
-    const filteredAnalyses = analyses.filter( a =>{
-        if(filter === 'all') return true
-        if(filter === 'completed') return a.status==='completed'
-        if (filter === 'processing') return a.status === 'processing';
-        if (filter === 'failed') return a.status === 'failed';
-        return true;
-    })
-
+  };
+  
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this analysis?')) return;
     
+    try {
+      await deleteAnalysis(id);
+      toast.success('Analysis deleted');
+      fetchAnalyses();
+    } catch (error) {
+      toast.error('Failed to delete');
+    }
+  };
+  
+  const filteredAnalyses = analyses.filter(a => {
+    if (filter === 'all') return true;
+    if (filter === 'completed') return a.status === 'completed';
+    if (filter === 'processing') return a.status === 'processing';
+    if (filter === 'failed') return a.status === 'failed';
+    return true;
+  });
+  
   const getStatusColor = (status) => {
     switch (status) {
       case 'completed': return 'bg-green-100 text-green-700';
@@ -68,7 +66,7 @@ const allAnalysisPage = ()=>{
       default: return 'text-gray-600';
     }
   };
-
+  
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -76,7 +74,7 @@ const allAnalysisPage = ()=>{
       </div>
     );
   }
-
+  
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
@@ -192,5 +190,6 @@ const allAnalysisPage = ()=>{
       </div>
     </div>
   );
-}
-export default allAnalysisPage
+};
+
+export default AnalysisListPage;

@@ -17,6 +17,7 @@ import AnalysisCreatePage from './pages/AnalysisCreatePage.jsx'
 import AnalysisResultPage from './pages/AnalysisResultPage.jsx'
 import CompareRolesPage from './pages/CompareRolesPage.jsx';
 import AnalysisListPage from './pages/AllAnalysisPage.jsx'
+import resumeDetailPage from './pages/detailedResumeOverviewPage.jsx'
 
 // Protected Route Component
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -57,7 +58,7 @@ function App() {
             path="/resumes"
             element={
               <ProtectedRoute>
-                <Outlet />
+                <MyResumesPage />
               </ProtectedRoute>
             }
           >
@@ -73,7 +74,11 @@ function App() {
               </ProtectedRoute>
             }
           />
-
+          <Route path="/resumes/:id" element={
+          <ProtectedRoute>
+            <DetailedResumeOverviewPage />
+          </ProtectedRoute>
+        } />
           
           <Route
             path="/analysis/create"

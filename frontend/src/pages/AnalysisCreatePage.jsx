@@ -1,143 +1,147 @@
-import {useState , useEffect} from 'react'
-import {toast} from 'react-hot-toast'
-import {useNavigate} from 'react-router-dom'
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
+import  resumeService  from '../services/resumeService.js';
 import api from '../communication/api.js'
-import resumeService from '../services/resumeService.js'
-import {createAnalysis , pollAnalysisStatus} from '../services/analysisService.js'
+import { createAnalysis, pollAnalysisStatus } from '../services/analysisService.js';
 
-const createAnalysisPage = ()=>{
-
-    const navigate = useNavigate()
-    // states
-    const [resumes , setResumes] = useState([])
-    const [jobRoles , setJobRoles] = useState([])
-    const [selectedResume , setSelectedResume] = useState(null)
-    const [selectedJobRole, setSelectedJobRole] = useState(null);
-    const [preferneces , setPreferences] = useState(
-        {
-            hoursPerWeek:12,
-            budget:'free',
-            learningStyle:'mixed'
-        }
-    )
-    // filters
-    const [categoryFilter, setCategoryFilter] = useState('');
-    const [experienceLevelFilter, setExperienceLevelFilter] = useState('');
-    const [searchQuery, setSearchQuery] = useState('');
-
-    // loading states 
-    const [loadingResumes , setLoadingResumes] = useState(false)
-    const [loadingJobRoles , setLoadingJobRoles] = useState(false)
-    const [analyzing , setAnalyzing] = useState(false)
-    const [progress , setProgress] = useState(0)
-
-    useEffect(()=>{
-        fetchResumes()
-    },[])
-
-    useEffect(()=>{
-        fetchJobRoles()
-    },[])
-
-    const fetchResumes = async()=>{
-
-        try{
-            setLoadingResumes(true)
-            const response = await resumeService.getMyResume()
-            // takes only completed or success resumes
-            // this filters all resume and gets resume which have processingstatus
-            const completedResumes = response.data.filter( r => r.processingStatus === 'completed')
-            setResumes(completedResumes)
-        }catch(error){
-            toast.error('Failed to load resumes');
-        }finally{
-            setLoadingResumes(false)
-        }
+const AnalysisCreatePage = () => {
+  const navigate = useNavigate();
+  
+  // State
+  const [resumes, setResumes] = useState([]);
+  const [jobRoles, setJobRoles] = useState([]);
+  const [selectedResume, setSelectedResume] = useState(null);
+  const [selectedJobRole, setSelectedJobRole] = useState(null);
+  const [preferences, setPreferences] = useState({
+    hoursPerWeek: 12,
+    budget: 'free',
+    learningStyle: 'mixed',
+  });
+  
+  // Filters
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [experienceLevelFilter, setExperienceLevelFilter] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  // Loading states
+  const [loadingResumes, setLoadingResumes] = useState(true);
+  const [loadingJobRoles, setLoadingJobRoles] = useState(true);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [progress, setProgress] = useState(0);
+  
+  // Fetch resumes
+  useEffect(() => {
+    fetchResumes();
+  }, []);
+  
+  // Fetch job roles
+  useEffect(() => {
+    fetchJobRoles();
+  }, []);
+  
+  const fetchResumes = async () => {
+    try {
+      setLoadingResumes(true);
+      const response = await resumeService.getMyResume();
+      console.log(response,'hey bhagwan')
+      const resumesArray = response.data.docs || [];
+      
+      // ✅ filter only completed resumes
+      console.log('maro mujeh',resumesArray)
+      const completedResumes = resumesArray.filter(
+        r => r.parsedData?.processingStatus === 'completed'
+      );
+      console.log('hey here',completedResumes)
+      setResumes(completedResumes);
+    } catch (error) {
+      toast.error('Failed to load resumes');
+    } finally {
+      setLoadingResumes(false);
     }
-
-    const fetchJobRoles = async()=>{
-
-        try{
-            setLoadingJobRoles(true)
-            // later change this to method when u create jobrole get service
-            const data = await api.get('/job-roles')
-            setJobRoles(data.data.data || [])
-
-        }catch(error){
-            toast.error('Failed to load Job roles')
-        }finally{
-            setLoadingJobRoles(false)
-        }
+  };
+  
+  const fetchJobRoles = async () => {
+    try {
+      setLoadingJobRoles(true);
+      const response = await api.get('/job-roles');
+      setJobRoles(response.data.data || []);
+    } catch (error) {
+      toast.error('Failed to load job roles');
+    } finally {
+      setLoadingJobRoles(false);
     }
-
-    // filter all the job roles accoring to the user provides filter
-    const filteredJobRoles = jobRoles.filter( job =>{
-        const matchesCategory = !categoryFilter || job.category === categoryFilter
-        const matchesExperienceLevel = !experienceLevelFilter || job.experienceLevel === experienceLevelFilter
-        const matchesSearch =
-            !searchQuery ||
-            // in all the job this must include this
-            job.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            job.description?.toLowerCase().includes(searchQuery.toLowerCase())
-
-        return matchesCategory && matchesExperienceLevel && matchesSearch
-    })
-
-    // Get unique categories and experience levels
+  };
+  
+  // Filter job roles
+  const filteredJobRoles = jobRoles.filter(role => {
+    const matchesCategory = !categoryFilter || role.category === categoryFilter;
+    const matchesLevel = !experienceLevelFilter || role.experienceLevel === experienceLevelFilter;
+    const matchesSearch = !searchQuery || 
+      role.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      role.description.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    return matchesCategory && matchesLevel && matchesSearch;
+  });
+  
+  // Get unique categories and experience levels
   const categories = [...new Set(jobRoles.map(r => r.category))];
   const experienceLevels = [...new Set(jobRoles.map(r => r.experienceLevel))];
-
-  const handleAnalysis = async()=>{
-
-    if(!selectedJobRole){
-        toast.error('Job Role choose kar bhosdike')
-        return;
+  
+  // Start analysis
+  const handleStartAnalysis = async () => {
+    if (!selectedResume) {
+      toast.error('Please select a resume');
+      return;
     }
-    if(!selectedResume){
-        toast.error('Tu bacchha hai mera par resume toh choose karna padega')
-        return;
-
+    
+    if (!selectedJobRole) {
+      toast.error('Please select a job role');
+      return;
     }
-
-    try{
-        setAnalyzing(true)
-        setProgress(0)
-
-        const response = await createAnalysis(
-            {
-                resumeId : selectedResume._id,
-                jobRoleId: selectedJobRole._id,
-                preference : preferneces
-            }
-        )
-        console.log(response)
-        const analysisId = response.data._id
-
-        // Simulate progress
+    
+    try {
+      setAnalyzing(true);
+      setProgress(0);
+      
+      // Start analysis
+      const response = await createAnalysis({
+        resumeId: selectedResume._id,
+        jobRoleId: selectedJobRole._id,
+        userPreferences: preferences,
+      });
+      
+      const analysisId = response.data.analysisId;
+      
+      // Simulate progress
       const progressInterval = setInterval(() => {
         setProgress(prev => {
           if (prev >= 90) return prev;
           return prev + Math.random() * 10;
         });
       }, 1000);
-
-     const completedAnalysis = await pollAnalysisStatus(analysisId)
-
-     clearInterval(progressInterval)
-     setProgress(100)
-
-     toast.success('Analysis successfully created !')
-
-     navigate(`/analysis/${analysisId}`)
-    }catch(error){
-        toast.error(error.message || 'Analysis failed');
+      
+      // Poll for completion
+      const completedAnalysis = await pollAnalysisStatus(analysisId);
+      
+      clearInterval(progressInterval);
+      setProgress(100);
+      
+      toast.success('Analysis completed!');
+      
+      // Redirect to results
+      setTimeout(() => {
+        navigate(`/analysis/${analysisId}`);
+      }, 500);
+      
+    } catch (error) {
+      toast.error(error.message || 'Analysis failed');
       setAnalyzing(false);
       setProgress(0);
     }
-  }
-
-//   checking ui whether u have loadingresume means show loading
-if (loadingResumes || loadingJobRoles) {
+  };
+  
+  if (loadingResumes || loadingJobRoles) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -147,9 +151,8 @@ if (loadingResumes || loadingJobRoles) {
       </div>
     );
   }
-
-//   now check whether u dont have any resume- ui for it
-if (resumes.length === 0) {
+  
+  if (resumes.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
         <div className="text-center max-w-md">
@@ -170,7 +173,7 @@ if (resumes.length === 0) {
       </div>
     );
   }
-
+  
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
@@ -406,7 +409,7 @@ if (resumes.length === 0) {
         {/* Start Analysis Button */}
         <div className="mt-8 flex justify-center">
           <button
-            onClick={handleAnalysis}
+            onClick={handleStartAnalysis}
             disabled={!selectedResume || !selectedJobRole || analyzing}
             className={`px-8 py-4 rounded-xl font-semibold text-lg transition-all ${
               selectedResume && selectedJobRole && !analyzing
@@ -420,6 +423,6 @@ if (resumes.length === 0) {
       </div>
     </div>
   );
+};
 
-}
-export default createAnalysisPage
+export default AnalysisCreatePage;

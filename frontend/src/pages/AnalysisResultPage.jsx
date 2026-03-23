@@ -1,69 +1,60 @@
-import {useEffect, useState} from 'react'
-import {useNavigate, useParams} from 'react-router-dom'
-import {toast} from 'react-hot-toast'
-import { getAnalysisById , deleteAnalysis , regenerateAnalysis} from '../services/analysisService.js'
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
+import { getAnalysisById, regenerateAnalysis, deleteAnalysis } from '../services/analysisService.js';
 
-const analysisResultPage = ()=>{
-    const {id} = useParams();
-    const navigate = useNavigate()
-
-    const [loading , setLoading] = useState(true)
-    const [analysis , setAnalysis ] = useState(null)
-    const [regenerating, setRegenerateAnalysis] = useState(false)
-    const [activeTab , setActiveTab] = useState('overview')
-
-
-    useEffect(()=>{
-        fetchAnalysis()
-    },[id])
-
-    const fetchAnalysis = async()=>{
-
-        try{
-            setLoading(true)
-            const response = await getAnalysisById(id)
-            setAnalysis(response.data)
-        }catch(error){
-            toast.error("Failed to load or fetch analysis")
-            navigate('/dashboard')
-        }finally{
-            setLoading(false)
-        }
+const AnalysisResultsPage = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  
+  const [analysis, setAnalysis] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [regenerating, setRegenerating] = useState(false);
+  const [activeTab, setActiveTab] = useState('overview');
+  
+  useEffect(() => {
+    fetchAnalysis();
+  }, [id]);
+  
+  const fetchAnalysis = async () => {
+    try {
+      setLoading(true);
+      const response = await getAnalysisById(id);
+      setAnalysis(response.data);
+    } catch (error) {
+      toast.error('Failed to load analysis');
+      navigate('/dashboard');
+    } finally {
+      setLoading(false);
     }
-
-    const handleRegenerate = async()=>{
-
-        if(window.confirm('Regenrate This analysis?')){
-        try{
-            setRegenerateAnalysis(true)
-            await regenerateAnalysis(id , {})
-            toast.success('Regenerate analysis successfully')
-            fetchAnalysis()
-        }catch(error){
-            toast.error('Failed to regenerate');
-        }
-        finally{
-            setRegenerateAnalysis(false)
-        }
+  };
+  
+  const handleRegenerate = async () => {
+    if (!window.confirm('Regenerate this analysis?')) return;
+    try {
+      setRegenerating(true);
+      await regenerateAnalysis(id, {});
+      toast.success('Regenerated!');
+      fetchAnalysis();
+    } catch (error) {
+      toast.error('Failed to regenerate');
+    } finally {
+      setRegenerating(false);
     }
+  };
+  
+  const handleDelete = async () => {
+    if (!window.confirm('Delete this analysis?')) return;
+    try {
+      await deleteAnalysis(id);
+      toast.success('Deleted');
+      navigate('/analyses');
+    } catch (error) {
+      toast.error('Failed to delete');
     }
-
-    const handleDelete = async()=>{
-        if(window.confirm('Delete this analysis')){
-            try{
-                setLoading(true)
-                await deleteAnalysis(id)
-                toast.success('Analysis deleted successfully')
-                navigate('/analysis/list')
-            }catch(error){
-                toast.error('Failed to delete analysis!')
-            }finally{
-                setLoading(false)
-            }
-        }
-    }
-
-     if (loading) {
+  };
+  
+  if (loading) {
     return <div className="min-h-screen flex items-center justify-center"><div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div></div>;
   }
   
@@ -85,7 +76,7 @@ const analysisResultPage = ()=>{
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <button onClick={() => navigate('/analysis/list')} className="flex items-center text-gray-600 hover:text-gray-900 mb-4">
+          <button onClick={() => navigate('/analyses')} className="flex items-center text-gray-600 hover:text-gray-900 mb-4">
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
@@ -300,8 +291,6 @@ const analysisResultPage = ()=>{
       </div>
     </div>
   );
+};
 
-
-}
-
-export default analysisResultPage
+export default AnalysisResultsPage;

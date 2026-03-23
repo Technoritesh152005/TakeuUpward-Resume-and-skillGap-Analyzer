@@ -1,11 +1,12 @@
-import {useState , useEffect} from 'react'
-import {toast} from 'react-hot-toast'
-import {useNavigate} from 'react-router-dom'
-import resumeService from '../services/resumeService'
-import {compareMultipleRoles} from '../services/analysisService'
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
+import resumeService from '../services/resumeService';
+import { compareMultipleRoles } from '../services/analysisService';
+import api from '../communication/api.js';
 
-const CompareRolesPage = ()=>{
-    const navigate = useNavigate();
+const CompareRolesPage = () => {
+  const navigate = useNavigate();
   
   const [resumes, setResumes] = useState([]);
   const [jobRoles, setJobRoles] = useState([]);
@@ -13,33 +14,33 @@ const CompareRolesPage = ()=>{
   const [selectedRoles, setSelectedRoles] = useState([]);
   const [comparing, setComparing] = useState(false);
   const [comparisonResults, setComparisonResults] = useState(null);
-
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
-
-  useEffect(()=>{
-    fetchResumes(),
-    fetchJobRoles()
-  },[])
-
-  const fetchResumes = async()=>{
-    try{
-       const allResumes =  await resumeService.getMyResume()
-       setResumes(allResumes.data.filter(r => r.processingStatus ==='completed'))
-
-    }catch(error){
-        toast.error('failed to load resume in compareRoles')
+  
+  useEffect(() => {
+    fetchResumes();
+    fetchJobRoles();
+  }, []);
+  
+  const fetchResumes = async () => {
+    try {
+      const response = await resumeService.getMyResume();
+      setResumes(response.data.filter(r => r.processingStatus === 'completed'));
+    } catch (error) {
+      toast.error('Failed to load resumes');
     }
-  }
-
-  const fetchJobRoles = async()=>{
-    try{
-        const response =await api.get('/job-roles')
-        setJobRoles(response.data || [])
-    }catch(error){
-        toast.error('Failed to load job roles');
+  };
+  
+  const fetchJobRoles = async () => {
+    try {
+      const response = await api.get('/job-roles');
+      setJobRoles(response.data.data || []);
+    } catch (error) {
+      toast.error('Failed to load job roles');
     }
-  }
+  };
+  
   const toggleRole = (role) => {
     if (selectedRoles.find(r => r._id === role._id)) {
       setSelectedRoles(selectedRoles.filter(r => r._id !== role._id));
@@ -52,7 +53,6 @@ const CompareRolesPage = ()=>{
     }
   };
   
-
   const handleCompare = async () => {
     if (!selectedResume) {
       toast.error('Please select a resume');
@@ -250,5 +250,6 @@ const CompareRolesPage = ()=>{
       </div>
     </div>
   );
-}
-export default CompareRolesPage
+};
+
+export default CompareRolesPage;

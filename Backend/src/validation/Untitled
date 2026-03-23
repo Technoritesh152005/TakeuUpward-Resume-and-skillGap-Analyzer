@@ -1,0 +1,7 @@
+2026-03-23 19:10:23 [ERROR]: Error: minMatchScore is not defined
+ ReferenceError: minMatchScore is not defined
+    at validateGetAnalysis (file:///C:/Users/RITESH/OneDrive/Desktop/Ai%20Powered%20Resume%20maker%20and%20skill%20gap%20analyzer/Backend/src/validation/analysis.validation.js:140:5)
+    at Layer.handle [as handle_request] (C:\Users\RITESH\OneDrive\Desktop\Ai Powered Resume maker and skill gap analyzer\Backend\node_modules\express\lib\router\layer.js:95:5)
+    at next (C:\Users\RITESH\OneDrive\Desktop\Ai Powered Resume maker and skill gap analyzer\Backend\node_modules\express\lib\router\route.js:149:13)
+    at file:///C:/Users/RITESH/OneDrive/Desktop/Ai%20Powered%20Resume%20maker%20and%20skill%20gap%20analyzer/Backend/src/middleware/authMiddleware.js:48:9
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)

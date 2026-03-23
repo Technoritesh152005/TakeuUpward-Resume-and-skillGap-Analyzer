@@ -22,7 +22,7 @@ const validateCreatingAnalysis = (req, res, next) => {
             resumeId: joi.string()
                 .custom(validateAnalysisId)
                 .required()
-                .message({
+                .messages({
                     'any.invalid': 'Invalid resume Id format',
                     'string.empty': 'Please provide resume Id'
                 }),
@@ -30,7 +30,7 @@ const validateCreatingAnalysis = (req, res, next) => {
             jobRoleId: joi.string()
                 .required()
                 .custom(validateAnalysisId)
-                .message({
+                .messages({
                     'any.invalid': 'Invalid Job Role Id format',
                     'string.empty': 'Please provide Job Role Id'
                 }),
@@ -104,14 +104,14 @@ const validateGetAnalysis = (req, res, next) => {
             resumeId: joi.string()
                 .custom(validateAnalysisId)
                 .optional()
-                .message({
+                .messages({
                     'any.inbalid': 'Invalid resume Id'
                 }),
 
             jobRoleId: joi.string()
                 .custom(validateAnalysisId)
                 .optional()
-                .message({
+                .messages({
                     'any.invalid': 'Invalid Job role id format'
                 }),
 
@@ -137,12 +137,14 @@ const validateGetAnalysis = (req, res, next) => {
 
     // if user provided that min match score and max match score means suppose search analysis netween 65 and 90 analysis. this is valid
     // but if user gave search between 70 and 50 . it is wrong
-    if (minMatchScore && maxMatchScore) {
-        if (minMatchScore > maxMatchScore) {
-            throw new ApiError(400, "Min Match score cannot be greater than Max Match Score")
-        }
-    }
+    // ADD THIS LINE after schema.validate
+const { minMatchScore, maxMatchScore } = value;
 
+if (minMatchScore && maxMatchScore) {
+    if (minMatchScore > maxMatchScore) {
+        throw new ApiError(400, "Min Match score cannot be greater than Max Match Score")
+    }
+}
     req.query = value
     next()
 }

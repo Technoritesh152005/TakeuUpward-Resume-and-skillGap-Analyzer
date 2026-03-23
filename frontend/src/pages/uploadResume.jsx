@@ -78,7 +78,7 @@ const Uploadresume = ()=>{
         }
       };
 
-      const uploadResume = async ()=>{
+      const handleuploadResume = async ()=>{
         if(!selectedFile) return 
 
         try{
@@ -278,7 +278,7 @@ const Uploadresume = ()=>{
               {/* Upload Button */}
               {selectedFile && !uploading && (
                 <button
-                  onClick={uploadResume}
+                  onClick={handleuploadResume}
                   disabled={uploading}
                   className="w-full py-4 bg-gradient-to-r from-primary-600 to-primary-700 text-white font-semibold rounded-xl hover:from-primary-700 hover:to-primary-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
