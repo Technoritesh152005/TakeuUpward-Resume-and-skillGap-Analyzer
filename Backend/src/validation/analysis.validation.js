@@ -1,11 +1,14 @@
 import joi from 'joi'
+import mongoose from 'mongoose'
+import ApiError from '../utils/apiError.js'
 
 const validateAnalysisId = (value, helpers) => {
 
-    if (!mongoose.types.ObjectId.isValid(value)) {
-        return helpers.error('Invalid Id Format')
+    if (!mongoose.Types.ObjectId.isValid(value)) {
+        return helpers.error('any.invalid')
     }
-    next();
+
+    return value
 }
 
 const validateCreatingAnalysis = (req, res, next) => {
@@ -19,7 +22,7 @@ const validateCreatingAnalysis = (req, res, next) => {
             resumeId: joi.string()
                 .custom(validateAnalysisId)
                 .required()
-                .message({
+                .messages({
                     'any.invalid': 'Invalid resume Id format',
                     'string.empty': 'Please provide resume Id'
                 }),
@@ -27,7 +30,7 @@ const validateCreatingAnalysis = (req, res, next) => {
             jobRoleId: joi.string()
                 .required()
                 .custom(validateAnalysisId)
-                .message({
+                .messages({
                     'any.invalid': 'Invalid Job Role Id format',
                     'string.empty': 'Please provide Job Role Id'
                 }),
@@ -47,7 +50,7 @@ const validateCreatingAnalysis = (req, res, next) => {
                     .default('medium')
                     .optional(),
 
-                learningStyle: Joi.string()
+                learningStyle: joi.string()
                     .valid('visual', 'auditory', 'reading', 'kinesthetic', 'mixed')
                     .optional()
                     .default('mixed'),
@@ -76,7 +79,7 @@ const validateGetAnalysis = (req, res, next) => {
     // if filters or get analysis from these factors also
     const schema = joi.object(
         {
-            pages: joi.number()
+            page: joi.number()
                 .integer()
                 .min(1)
                 .max(5)
@@ -101,14 +104,14 @@ const validateGetAnalysis = (req, res, next) => {
             resumeId: joi.string()
                 .custom(validateAnalysisId)
                 .optional()
-                .message({
+                .messages({
                     'any.inbalid': 'Invalid resume Id'
                 }),
 
             jobRoleId: joi.string()
                 .custom(validateAnalysisId)
                 .optional()
-                .message({
+                .messages({
                     'any.invalid': 'Invalid Job role id format'
                 }),
 
@@ -134,13 +137,15 @@ const validateGetAnalysis = (req, res, next) => {
 
     // if user provided that min match score and max match score means suppose search analysis netween 65 and 90 analysis. this is valid
     // but if user gave search between 70 and 50 . it is wrong
-    if (minMatchScore && maxMatchScore) {
-        if (minMatchScore > maxMatchScore) {
-            throw new ApiError(400, "Min Match score cannot be greater than Max Match Score")
-        }
-    }
+    // ADD THIS LINE after schema.validate
+const { minMatchScore, maxMatchScore } = value;
 
-    req.body = value
+if (minMatchScore && maxMatchScore) {
+    if (minMatchScore > maxMatchScore) {
+        throw new ApiError(400, "Min Match score cannot be greater than Max Match Score")
+    }
+}
+    req.query = value
     next()
 }
 

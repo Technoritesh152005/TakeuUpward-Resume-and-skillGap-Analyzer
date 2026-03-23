@@ -1,4 +1,5 @@
 import mongoose from 'mongoose'
+import mongoosePaginate from 'mongoose-paginate-v2'
 import { EXPERIENCE_LEVELS , JOB_CATEGORIES} from '../config/constant.js'
 
 
@@ -26,12 +27,10 @@ isActive: {
         category: {
             type: String,
             required: true,
-            enum: Object.values(JOB_CATEGORIES),
             index: true,
         },
         experienceLevel: {
             type: String,
-            enum: Object.values(EXPERIENCE_LEVELS),
             index: true,
             required: true
         },
@@ -75,17 +74,13 @@ isActive: {
             }]
         },
         salaryRange: {
-            type: Number,
-            min: Number,
-            max: Number,
-            currency: {
-                type: String,
-                default: 'USD'
-            },
+            min: { type: Number },
+            max: { type: Number },
+            currency: { type: String, default: 'USD' },
             period: {
                 type: String,
                 enum: ['hourly', 'monthly', 'yearly'],
-                default: 'yearly'
+                default: 'yearly',
             },
         },
         demandLevel: {
@@ -132,6 +127,9 @@ jobRoleSchema.pre('save', function (next) {
     }
     next();
 });
+
+// Enable mongoose-paginate-v2 so controllers can call `jobRoleModel.paginate()`
+jobRoleSchema.plugin(mongoosePaginate)
 
 // getting all required skills 
 // // the use of this method is that requiresskill is store like this

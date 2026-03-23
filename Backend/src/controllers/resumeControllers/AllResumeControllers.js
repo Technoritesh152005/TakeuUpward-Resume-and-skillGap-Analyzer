@@ -5,6 +5,7 @@ all function which will be performing in resume controllers
 3.get resume by id
 4.delete resume
 */
+
 import asyncHandler from '../../utils/asyncHandler.js'
 import ApiError from '../../utils/apiError.js'
 import userModel from '../../models/user.model.js'
@@ -99,7 +100,9 @@ export const getMyResume = asyncHandler(async (req, res, next) => {
     const resume = await resumeModel.paginate(
         {
             user: req.user._id,
-            $or: [{ isActive: true }, { isActive: { $exists: false } }]
+            processingStatus:'completed',
+            $or: [{ isActive: true }, { isActive: { $exists: false } }],
+           
         }, {
         page: page,
         limit,

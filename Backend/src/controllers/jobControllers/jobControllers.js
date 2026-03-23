@@ -8,7 +8,7 @@ import ApiResponse from '../../utils/apiResponse.js'
 export const getAllJobRoles = asyncHandler(async (req, res) => {
 
     // to get all job roles we fill use paginate method where we will create a filter object
-    const { page = 2, limit = 10, sort = '-views', category, experienceLevel, industryTrend } = req.query
+    const { page = 1, limit = 10, sort = '-views', category, experienceLevel, industryTrend } = req.query
 
     const cacheKey = `jobRole:list:${JSON.stringify(req.query)}`
     const cachedData = await redisClient.get(cacheKey)
@@ -29,25 +29,30 @@ export const getAllJobRoles = asyncHandler(async (req, res) => {
     }
 
     if (cachedData) {
-        const cachedData = JSON.parse(cachedData)
-        return res.status(200)
-            .json(new ApiResponse(201, cachedData, 'cached data of jobrole fetched succesfully'))
+        const cachedDocs = JSON.parse(cachedData)
+        // If cache has empty data (e.g., ran before seeding), treat as cache miss
+        if (Array.isArray(cachedDocs) && cachedDocs.length > 0) {
+            return res.status(200).json(
+                new ApiResponse(200, cachedDocs, 'Cached job roles fetched successfully')
+            )
+        }
     }
-    const jobRoles = await jobRoleModel.paginate(filter, {
+
+    const paginateResult = await jobRoleModel.paginate(filter, {
         page: parseInt(page),
         limit: parseInt(limit),
         sort: sort,
         select: '-requiredSkills.critical.description -requiredSkills.important.description',
     })
 
-    if (!jobRoles || jobRoles.length == 0) {
-        throw new ApiError(401, 'No Job roles found')
-    }
+    const jobRoles = paginateResult?.docs || []
+
     await redisClient.setEx(cacheKey, 600, JSON.stringify(jobRoles))
     // u should not increment views here cause u r just viewing it in homepage
 
-    res.status(200)
-        .json(201, 'All Job Roles Fetched succesfully', jobRoles)
+    res.status(200).json(
+        new ApiResponse(200, jobRoles, 'All Job Roles Fetched successfully')
+    )
 })
 
 // get job role by id

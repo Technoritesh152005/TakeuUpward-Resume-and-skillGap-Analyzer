@@ -6,11 +6,11 @@
   "type": "module",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "nodemon src/server.js",
+    "dev": "node --watch src/server.js",
     "test": "jest --coverage",
-    "seed:roles": "node src/scripts/seed-job-roles.js",
-    "seed:resources": "node src/scripts/seed-resources.js",
-    "seed:all": "npm run seed:roles && npm run seed:resources"
+    "seed:roles": "node src/scripts/jobroleSeed.js",
+    "seed:resources": "echo \"seed:resources not configured\"",
+    "seed:all": "npm run seed:roles"
   },
   "keywords": [
     "resume",
@@ -50,11 +50,11 @@
     "winston": "^3.11.0",
     "winston-daily-rotate-file": "^5.0.0"
   },
-  "devDependencies": {
-    "nodemon": "^3.0.3"
-  },
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=9.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
   }
 }

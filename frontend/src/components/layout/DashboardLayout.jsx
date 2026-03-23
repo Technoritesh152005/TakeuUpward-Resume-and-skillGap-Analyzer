@@ -33,7 +33,7 @@ const DashboardLayout = ({ children }) => {
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'My Resumes', path: '/resumes', icon: FileText },
-    { name: 'Analysis', path: '/analysis', icon: Target },
+    { name: 'Analysis', path: '/analysis/list', icon: Target },
     { name: 'Roadmap', path: '/roadmap', icon: Map },
     { name: 'Job Roles', path: '/job-roles', icon: Briefcase },
     { name: 'Profile', path: '/profile', icon: User },
