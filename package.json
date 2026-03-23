@@ -1,9 +1,7 @@
 {
   "name": "resume-analyzer",
   "scripts": {
-    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "dev:backend": "npm run dev --prefix backend",
-    "dev:frontend": "npm run dev --prefix frontend"
+    "dev": "concurrently \"node --watch backend/src/server.js\" \"npx vite --cwd frontend\""
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

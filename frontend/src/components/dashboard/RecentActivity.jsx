@@ -34,7 +34,8 @@ const RecentActivity = ({ activities = [], loading = false }) => {
     }
 
     if (activity.type === 'analysis_complete') {
-      navigate('/analysis');
+      navigate('/analysis/list');
+      
     }
   };
   if (loading) {

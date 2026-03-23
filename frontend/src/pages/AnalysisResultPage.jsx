@@ -1,10 +1,10 @@
 import {useEffect, useState} from 'react'
-import {useNavigate, useParams, usenavigate} from 'react-router-dom'
+import {useNavigate, useParams} from 'react-router-dom'
 import {toast} from 'react-hot-toast'
 import { getAnalysisById , deleteAnalysis , regenerateAnalysis} from '../services/analysisService.js'
 
 const analysisResultPage = ()=>{
-    const {id} = req.params;
+    const {id} = useParams();
     const navigate = useNavigate()
 
     const [loading , setLoading] = useState(true)
@@ -54,7 +54,7 @@ const analysisResultPage = ()=>{
                 setLoading(true)
                 await deleteAnalysis(id)
                 toast.success('Analysis deleted successfully')
-                navigate('/analysis')
+                navigate('/analysis/list')
             }catch(error){
                 toast.error('Failed to delete analysis!')
             }finally{
@@ -85,7 +85,7 @@ const analysisResultPage = ()=>{
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <button onClick={() => navigate('/analyses')} className="flex items-center text-gray-600 hover:text-gray-900 mb-4">
+          <button onClick={() => navigate('/analysis/list')} className="flex items-center text-gray-600 hover:text-gray-900 mb-4">
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>

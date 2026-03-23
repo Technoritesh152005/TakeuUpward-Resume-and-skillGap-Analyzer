@@ -2,7 +2,7 @@ import {useState , useEffect} from 'react'
 import {toast} from 'react-hot-toast'
 import {useNavigate} from 'react-router-dom'
 import api from '../communication/api.js'
-import {getMyResume} from '../services/resumeService.js'
+import resumeService from '../services/resumeService.js'
 import {createAnalysis , pollAnalysisStatus} from '../services/analysisService.js'
 
 const createAnalysisPage = ()=>{
@@ -43,7 +43,7 @@ const createAnalysisPage = ()=>{
 
         try{
             setLoadingResumes(true)
-            const response = await getMyResume()
+            const response = await resumeService.getMyResume()
             // takes only completed or success resumes
             // this filters all resume and gets resume which have processingstatus
             const completedResumes = response.data.filter( r => r.processingStatus === 'completed')
@@ -74,10 +74,11 @@ const createAnalysisPage = ()=>{
     const filteredJobRoles = jobRoles.filter( job =>{
         const matchesCategory = !categoryFilter || job.category === categoryFilter
         const matchesExperienceLevel = !experienceLevelFilter || job.experienceLevel === experienceLevelFilter
-        const matchesSearch = !searchQuery ||
-        // in all the job this must include this 
-        job.tile.toLowerCase().includes(searchQuery.toLowerCase())
-        job.description.toLowercase(searchQuery.toLowerCase())
+        const matchesSearch =
+            !searchQuery ||
+            // in all the job this must include this
+            job.tile?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            job.description?.toLowerCase().includes(searchQuery.toLowerCase())
 
         return matchesCategory && matchesExperienceLevel && matchesSearch
     })
@@ -419,3 +420,4 @@ if (resumes.length === 0) {
   );
 
 }
+export default createAnalysisPage

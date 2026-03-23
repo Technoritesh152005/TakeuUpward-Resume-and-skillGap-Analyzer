@@ -21,7 +21,7 @@ const QuickActions = () => {
       description: 'Get detailed skill gap analysis',
       gradient: 'from-purple-500 to-pink-500',
       hoverGradient: 'hover:from-purple-600 hover:to-pink-600',
-      path: '/analysis',
+      path: '/analysis/create',
     },
     {
       icon: Map,

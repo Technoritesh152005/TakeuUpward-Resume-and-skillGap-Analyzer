@@ -1,4 +1,3 @@
-import { clearInterval } from 'timers'
 import api from '../communication/api.js'
 
 export const createAnalysis = async (data) => {
@@ -18,7 +17,7 @@ export const getMyAnalysis = async (params = {}) => {
 }
 
 export const getAnalysisById = async (id) => {
-    const response = await api.get(`'/analysis/${id}`)
+    const response = await api.get(`/analysis/${id}`)
     return response.data
 }
 export const regenerateAnalysis = async (id, data) => {

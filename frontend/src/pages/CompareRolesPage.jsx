@@ -1,7 +1,7 @@
 import {useState , useEffect} from 'react'
 import {toast} from 'react-hot-toast'
 import {useNavigate} from 'react-router-dom'
-import {getMyResume} from '../services/resumeService'
+import resumeService from '../services/resumeService'
 import {compareMultipleRoles} from '../services/analysisService'
 
 const CompareRolesPage = ()=>{
@@ -24,7 +24,7 @@ const CompareRolesPage = ()=>{
 
   const fetchResumes = async()=>{
     try{
-       const allResumes =  await getMyResume()
+       const allResumes =  await resumeService.getMyResume()
        setResumes(allResumes.data.filter(r => r.processingStatus ==='completed'))
 
     }catch(error){
