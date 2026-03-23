@@ -12,6 +12,12 @@ import ResumeUpload from './pages/uploadResume.jsx'
 import MyResumesPage from './pages/resumePage.jsx'
 import DetailedResumeOverviewPage from './pages/detailedResumeOverviewPage.jsx'
 
+// analysis
+import AnalysisCreatePage from './pages/AnalysisCreatePage.jsx'
+import AnalysisResultPage from './pages/AnalysisResultPage.jsx'
+import CompareRolesPage from './pages/CompareRolesPage.jsx';
+import AnalysisListPage from './pages/AllAnalysisPage.jsx'
+
 // Protected Route Component
 import ProtectedRoute from './components/auth/ProtectedRoute';
 
@@ -70,28 +76,31 @@ function App() {
 
           
           <Route
-            path="/analysis"
+            path="/analysis/create"
             element={
               <ProtectedRoute>
-                <div className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-neutral-900">
-                  <div className="text-center">
-                    <h1 className="text-3xl font-bold text-neutral-900 dark:text-white mb-4">
-                      🎯 Analysis Page
-                    </h1>
-                    <p className="text-neutral-600 dark:text-neutral-400 mb-4">
-                      Coming soon! View your resume analysis here.
-                    </p>
-                    <a
-                      href="/dashboard"
-                      className="inline-block px-6 py-3 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors"
-                    >
-                      Back to Dashboard
-                    </a>
-                  </div>
-                </div>
+                <AnalysisCreatePage/>
               </ProtectedRoute>
             }
           />
+
+<Route path="/analysis/compare" element={
+          <ProtectedRoute>
+            <CompareRolesPage />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/analysis/list" element={
+          <ProtectedRoute>
+            <AnalysisListPage />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/analysis/:id" element={
+          <ProtectedRoute>
+            <AnalysisResultPage />
+          </ProtectedRoute>
+        } />
 
           <Route
             path="/roadmap"

@@ -403,7 +403,7 @@ if (resumes.length === 0) {
         {/* Start Analysis Button */}
         <div className="mt-8 flex justify-center">
           <button
-            onClick={handleStartAnalysis}
+            onClick={handleAnalysis}
             disabled={!selectedResume || !selectedJobRole || analyzing}
             className={`px-8 py-4 rounded-xl font-semibold text-lg transition-all ${
               selectedResume && selectedJobRole && !analyzing
