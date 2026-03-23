@@ -1,168 +1,182 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import  resumeService  from '../services/resumeService.js';
-import api from '../communication/api.js'
-import { createAnalysis, pollAnalysisStatus } from '../services/analysisService.js';
+import resumeService from '../services/resumeService.js';
+import api from '../communication/api.js';
+import { createAnalysis, getAnalysisById } from '../services/analysisService.js';
+
+const getResumesFromResponse = (response) => {
+  const payload = response?.data;
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.docs)) return payload.docs;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.data?.docs)) return payload.data.docs;
+  return [];
+};
+
+const getJobRolesFromResponse = (response) => {
+  const payload = response?.data;
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.data?.docs)) return payload.data.docs;
+  return [];
+};
+
+const waitForCompletedAnalysis = async (analysisId, maxAttempts = 60, intervalMs = 2000) => {
+  let attempts = 0;
+
+  while (attempts < maxAttempts) {
+    attempts += 1;
+    const result = await getAnalysisById(analysisId);
+    const analysis = result?.data;
+
+    if (analysis?.status === 'completed') return analysis;
+    if (analysis?.status === 'failed') {
+      throw new Error(analysis?.error || 'Analysis failed on server');
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+
+  throw new Error('Analysis is taking longer than expected. Please check Analysis List after a while.');
+};
 
 const AnalysisCreatePage = () => {
   const navigate = useNavigate();
-  
-  // State
+
   const [resumes, setResumes] = useState([]);
   const [jobRoles, setJobRoles] = useState([]);
   const [selectedResume, setSelectedResume] = useState(null);
   const [selectedJobRole, setSelectedJobRole] = useState(null);
-  const [preferences, setPreferences] = useState({
-    hoursPerWeek: 12,
-    budget: 'free',
-    learningStyle: 'mixed',
-  });
-  
-  // Filters
+
   const [categoryFilter, setCategoryFilter] = useState('');
   const [experienceLevelFilter, setExperienceLevelFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  
-  // Loading states
+
   const [loadingResumes, setLoadingResumes] = useState(true);
   const [loadingJobRoles, setLoadingJobRoles] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
   const [progress, setProgress] = useState(0);
-  
-  // Fetch resumes
+
   useEffect(() => {
     fetchResumes();
   }, []);
-  
-  // Fetch job roles
+
   useEffect(() => {
     fetchJobRoles();
   }, []);
-  
+
   const fetchResumes = async () => {
     try {
       setLoadingResumes(true);
       const response = await resumeService.getMyResume();
-      console.log(response,'hey bhagwan')
-      const resumesArray = response.data.docs || [];
-      
-      // ✅ filter only completed resumes
-      console.log('maro mujeh',resumesArray)
-      const completedResumes = resumesArray.filter(
-        r => r.parsedData?.processingStatus === 'completed'
+      const resumesArray = getResumesFromResponse(response);
+
+      const activeCompletedResumes = resumesArray.filter(
+        (resume) => resume?.isActive !== false && resume?.parsedData?.processingStatus === 'completed'
       );
-      console.log('hey here',completedResumes)
-      setResumes(completedResumes);
-    } catch (error) {
+
+      setResumes(activeCompletedResumes);
+    } catch {
       toast.error('Failed to load resumes');
     } finally {
       setLoadingResumes(false);
     }
   };
-  
+
   const fetchJobRoles = async () => {
     try {
       setLoadingJobRoles(true);
       const response = await api.get('/job-roles');
-      setJobRoles(response.data.data || []);
-    } catch (error) {
+      setJobRoles(getJobRolesFromResponse(response));
+    } catch {
       toast.error('Failed to load job roles');
     } finally {
       setLoadingJobRoles(false);
     }
   };
-  
-  // Filter job roles
-  const filteredJobRoles = jobRoles.filter(role => {
+
+  const filteredJobRoles = jobRoles.filter((role) => {
     const matchesCategory = !categoryFilter || role.category === categoryFilter;
     const matchesLevel = !experienceLevelFilter || role.experienceLevel === experienceLevelFilter;
-    const matchesSearch = !searchQuery || 
-      role.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      role.description.toLowerCase().includes(searchQuery.toLowerCase());
-    
+    const matchesSearch = !searchQuery
+      || role.title?.toLowerCase().includes(searchQuery.toLowerCase())
+      || role.description?.toLowerCase().includes(searchQuery.toLowerCase());
+
     return matchesCategory && matchesLevel && matchesSearch;
   });
-  
-  // Get unique categories and experience levels
-  const categories = [...new Set(jobRoles.map(r => r.category))];
-  const experienceLevels = [...new Set(jobRoles.map(r => r.experienceLevel))];
-  
-  // Start analysis
+
+  const categories = [...new Set(jobRoles.map((r) => r.category).filter(Boolean))];
+  const experienceLevels = [...new Set(jobRoles.map((r) => r.experienceLevel).filter(Boolean))];
+
   const handleStartAnalysis = async () => {
-    if (!selectedResume) {
+    if (!selectedResume?._id) {
       toast.error('Please select a resume');
       return;
     }
-    
-    if (!selectedJobRole) {
+
+    if (!selectedJobRole?._id) {
       toast.error('Please select a job role');
       return;
     }
-    
+
     try {
       setAnalyzing(true);
-      setProgress(0);
-      
-      // Start analysis
+      setProgress(5);
+
       const response = await createAnalysis({
         resumeId: selectedResume._id,
         jobRoleId: selectedJobRole._id,
-        userPreferences: preferences,
       });
-      
-      const analysisId = response.data.analysisId;
-      
-      // Simulate progress
+
+      const analysisId = response?.data?._id;
+      if (!analysisId) {
+        throw new Error('Analysis created but ID missing from response');
+      }
+
       const progressInterval = setInterval(() => {
-        setProgress(prev => {
-          if (prev >= 90) return prev;
-          return prev + Math.random() * 10;
-        });
+        setProgress((prev) => (prev >= 90 ? prev : prev + Math.random() * 8));
       }, 1000);
-      
-      // Poll for completion
-      const completedAnalysis = await pollAnalysisStatus(analysisId);
-      
+
+      await waitForCompletedAnalysis(analysisId);
+
       clearInterval(progressInterval);
       setProgress(100);
-      
       toast.success('Analysis completed!');
-      
-      // Redirect to results
+
       setTimeout(() => {
         navigate(`/analysis/${analysisId}`);
       }, 500);
-      
     } catch (error) {
-      toast.error(error.message || 'Analysis failed');
+      toast.error(error?.response?.data?.message || error.message || 'Analysis failed');
       setAnalyzing(false);
       setProgress(0);
     }
   };
-  
+
   if (loadingResumes || loadingJobRoles) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-neutral-950">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <p className="text-gray-600 dark:text-gray-300">Loading...</p>
         </div>
       </div>
     );
   }
-  
+
   if (resumes.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6">
-        <div className="text-center max-w-md">
-          <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+      <div className="min-h-screen flex items-center justify-center p-6 bg-gray-50 dark:bg-neutral-950">
+        <div className="text-center max-w-md bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-700 rounded-2xl p-8 shadow-sm">
+          <div className="w-20 h-20 bg-gray-100 dark:bg-neutral-800 rounded-full flex items-center justify-center mx-auto mb-6">
             <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-3">No Resumes Yet</h2>
-          <p className="text-gray-600 mb-6">Upload a resume first to start your career analysis</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">No Ready Resume Found</h2>
+          <p className="text-gray-600 dark:text-gray-300 mb-2">Upload a resume and wait for parsing to complete before creating analysis.</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Tip: Go to Resume page and confirm status is completed.</p>
           <button
             onClick={() => navigate('/upload')}
             className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -173,59 +187,44 @@ const AnalysisCreatePage = () => {
       </div>
     );
   }
-  
+
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-neutral-950 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Create Career Analysis</h1>
-          <p className="text-gray-600">Select your resume and target job role to get personalized insights</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Create Career Analysis</h1>
+          <p className="text-gray-600 dark:text-gray-300">Select your resume and target job role to get personalized insights</p>
         </div>
-        
-        {/* Progress overlay */}
+
         {analyzing && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white dark:bg-neutral-900 rounded-2xl p-8 max-w-md w-full mx-4 border border-gray-200 dark:border-neutral-700">
               <div className="text-center">
-                <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900/40 rounded-full flex items-center justify-center mx-auto mb-6">
                   <svg className="w-10 h-10 text-blue-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                   </svg>
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">Analyzing Your Profile</h3>
-                <p className="text-gray-600 mb-6">Our AI is analyzing your skills and creating a personalized roadmap...</p>
-                
-                {/* Progress bar */}
-                <div className="w-full bg-gray-200 rounded-full h-3 mb-4">
-                  <div 
-                    className="bg-blue-600 h-3 rounded-full transition-all duration-500 ease-out"
-                    style={{ width: `${progress}%` }}
-                  ></div>
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Analyzing Your Profile</h3>
+                <p className="text-gray-600 dark:text-gray-300 mb-6">Our AI is analyzing your skills...</p>
+
+                <div className="w-full bg-gray-200 dark:bg-neutral-700 rounded-full h-3 mb-4">
+                  <div className="bg-blue-600 h-3 rounded-full transition-all duration-500 ease-out" style={{ width: `${progress}%` }}></div>
                 </div>
-                <p className="text-sm text-gray-500">{Math.round(progress)}% complete</p>
-                
-                {/* Loading messages */}
-                <div className="mt-6 space-y-2">
-                  {progress < 30 && <p className="text-sm text-gray-600 animate-pulse">🔍 Analyzing your resume...</p>}
-                  {progress >= 30 && progress < 60 && <p className="text-sm text-gray-600 animate-pulse">🎯 Identifying skill gaps...</p>}
-                  {progress >= 60 && progress < 90 && <p className="text-sm text-gray-600 animate-pulse">📊 Calculating match score...</p>}
-                  {progress >= 90 && <p className="text-sm text-gray-600 animate-pulse">🗺️ Creating learning roadmap...</p>}
-                </div>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{Math.round(progress)}% complete</p>
               </div>
             </div>
           </div>
         )}
-        
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left: Resume Selection */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-700 p-6">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
                 <span className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold mr-3">1</span>
                 Select Resume
               </h2>
-              
+
               <div className="space-y-3">
                 {resumes.map((resume) => (
                   <div
@@ -233,191 +232,91 @@ const AnalysisCreatePage = () => {
                     onClick={() => setSelectedResume(resume)}
                     className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
                       selectedResume?._id === resume._id
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 hover:border-blue-300'
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30'
+                        : 'border-gray-200 dark:border-neutral-700 hover:border-blue-300'
                     }`}
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="font-medium text-gray-900 mb-1">{resume.fileName}</h3>
-                        <p className="text-sm text-gray-600 mb-2">
-                          {resume.parsedData?.personal?.name || 'No name found'}
-                        </p>
-                        <div className="flex items-center text-xs text-gray-500">
-                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                          {new Date(resume.createdAt).toLocaleDateString()}
-                        </div>
-                      </div>
-                      {selectedResume?._id === resume._id && (
-                        <svg className="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                        </svg>
-                      )}
-                    </div>
+                    <h3 className="font-medium text-gray-900 dark:text-white mb-1">{resume.originalFileName || resume.fileName}</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">{resume.parsedData?.personal?.name || 'No name found'}</p>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">{new Date(resume.createdAt).toLocaleDateString()}</div>
                   </div>
                 ))}
               </div>
-              
-              {/* Preferences */}
-              <div className="mt-6 pt-6 border-t border-gray-200">
-                <h3 className="text-sm font-medium text-gray-900 mb-4">Learning Preferences (Optional)</h3>
-                
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm text-gray-700 mb-2">
-                      Hours per week: {preferences.hoursPerWeek}h
-                    </label>
-                    <input
-                      type="range"
-                      min="5"
-                      max="40"
-                      value={preferences.hoursPerWeek}
-                      onChange={(e) => setPreferences({ ...preferences, hoursPerWeek: parseInt(e.target.value) })}
-                      className="w-full"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm text-gray-700 mb-2">Budget</label>
-                    <select
-                      value={preferences.budget}
-                      onChange={(e) => setPreferences({ ...preferences, budget: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="free">Free resources</option>
-                      <option value="low">Low ($0-50)</option>
-                      <option value="medium">Medium ($50-200)</option>
-                      <option value="high">High ($200+)</option>
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm text-gray-700 mb-2">Learning Style</label>
-                    <select
-                      value={preferences.learningStyle}
-                      onChange={(e) => setPreferences({ ...preferences, learningStyle: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="visual">Visual (videos, diagrams)</option>
-                      <option value="reading">Reading (articles, books)</option>
-                      <option value="hands-on">Hands-on (projects, practice)</option>
-                      <option value="mixed">Mixed approach</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
-          
-          {/* Right: Job Role Selection */}
+
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <span className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold mr-3">2</span>
-                Select Target Job Role
+            <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-700 p-6">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                <span className="w-8 h-8 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-sm font-bold mr-3">2</span>
+                Select Job Role
               </h2>
-              
-              {/* Filters */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">
                 <input
                   type="text"
-                  placeholder="Search job roles..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Search role..."
+                  className="px-3 py-2 border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-900 dark:text-white rounded-lg"
                 />
-                
                 <select
                   value={categoryFilter}
                   onChange={(e) => setCategoryFilter(e.target.value)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="px-3 py-2 border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-900 dark:text-white rounded-lg"
                 >
-                  <option value="">All Categories</option>
-                  {categories.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
+                  <option value="">All categories</option>
+                  {categories.map((category) => (
+                    <option key={category} value={category}>{category}</option>
                   ))}
                 </select>
-                
                 <select
                   value={experienceLevelFilter}
                   onChange={(e) => setExperienceLevelFilter(e.target.value)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="px-3 py-2 border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-gray-900 dark:text-white rounded-lg"
                 >
-                  <option value="">All Levels</option>
-                  {experienceLevels.map(level => (
+                  <option value="">All levels</option>
+                  {experienceLevels.map((level) => (
                     <option key={level} value={level}>{level}</option>
                   ))}
                 </select>
               </div>
-              
-              {/* Job Roles List */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[600px] overflow-y-auto pr-2">
+
+              <div className="space-y-3 max-h-[420px] overflow-auto pr-1">
                 {filteredJobRoles.map((role) => (
                   <div
                     key={role._id}
                     onClick={() => setSelectedJobRole(role)}
-                    className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                    className={`rounded-lg border p-4 cursor-pointer transition ${
                       selectedJobRole?._id === role._id
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 hover:border-blue-300'
+                        ? 'border-green-500 bg-green-50 dark:bg-green-950/20'
+                        : 'border-gray-200 dark:border-neutral-700 hover:border-green-300'
                     }`}
                   >
-                    <div className="flex items-start justify-between mb-2">
-                      <h3 className="font-semibold text-gray-900">{role.title}</h3>
-                      {selectedJobRole?._id === role._id && (
-                        <svg className="w-5 h-5 text-blue-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                        </svg>
-                      )}
-                    </div>
-                    
-                    <p className="text-sm text-gray-600 mb-3 line-clamp-2">{role.description}</p>
-                    
-                    <div className="flex flex-wrap gap-2">
-                      <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
-                        {role.category}
-                      </span>
-                      <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">
-                        {role.experienceLevel}
-                      </span>
-                      {role.demandLevel && (
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                          role.demandLevel === 'very-high' ? 'bg-green-100 text-green-700' :
-                          role.demandLevel === 'high' ? 'bg-emerald-100 text-emerald-700' :
-                          role.demandLevel === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-gray-100 text-gray-700'
-                        }`}>
-                          {role.demandLevel} demand
-                        </span>
-                      )}
+                    <h3 className="font-semibold text-gray-900 dark:text-white">{role.title}</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-1 line-clamp-2">{role.description}</p>
+                    <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 flex gap-2">
+                      <span>{role.category}</span>
+                      <span>•</span>
+                      <span>{role.experienceLevel}</span>
                     </div>
                   </div>
                 ))}
+                {filteredJobRoles.length === 0 && (
+                  <div className="text-center text-gray-500 dark:text-gray-400 py-8">No job roles found for selected filters.</div>
+                )}
               </div>
-              
-              {filteredJobRoles.length === 0 && (
-                <div className="text-center py-12">
-                  <p className="text-gray-500">No job roles found matching your filters</p>
-                </div>
-              )}
             </div>
           </div>
         </div>
-        
-        {/* Start Analysis Button */}
-        <div className="mt-8 flex justify-center">
+
+        <div className="mt-8 flex justify-end">
           <button
             onClick={handleStartAnalysis}
-            disabled={!selectedResume || !selectedJobRole || analyzing}
-            className={`px-8 py-4 rounded-xl font-semibold text-lg transition-all ${
-              selectedResume && selectedJobRole && !analyzing
-                ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg hover:shadow-xl'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            }`}
+            disabled={analyzing || !selectedResume || !selectedJobRole}
+            className="px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {analyzing ? 'Analyzing...' : 'Start Career Analysis'}
+            {analyzing ? 'Analyzing...' : 'Start Analysis'}
           </button>
         </div>
       </div>
