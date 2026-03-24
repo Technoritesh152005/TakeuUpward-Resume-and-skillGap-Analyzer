@@ -1,0 +1,11 @@
+first we need to do
+create analyss page
+create detailed analysis overview page
+create a page where user can handle multiple job roles with resume
+create a create roadmap page
+show detailed structure of roadmap
+view all roadmap pages
+same goes with browse all job roles
+and make a search box or filter where it can browse
+these r the mvp
+

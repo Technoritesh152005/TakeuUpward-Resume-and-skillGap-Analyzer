@@ -46,6 +46,10 @@ const DashboardLayout = ({ children }) => {
         /^\/resumes\/[^/]+/.test(location.pathname)
       );
     }
+    if (path === '/analysis') {
+      return location.pathname === '/analysis' || location.pathname.startsWith('/analysis/');
+    }
+
     return location.pathname === path;
   };
 

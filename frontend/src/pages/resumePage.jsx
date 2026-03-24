@@ -36,7 +36,7 @@ const resumePage = ()=> {
     const handleDelete = async (id) => {
         try{
             setLoading(true)
-            await resumeService.deleteResume(id)
+            const data = await resumeService.deleteResume(id)
             toast.success('Resume deleted successfully')
             setDeleteConfirm(null)
             // aftee deleting fetch the new resume list

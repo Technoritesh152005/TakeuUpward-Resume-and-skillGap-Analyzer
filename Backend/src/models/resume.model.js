@@ -112,7 +112,9 @@ const resumeSchema = mongoose.Schema(
                     }
                 }
             ],
-            processingStatus:{
+            
+        },
+        processingStatus:{
             type:String,
             enum:['pending','completed','proccessing','failed'],
             default:'pending',
@@ -132,7 +134,6 @@ const resumeSchema = mongoose.Schema(
             type: Boolean,
             default: true,
             },
-        }
     }
     ,
     {

@@ -22,7 +22,7 @@ import logger from '../utils/logs.js'
         categories.forEach((cat) => {
             console.log(`   ${cat._id}: ${cat.count} roles`);
           });
-
+         
         return inserted
     }catch(error){
         logger.error(`Failed to seed job roles: ${error.message}`);

@@ -23,11 +23,46 @@ const api = axios.create({
     // “Include cookies when sending requests to the server.”
     // default it dont send bcz of cross origin request cookies so we tell them
 })
+
+
+const isAuthEndpoint = (url = '') => {
+  return (
+    url.includes('/auth/login') ||
+    url.includes('/auth/signup') ||
+    url.includes('/auth/refresh-token')
+  )
+}
+
+// IMPORTANT:
+// Backend uses 401 for both auth failures and business validation errors.
+// We should refresh token ONLY when the error looks auth/token-related,
+// otherwise user gets logged out while using normal features.
+const isTokenRelated401 = (error) => {
+  if (error?.response?.status !== 401) return false
+
+  const message = String(
+    error?.response?.data?.message ||
+    error?.response?.data?.error ||
+    ''
+  ).toLowerCase()
+
+  if (!message) return false
+  // So this function filters:
+  // ✔ only token-related errors
+  return (
+    message.includes('token') ||
+    message.includes('jwt') ||
+    message.includes('unauthorized') ||
+    message.includes('not authorized') ||
+    message.includes('expired')
+  )
+}
+
 // handling axios for every request
 api.interceptors.request.use(
     // config has all details of the request
     (config) => {
-        console.log(config)
+        
         // before sending every req check whether token is present and sent in header
         const token = localStorage.getItem('accessToken')
 
@@ -47,46 +82,65 @@ api.interceptors.request.use(
 api.interceptors.response.use(
     (response) => response,
     async (error) => {
-      const originalRequest = error.config;
-  
-      // Do NOT refresh on auth endpoints
-      const isAuthEndpoint =
-        originalRequest?.url?.includes('/auth/login') ||
-        originalRequest?.url?.includes('/auth/signup') ||
-        originalRequest?.url?.includes('/auth/refresh-token');
-  
-      // If 401 on auth endpoints, just return the backend error
-      if (isAuthEndpoint) {
-        return Promise.reject(error);
+      const originalRequest = error.config || {}
+
+    // Never refresh for auth endpoints
+    if (isAuthEndpoint(originalRequest?.url || '')) {
+      return Promise.reject(error)
+    }
+
+    // Refresh only for token-related 401s
+    if (
+      isTokenRelated401(error) &&
+      !originalRequest._retry
+    ) {
+      const refreshToken = localStorage.getItem('refreshToken')
+      if (!refreshToken) {
+        return Promise.reject(error)
       }
-  
-      // Only try refresh if we actually have a refresh token
-      if (error.response?.status === 401 && !originalRequest._retry) {
-        const refreshToken = localStorage.getItem('refreshToken');
-        if (!refreshToken) {
-          return Promise.reject(error); // let UI show the real 401 message
+
+      originalRequest._retry = true
+
+      try {
+        const response = await axios.post(
+          `${API_BASE_URL}/auth/refresh-token`,
+          { refreshToken },
+          { withCredentials: true }
+        )
+
+        const accessToken = response?.data?.data?.accessToken
+        if (!accessToken) {
+          return Promise.reject(error)
         }
-  
-        originalRequest._retry = true;
-  
-        try {
-          const response = await axios.post(
-            `${API_BASE_URL}/auth/refresh-token`,
-            { refreshToken },
-            { withCredentials: true }
-          );
-  
-          const accessToken = response.data.data.accessToken;
-          localStorage.setItem('accessToken', accessToken);
-          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-          return api(originalRequest);
-        } catch (refreshError) {
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
-          window.location.href = '/login';
-          return Promise.reject(refreshError);
+
+        localStorage.setItem('accessToken', accessToken)
+        originalRequest.headers = originalRequest.headers || {}
+        originalRequest.headers.Authorization = `Bearer ${accessToken}`
+
+        return api(originalRequest)
+      } catch (refreshError) {
+        // logout only when refresh token itself is invalid/expired
+        const refreshMessage = String(
+          refreshError?.response?.data?.message ||
+          refreshError?.response?.data?.error ||
+          ''
+        ).toLowerCase()
+
+        if (
+          refreshMessage.includes('refresh') ||
+          refreshMessage.includes('token') ||
+          refreshMessage.includes('expired') ||
+          refreshError?.response?.status === 401
+        ) {
+          localStorage.removeItem('accessToken')
+          localStorage.removeItem('refreshToken')
+          window.location.href = '/login'
         }
+
+        return Promise.reject(refreshError)
       }
+    }
+
   
       return Promise.reject(error);
     }

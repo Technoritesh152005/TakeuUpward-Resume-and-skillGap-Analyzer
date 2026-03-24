@@ -29,6 +29,7 @@ const resumeService = {
 
     deleteResume:async(id)=>{
         const response = await api.delete(`/resumes/${id}`)
+        console.log('hey im at delet',response)
         return response.data
     },
 

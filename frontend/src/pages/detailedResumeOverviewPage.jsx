@@ -75,9 +75,12 @@ const ResumeDetailPage = () => {
   const handleDelete = async () => {
     if (window.confirm('Are you sure you want to delete this resume?')) {
       try {
-        await resumeService.deleteResume(id);
-        toast.success('Resume deleted successfully');
+        const data = await resumeService.deleteResume(id);
+        if(data.data.success === true){
+          toast.success('Resume deleted successfully');
         navigate('/resumes');
+        }
+        
       } catch (error) {
         console.error('Failed to delete:', error);
         toast.error('Failed to delete resume');
