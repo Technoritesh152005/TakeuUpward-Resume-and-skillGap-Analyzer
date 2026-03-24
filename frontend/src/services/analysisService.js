@@ -1,5 +1,6 @@
 import api from '../communication/api.js';
 
+// it makes sure you get is always array
 const asArray = (value) => {
   if (Array.isArray(value)) return value;
   if (value && Array.isArray(value.docs)) return value.docs;
@@ -7,6 +8,7 @@ const asArray = (value) => {
   return [];
 };
 
+// removes data 
 const extractPayload = (response) => {
   const raw = response?.data;
   if (!raw) return null;
@@ -17,12 +19,14 @@ const extractPayload = (response) => {
 };
 
 const analysisService = {
+  // create analysis
   createAnalysis: async ({ resumeId, jobRoleId, preference }) => {
     const response = await api.post('/analysis/create-analysis', {
       resumeId,
       jobRoleId,
       ...(preference ? { preference } : {}),
     });
+    console.log(response)
     return extractPayload(response);
   },
 
@@ -37,15 +41,21 @@ const analysisService = {
   },
 
   getMyAnalyses: async (query = {}) => {
+
+    // This helps convert object → URL query string
     const params = new URLSearchParams();
+    // loops through each query and converts { page: 1, limit: 10 } to [ ["page",1], ["limit",10] ]
     Object.entries(query).forEach(([key, value]) => {
+      // helps to avoid uneccesary or usely params like search =''-> rject this
       if (value !== undefined && value !== null && value !== '') {
+        // builds query string ?page=1&limit=10
         params.set(key, value);
       }
     });
 
     const response = await api.get(`/analysis/all-analysis${params.toString() ? `?${params.toString()}` : ''}`);
     const payload = extractPayload(response);
+    console.log(payload)
     return {
       raw: payload,
       docs: asArray(payload),
@@ -57,20 +67,33 @@ const analysisService = {
     return extractPayload(response);
   },
 
-  getJobRoles: async ({ limit = 12 } = {}) => {
-    const safeLimit = Math.min(12, Math.max(1, Number(limit) || 12));
-
-    const response = await api.get(`/job-roles/trending-job-roles?limit=${safeLimit}`);
-    const payload = extractPayload(response);
-
-    if (Array.isArray(payload)) return payload;
-    if (Array.isArray(payload?.docs)) return payload.docs;
-    if (Array.isArray(payload?.jobRoles)) return payload.jobRoles;
-    if (Array.isArray(payload?.data)) return payload.data;
-
-    return [];
-  },
-
+  getJobRoles: async ({ limit = 60, page = 1, trending = false } = {}) => {                                                 
+      const safeLimit = Math.min(500, Math.max(1, Number(limit) || 60));                                                      
+   const safePage = Math.max(1, Number(page) || 1);                                                                        
+      const extractRoles = (payload) => {                                                                                     
+        if (Array.isArray(payload)) return payload;                                                                           
+       if (Array.isArray(payload?.docs)) return payload.docs;                                                                
+       if (Array.isArray(payload?.jobRoles)) return payload.jobRoles;                                                        
+          if (Array.isArray(payload?.data)) return payload.data;                                                                
+       return [];                                                                                                            
+      };                                                                                                                      
+                                                                                                                              
+    const loadFromEndpoint = async (endpoint) => {                                                                          
+       const response = await api.get(`${endpoint}?page=${safePage}&limit=${safeLimit}`);                                    
+        return extractRoles(extractPayload(response));                                                                        
+       };                                                                                                                      
+                                                                                                                             
+      if (trending) {                                                                                                         
+      return loadFromEndpoint('/job-roles/trending-job-roles');                                                             
+       }                                                                                                                       
+                                                                                                                            
+      try {                                                                                                                   
+      return await loadFromEndpoint('/job-roles');                                                                          
+      } catch (error) {                                                                                                       
+       console.warn('Falling back to trending job roles after full catalog load failed', error);                             
+      return loadFromEndpoint('/job-roles/trending-job-roles');                                                             
+       }                                                                                                                       
+      },        
 };
 
 export default analysisService;

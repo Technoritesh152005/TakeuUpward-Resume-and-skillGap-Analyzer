@@ -18,12 +18,17 @@ import resumeStructureInstance from '../../services/ai.services/analyze_resume_s
 // ...
 
 // inside reparseResume:
-
+// clear cache based on user resume
 const clearResumeUserCaches = async (userId) => {
     const keys = await redisClient.keys(`Resume:user:${userId}*`);
     if (keys.length > 0) {
         await redisClient.del(...keys);
     }
+};
+
+const clearResumeDetailCache = async (resumeId, userId) => {
+    await redisClient.del(`Resume:id:${resumeId}`);
+    await redisClient.del(`Resume:id:${resumeId}:user:${userId}`);
 };
 
 export const uploadResume = asyncHandler(async (req, res, next) => {
@@ -67,6 +72,7 @@ export const uploadResume = asyncHandler(async (req, res, next) => {
 
     // once a new resume is uploaded deleted the old cache
     await clearResumeUserCaches(req.user._id)
+    await clearResumeDetailCache(resume._id, req.user._id)
 
     res.status(200)
         .json(new ApiResponse(201, resume, 'Resume uploaded Succesfully'))
@@ -161,7 +167,7 @@ export const deleteResume = asyncHandler(async (req, res, next) => {
 
     await resumeData.save()
     await clearResumeUserCaches(user._id)
-    await redisClient.del(`Resume:id:${resume}`)
+    await clearResumeDetailCache(resume, user._id)
     await redisClient.del(`ResumeSkill:resume:${resume}:user:${user._id}`)
 
     res.status(200)
@@ -216,16 +222,30 @@ export const reparseResume = asyncHandler(async (req, res) => {
     try {
         const structuredData = await resumeStructureInstance.analyzeResumeStructure(existingRaw);
 
+        // prev means get old data
+        // if the given data is in mongoose doc convert in js object plain
         const prev = resume.parsedData?.toObject?.() ?? { ...resume.parsedData };
         resume.parsedData = {
+            // means old or new data ko spread karo as u can further pick any key
             ...prev,
             ...structuredData,
+            // means old kept as it is and new added
+            personal: {
+                ...(prev.personal || {}),
+                ...(structuredData.personal || {}),
+            },
+            skills: {
+                ...(prev.skills || {}),
+                ...(structuredData.skills || {}),
+            },
             rawText: existingRaw,
             processingStatus: 'completed',
             version: (prev.version ?? 1) + 1,
         };
+
+        // now as u done reparse means u dont need to have old data 
         await resume.save();
-        await redisClient.del(`Resume:id:${req.params.id}:user:${req.user._id}`)
+        await clearResumeDetailCache(req.params.id, req.user._id)
         await redisClient.del(`ResumeSkill:resume:${req.params.id}:user:${req.user._id}`)
         await clearResumeUserCaches(req.user._id)
         logger.info(`Resume re-parsed successfully: ${resume._id}`);
@@ -237,3 +257,8 @@ export const reparseResume = asyncHandler(async (req, res) => {
         throw new ApiError(500, 'Failed to re-parse resume');
     }
 })
+
+
+// cache u have of resume
+// const cacheKey = `Resume:user:${req.user._id}:limit:${limit}:page:${page}`
+// const cacheKey = `Resume:id:${req.params.id}`

@@ -31,18 +31,29 @@ class resumeParser {
             const parsedData = {
                 personal: {
                     ...aiStructuredData.personal,
-                    emails: emails[0] || aiStructuredData.personal?.email || null,
+                    email: emails[0] || aiStructuredData.personal?.email || null,
                     phone: phone[0] || aiStructuredData.personal?.phone || null,
-
+                    linkedin: aiStructuredData.personal?.linkedin || null,
+                    github: aiStructuredData.personal?.github || null,
+                    portfolio: aiStructuredData.personal?.portfolio || null,
                 },
                 summary: aiStructuredData.summary,
-                eduaction: aiStructuredData.education || [],
+                education: aiStructuredData.education || [],
                 experience: aiStructuredData.experience || [],
-                skills: aiStructuredData.skills || {},
-                projects: aiStructuredData.projects || [],
-                certifications: aiStructuredData.certifications || [],
-                achievements: aiStructuredData.achievements || [],
-
+                skills: {
+                    technical: aiStructuredData.skills?.technical || [],
+                    tools: aiStructuredData.skills?.tools || [],
+                    frameworks: aiStructuredData.skills?.frameworks || [],
+                    language: aiStructuredData.skills?.languages || aiStructuredData.skills?.language || [],
+                    database: aiStructuredData.skills?.databases || aiStructuredData.skills?.database || [],
+                    others: aiStructuredData.skills?.soft || aiStructuredData.skills?.others || [],
+                },
+                project: aiStructuredData.projects || [],
+                certification: Array.isArray(aiStructuredData.certifications)
+                    ? aiStructuredData.certifications[0] || {}
+                    : aiStructuredData.certifications || {},
+                achievments: aiStructuredData.achievements || [],
+                language: aiStructuredData.languages || [],
             }
 
             const wordCount = textextractor.countWords(textdata.text)

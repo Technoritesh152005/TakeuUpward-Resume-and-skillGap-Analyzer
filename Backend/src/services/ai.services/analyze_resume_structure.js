@@ -4,6 +4,7 @@ import { getModel } from '../../config/gemini.js';
 class AnalyzeResumeStructure {
 
 
+  // take all the conten which lies bwn { }
   extractJsonBlock(content) {
     const firstBrace = content.indexOf('{');
     const lastBrace = content.lastIndexOf('}');
@@ -15,6 +16,7 @@ class AnalyzeResumeStructure {
     return content.slice(firstBrace, lastBrace + 1);
   }
 
+  // to just make data pure json only no markdown nothing and sometimes also has extra fancy quotes
   normalizeJsonString(content) {
     return content
       .replace(/```json\n?/gi, '')
@@ -35,6 +37,7 @@ class AnalyzeResumeStructure {
   ${invalidJson}
   `;
   
+  // way to communicate to gemini
     const model = getModel();
     const result = await model.generateContent(repairPrompt);
     const response = await result.response;
@@ -43,7 +46,7 @@ class AnalyzeResumeStructure {
     return this.normalizeJsonString(text);
   }
 
-
+// all in one block
   async parseStructuredJson(rawContent) {
     // remove trailling commas
   const normalized = this.normalizeJsonString(rawContent);

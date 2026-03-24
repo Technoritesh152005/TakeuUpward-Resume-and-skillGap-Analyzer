@@ -1,4 +1,5 @@
 import mongoose from 'mongoose'
+import mongoosePaginate from 'mongoose-paginate-v2';
 import { EXPERIENCE_LEVELS , JOB_CATEGORIES} from '../config/constant.js'
 
 
@@ -119,6 +120,8 @@ isActive: {
 jobRoleSchema.index({category:1,experienceLevel:1})
 jobRoleSchema.index({trending:-1,views:-1})
 jobRoleSchema.index({ title: 'text', description: 'text' });
+
+jobRoleSchema.plugin(mongoosePaginate);
 
 // now making the slug
 // u cannot use arrow fxn cause it dont have access to this but here this have access to current document

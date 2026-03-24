@@ -25,7 +25,7 @@ const analysisSchema = mongoose.Schema(
         matchScore: {
             type: Number,
             required: true,
-            min: 1,
+            min: 0,
             max: 100
         },
         
@@ -89,7 +89,7 @@ const analysisSchema = mongoose.Schema(
                     learningTime: String,
                     difficulty: {
                         type: String,
-                        enum: ['beginner', 'intermediate', 'advanced']
+                        enum: ['beginner', 'medium', 'intermediate', 'advanced']
                     },
                     prerequisites: [String]
                 }
@@ -102,7 +102,7 @@ const analysisSchema = mongoose.Schema(
                     learningTime: String,
                     difficulty: {
                         type: String,
-                        enum: ['beginner', 'intermediate', 'advanced']
+                        enum: ['beginner', 'medium', 'intermediate', 'advanced']
                     },
                     prerequisites: [String]
                 }
@@ -115,7 +115,7 @@ const analysisSchema = mongoose.Schema(
                     learningTime: String,
                     difficulty: {
                         type: String,
-                        enum: ['beginner', 'intermediate', 'advanced']
+                        enum: ['beginner', 'medium', 'intermediate', 'advanced']
                     },
                     prerequisites: [String]
                 }

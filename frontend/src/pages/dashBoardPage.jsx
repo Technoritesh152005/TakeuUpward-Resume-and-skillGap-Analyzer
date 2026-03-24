@@ -121,16 +121,10 @@ const DashboardPage = () => {
           {/* Left Column - 2/3 width */}
           <div className="lg:col-span-2 space-y-6">
             {/* Skill Progress Graph (with Recharts) */}
-            {dashboardData?.weeklyProgress && dashboardData.weeklyProgress.length > 0 ? (
+            {dashboardData?.analysisHistory && dashboardData.analysisHistory.length > 0 ? (
               <SkillProgressGraph 
                 data={{
-                  weeklyProgress: dashboardData.weeklyProgress,
-                  skillComparison: dashboardData.skillProgress?.map(skill => ({
-                    skill: skill.name,
-                    current: skill.current,
-                    target: skill.target,
-                    industry: Math.min(100, skill.current + 10) // Mock industry avg
-                  })) || []
+                  analysisHistory: dashboardData.analysisHistory
                 }}
                 loading={loading}
               />
@@ -141,10 +135,10 @@ const DashboardPage = () => {
                     <TrendingUp className="w-8 h-8 text-neutral-400" />
                   </div>
                   <h3 className="text-lg font-semibold text-neutral-900 dark:text-white mb-2">
-                    No Skill Data Yet
+                    No Analysis History Yet
                   </h3>
                   <p className="text-neutral-600 dark:text-neutral-400">
-                    Complete an analysis to see your skill progress
+                    Complete at least one analysis to see your real progress history
                   </p>
                 </div>
               )

@@ -134,6 +134,13 @@ const ResumeDetailPage = () => {
   }
 
   const parsedData = resume.parsedData || {};
+  const personalLinkedin = parsedData.personal?.linkedin || parsedData.personal?.Linkedin;
+  const personalGithub = parsedData.personal?.github || parsedData.personal?.Github;
+  const personalPortfolio = parsedData.personal?.portfolio || parsedData.personal?.personalPortfolio;
+  const educationItems = parsedData.education || parsedData.eduaction || [];
+  const projectItems = parsedData.project || parsedData.projects || [];
+  const certificationData = parsedData.certification || parsedData.certifications || {};
+  const achievementItems = parsedData.achievments || parsedData.achievements || [];
 
   return (
     <DashboardLayout>
@@ -239,28 +246,28 @@ const ResumeDetailPage = () => {
               {parsedData.personal.location && (
                 <InfoItem icon={MapPin} label="Location" value={parsedData.personal.location} />
               )}
-              {parsedData.personal.Linkedin && (
+              {personalLinkedin && (
                 <InfoItem 
                   icon={Linkedin} 
                   label="LinkedIn" 
-                  value={parsedData.personal.Linkedin}
-                  link={parsedData.personal.Linkedin}
+                  value={personalLinkedin}
+                  link={personalLinkedin}
                 />
               )}
-              {parsedData.personal.Github && (
+              {personalGithub && (
                 <InfoItem 
                   icon={Github} 
                   label="GitHub" 
-                  value={parsedData.personal.Github}
-                  link={parsedData.personal.Github}
+                  value={personalGithub}
+                  link={personalGithub}
                 />
               )}
-              {parsedData.personal.personalPortfolio && (
+              {personalPortfolio && (
                 <InfoItem 
                   icon={Globe} 
                   label="Portfolio" 
-                  value={parsedData.personal.personalPortfolio}
-                  link={parsedData.personal.personalPortfolio}
+                  value={personalPortfolio}
+                  link={personalPortfolio}
                 />
               )}
             </div>
@@ -377,22 +384,22 @@ const ResumeDetailPage = () => {
         )}
 
         {/* Education */}
-        {parsedData.education && parsedData.education.length > 0 && (
+        {educationItems.length > 0 && (
           <Section
             title="Education"
             icon={GraduationCap}
-            count={parsedData.education.length}
+            count={educationItems.length}
             expanded={expandedSections.education}
             onToggle={() => toggleSection('education')}
           >
             <div className="space-y-4">
-              {parsedData.education.map((edu, index) => (
+              {educationItems.map((edu, index) => (
                 <div key={index} className="p-4 bg-neutral-50 dark:bg-neutral-900/50 rounded-xl">
                   <h4 className="text-lg font-bold text-neutral-900 dark:text-white mb-1">
                     {edu.degree} {edu.major && `in ${edu.major}`}
                   </h4>
                   <p className="text-primary-600 dark:text-primary-400 font-medium mb-2">
-                    {edu.instituition}
+                    {edu.institution || edu.instituition}
                   </p>
                   <div className="flex items-center gap-4 text-sm text-neutral-600 dark:text-neutral-400">
                     {edu.location && (
@@ -406,16 +413,16 @@ const ResumeDetailPage = () => {
                         <Calendar className="w-3 h-3" />
                         {edu.startDate && format(new Date(edu.startDate), 'MMM yyyy')}
                         {' - '}
-                        {edu.currentStatus ? 'Present' : edu.endDate ? format(new Date(edu.endDate), 'MMM yyyy') : 'N/A'}
+                        {edu.current || edu.currentStatus ? 'Present' : edu.endDate ? format(new Date(edu.endDate), 'MMM yyyy') : 'N/A'}
                       </span>
                     )}
-                    {edu.cgpa && (
-                      <span className="font-semibold">GPA: {edu.cgpa}</span>
+                    {(edu.gpa || edu.cgpa) && (
+                      <span className="font-semibold">GPA: {edu.gpa || edu.cgpa}</span>
                     )}
                   </div>
-                  {edu.achievments && edu.achievments.length > 0 && (
+                  {(edu.achievements || edu.achievments)?.length > 0 && (
                     <div className="mt-3 flex flex-wrap gap-2">
-                      {edu.achievments.map((achievement, i) => (
+                      {(edu.achievements || edu.achievments).map((achievement, i) => (
                         <span
                           key={i}
                           className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-md text-xs"
@@ -449,27 +456,27 @@ const ResumeDetailPage = () => {
               {parsedData.skills.tools && parsedData.skills.tools.length > 0 && (
                 <SkillGroup title="Tools" skills={parsedData.skills.tools} color="green" />
               )}
-              {parsedData.skills.language && parsedData.skills.language.length > 0 && (
-                <SkillGroup title="Languages" skills={parsedData.skills.language} color="amber" />
+              {(parsedData.skills.language || parsedData.skills.languages) && (parsedData.skills.language || parsedData.skills.languages).length > 0 && (
+                <SkillGroup title="Languages" skills={parsedData.skills.language || parsedData.skills.languages} color="amber" />
               )}
-              {parsedData.skills.database && parsedData.skills.database.length > 0 && (
-                <SkillGroup title="Databases" skills={parsedData.skills.database} color="red" />
+              {(parsedData.skills.database || parsedData.skills.databases) && (parsedData.skills.database || parsedData.skills.databases).length > 0 && (
+                <SkillGroup title="Databases" skills={parsedData.skills.database || parsedData.skills.databases} color="red" />
               )}
             </div>
           </Section>
         )}
 
         {/* Projects */}
-        {parsedData.project && parsedData.project.length > 0 && (
+        {projectItems.length > 0 && (
           <Section
             title="Projects"
             icon={Code}
-            count={parsedData.project.length}
+            count={projectItems.length}
             expanded={expandedSections.projects}
             onToggle={() => toggleSection('projects')}
           >
             <div className="space-y-4">
-              {parsedData.project.map((project, index) => (
+              {projectItems.map((project, index) => (
                 <div key={index} className="p-4 bg-neutral-50 dark:bg-neutral-900/50 rounded-xl">
                   <h4 className="text-lg font-bold text-neutral-900 dark:text-white mb-2">
                     {project.title}
@@ -490,9 +497,9 @@ const ResumeDetailPage = () => {
                     </div>
                   )}
                   <div className="flex items-center gap-4 text-sm">
-                    {project.liveUrl && (
+                    {(project.liveUrl || project.url) && (
                       <a
-                        href={project.liveUrl}
+                        href={project.liveUrl || project.url}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1"
@@ -520,7 +527,7 @@ const ResumeDetailPage = () => {
         )}
 
         {/* Certifications */}
-        {parsedData.certification && Object.keys(parsedData.certification).length > 0 && (
+        {certificationData && Object.keys(certificationData).length > 0 && (
           <Section
             title="Certifications"
             icon={Award}
@@ -529,35 +536,35 @@ const ResumeDetailPage = () => {
           >
             <div className="p-4 bg-neutral-50 dark:bg-neutral-900/50 rounded-xl">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {parsedData.certification.name && (
+                {certificationData.name && (
                   <div>
                     <span className="text-sm text-neutral-600 dark:text-neutral-400">Name:</span>
                     <p className="font-semibold text-neutral-900 dark:text-white">
-                      {parsedData.certification.name}
+                      {certificationData.name}
                     </p>
                   </div>
                 )}
-                {parsedData.certification.issuer && (
+                {certificationData.issuer && (
                   <div>
                     <span className="text-sm text-neutral-600 dark:text-neutral-400">Issuer:</span>
                     <p className="font-semibold text-neutral-900 dark:text-white">
-                      {parsedData.certification.issuer}
+                      {certificationData.issuer}
                     </p>
                   </div>
                 )}
-                {parsedData.certification.issueDate && (
+                {certificationData.issueDate && (
                   <div>
                     <span className="text-sm text-neutral-600 dark:text-neutral-400">Issue Date:</span>
                     <p className="font-semibold text-neutral-900 dark:text-white">
-                      {format(new Date(parsedData.certification.issueDate), 'MMM yyyy')}
+                      {format(new Date(certificationData.issueDate), 'MMM yyyy')}
                     </p>
                   </div>
                 )}
-                {parsedData.certification.url && (
+                {certificationData.url && (
                   <div>
                     <span className="text-sm text-neutral-600 dark:text-neutral-400">Credential:</span>
                     <a
-                      href={parsedData.certification.url}
+                      href={certificationData.url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="font-semibold text-primary-600 dark:text-primary-400 hover:underline block truncate"
@@ -568,6 +575,25 @@ const ResumeDetailPage = () => {
                 )}
               </div>
             </div>
+          </Section>
+        )}
+
+        {achievementItems.length > 0 && (
+          <Section
+            title="Achievements"
+            icon={Award}
+            count={achievementItems.length}
+            expanded={expandedSections.certifications}
+            onToggle={() => toggleSection('certifications')}
+          >
+            <ul className="space-y-2">
+              {achievementItems.map((item, index) => (
+                <li key={`${item}-${index}`} className="flex items-start gap-2 text-sm text-neutral-700 dark:text-neutral-300">
+                  <span className="mt-1 text-primary-600">•</span>
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
           </Section>
         )}
       </div>

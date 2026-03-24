@@ -1,320 +1,151 @@
-import joi from 'joi'
+import Joi from 'joi';
+import mongoose from 'mongoose';
+import ApiError from '../utils/apiError.js';
 
-const validateAnalysisId = (value, helpers) => {
-
-    if (!mongoose.types.ObjectId.isValid(value)) {
-        return helpers.error('Invalid Id Format')
+const objectId = () =>
+  Joi.string().custom((value, helpers) => {
+    if (!mongoose.Types.ObjectId.isValid(value)) {
+      return helpers.error('any.invalid');
     }
-    next();
-}
+    return value;
+  }, 'ObjectId validation');
+
+const analysisIdParamsSchema = Joi.object({
+  id: objectId().required().messages({
+    'any.invalid': 'Invalid analysis id format',
+    'string.empty': 'Analysis id is required',
+  }),
+});
+
+const createAnalysisSchema = Joi.object({
+  resumeId: objectId().required().messages({
+    'any.invalid': 'Invalid resume id format',
+    'string.empty': 'Resume id is required',
+  }),
+  jobRoleId: objectId().required().messages({
+    'any.invalid': 'Invalid job role id format',
+    'string.empty': 'Job role id is required',
+  }),
+  preference: Joi.object({
+    hoursPerWeek: Joi.number().integer().min(1).max(168).optional(),
+    budget: Joi.string().valid('free', 'low', 'medium', 'high').optional(),
+    learningStyle: Joi.string()
+      .valid('visual', 'auditory', 'reading', 'kinesthetic', 'mixed')
+      .optional(),
+  }).optional(),
+});
+
+const getAnalysisSchema = Joi.object({
+  page: Joi.number().integer().min(1).default(1),
+  limit: Joi.number().integer().min(1).max(100).default(10),
+  sort: Joi.string()
+    .valid('createdAt', '-createdAt', 'matchScore', '-matchScore')
+    .default('-createdAt'),
+  status: Joi.string().valid('pending', 'completed', 'processing', 'failed').optional(),
+  resumeId: objectId().optional().messages({
+    'any.invalid': 'Invalid resume id format',
+  }),
+  jobRoleId: objectId().optional().messages({
+    'any.invalid': 'Invalid job role id format',
+  }),
+  minMatchScore: Joi.number().min(0).max(100).optional(),
+  maxMatchScore: Joi.number().min(0).max(100).optional(),
+  isActive: Joi.boolean().optional(),
+});
+
+const compareRolesSchema = Joi.object({
+  resumeId: objectId().required().messages({
+    'any.invalid': 'Invalid resume id format',
+    'string.empty': 'Resume id is required',
+  }),
+  jobRolesId: Joi.array()
+    .items(
+      objectId().messages({
+        'any.invalid': 'Invalid job role id format',
+      })
+    )
+    .min(2)
+    .max(5)
+    .required()
+    .messages({
+      'array.min': 'Please provide at least 2 job roles to compare',
+      'array.max': 'You can compare maximum 5 job roles at once',
+      'array.base': 'jobRolesId must be an array',
+    }),
+  jobRoleId: Joi.any().optional(),
+});
+
+const regenerateAnalysisSchema = Joi.object({
+  preferences: Joi.object({
+    hoursPerWeek: Joi.number().integer().min(1).max(168).optional(),
+    budget: Joi.string().valid('free', 'low', 'medium', 'high').optional(),
+    learningStyle: Joi.string()
+      .valid('visual', 'auditory', 'reading', 'kinesthetic', 'mixed')
+      .optional(),
+  }).optional(),
+});
 
 const validateCreatingAnalysis = (req, res, next) => {
-
-    // means during creating analysis we take fiellds. these ensure r they fields correct
-    // u need resume and job role
-    // cause in analysis u generate score,roadmpa,stengths,gaps
-
-    const schema = joi.object(
-        {
-            resumeId: joi.string()
-                .custom(validateAnalysisId)
-                .required()
-                .message({
-                    'any.invalid': 'Invalid resume Id format',
-                    'string.empty': 'Please provide resume Id'
-                }),
-
-            jobRoleId: joi.string()
-                .required()
-                .custom(validateAnalysisId)
-                .message({
-                    'any.invalid': 'Invalid Job Role Id format',
-                    'string.empty': 'Please provide Job Role Id'
-                }),
-
-            // during analysis some additional requirment are also required . if user dont provide it we will add default. so there is modification of req.body
-            // whole object is optional
-            preference: joi.object({
-                hoursPerWeek: joi.number()
-                    .integer()
-                    .optional()
-                    .min(10)
-                    .max(140)
-                    .default(5),
-
-                budget: joi.string()
-                    .valid('free', 'low', 'high', 'medium')
-                    .default('medium')
-                    .optional(),
-
-                learningStyle: Joi.string()
-                    .valid('visual', 'auditory', 'reading', 'kinesthetic', 'mixed')
-                    .optional()
-                    .default('mixed'),
-
-            }).optional(),
-
-        }
-    )
-
-    // use value whenever u used default , optional joi is adding something if not provided and type conversion
-    const { error, value } = schema.validate(req.body)
-
-    if (error) {
-        throw new ApiError(401, 'Error occured while validating creating ananlysi', error.details[0].message)
-    }
-
-    req.body = value
-    next()
-}
-
-
-const validateGetAnalysis = (req, res, next) => {
-
-    // validation of get analysis means we get from req.params. we check limit , sort , pages , status and also mainly
-    // we filter also .. means we set resumeId , jobRole , means we get analysis from these factor also if provided. they r optional. also minmacthscore , maxscore
-    // if filters or get analysis from these factors also
-    const schema = joi.object(
-        {
-            pages: joi.number()
-                .integer()
-                .min(1)
-                .max(5)
-                .default(1),
-
-            limit: joi.number()
-                .min(1)
-                .max(100)
-                .optional()
-                .default(10),
-
-            sort: joi.string()
-                // sort can be done based on score also like we took down
-                .valid('createdAt', '-createdAt', 'matchSCore', '-matchScore')
-                .default('createdAt')
-                .optional(),
-
-            status: joi.string()
-                .valid('pending', 'completed', 'processing', 'failed')
-                .optional(),
-
-            resumeId: joi.string()
-                .custom(validateAnalysisId)
-                .optional()
-                .message({
-                    'any.inbalid': 'Invalid resume Id'
-                }),
-
-            jobRoleId: joi.string()
-                .custom(validateAnalysisId)
-                .optional()
-                .message({
-                    'any.invalid': 'Invalid Job role id format'
-                }),
-
-            // means get analysis according to this minimum score
-            minMatchScore: joi.number()
-                .integer()
-                .min(1)
-                .max(100)
-                .optional(),
-
-            maxMatchScore: joi.number()
-                .min(0)
-                .max(100)
-                .optional(),
-        }
-    )
-
-    const { error, value } = schema.validate(req.query)
-
-    if (error) {
-        throw new ApiError(400, error.details[0].message)
-    }
-
-    // if user provided that min match score and max match score means suppose search analysis netween 65 and 90 analysis. this is valid
-    // but if user gave search between 70 and 50 . it is wrong
-    if (minMatchScore && maxMatchScore) {
-        if (minMatchScore > maxMatchScore) {
-            throw new ApiError(400, "Min Match score cannot be greater than Max Match Score")
-        }
-    }
-
-    req.body = value
-    next()
-}
-
-const validateCompareRoles = (req, res, next) => {
-
-    // comparing roles means ur role in resume is compared with multiple job roles. so u need to provide job roles resume id
-    const schema = joi.object(
-        {
-            resumeId: joi.string()
-                .custom(validateAnalysisId)
-                .required()
-                .message({
-                    'any.inavlid': 'Provided resume id format is wrong',
-                    'string.empty': 'Resume Id cannot be empty'
-                }),
-
-            jobRolesId: joi.array()
-                .items(
-                    joi.string()
-                        .custom(validateAnalysisId)
-                        .message({
-                            'any.invalid': 'Invalid Id format',
-                        })
-                )
-                .min(1)
-                .max(5)
-                .required()
-                .required()
-                .messages({
-                    'array.min': 'Please provide at least 2 job roles to compare',
-                    'array.max': 'You can compare maximum 5 job roles at once',
-                    'array.base': 'jobRoleIds must be an array',
-                }),
-
-
-        }
-
-    )
-
-    const { errors, value } = schema.validate(req.body)
-
-    if (errors) {
-        throw new ApiError(400, errors.details[0].messages)
-    }
-    // passing corrected values to body
-    req.body = value
-    next()
-}
-
-
-const validateAnalysisIdIsCorrect = (req, res, next) => {
-
-    const schema = joi.object(
-        {
-            id: joi.string()
-                .custom(validateAnalysisId)
-                .required()
-                .message({
-                    'any.invalid': 'Invalid analysis Id Format'
-                })
-        }
-    )
-
-    const { error } = schema.validate(req.params)
-
-    if (error) {
-        throw new ApiError(401, 'Invalid Analysis Id')
-    }
-
-    next()
-}
-
-const validateRegenerateAnalysis = (req, res, next) => {
-    const schema = joi.object({
-        preferences: joi.object({
-            hoursPerWeek: joi.number()
-                .integer()
-                .min(1)
-                .max(168)
-                .optional(),
-
-            budget: joi.string()
-                .valid('free', 'low', 'medium', 'high')
-                .optional(),
-
-            learningStyle: joi.string()
-                .valid('visual', 'auditory', 'reading', 'kinesthetic', 'mixed')
-                .optional(),
-        }).optional(),
-    });
-
-    const { error, value } = schema.validate(req.body);
-
-    if (error) {
-        throw new ApiError(400, error.details[0].message);
-    }
-
-    req.body = value;
-
-    next();
+  const { error, value } = createAnalysisSchema.validate(req.body, { abortEarly: true, stripUnknown: true });
+  if (error) {
+    throw new ApiError(400, error.details[0].message);
+  }
+  req.body = value;
+  next();
 };
 
-export { validateAnalysisId, validateAnalysisIdIsCorrect, validateCompareRoles, validateCreatingAnalysis, validateGetAnalysis, validateRegenerateAnalysis }
-// When we GET analyses, usually we pass page, limit, sort.
-// Then why are resumeId, jobRoleId, minMatchScore, maxMatchScore also there?
+const validateGetAnalysis = (req, res, next) => {
+  const { error, value } = getAnalysisSchema.validate(req.query, { abortEarly: true, stripUnknown: true });
+  if (error) {
+    throw new ApiError(400, error.details[0].message);
+  }
 
-// Very good backend thinking.
+  if (
+    value.minMatchScore !== undefined &&
+    value.maxMatchScore !== undefined &&
+    value.minMatchScore > value.maxMatchScore
+  ) {
+    throw new ApiError(400, 'Min match score cannot be greater than max match score');
+  }
 
-// 🎯 Short Answer
+  req.query = value;
+  next();
+};
 
-// Because GET API is not just for pagination.
+const validateCompareRoles = (req, res, next) => {
+  const { error, value } = compareRolesSchema.validate(req.body, { abortEarly: true, stripUnknown: true });
+  if (error) {
+    throw new ApiError(400, error.details[0].message);
+  }
+  req.body = value;
+  next();
+};
 
-// It also supports filtering.
+const validateAnalysisId = (req, res, next) => {
+  const { error, value } = analysisIdParamsSchema.validate(req.params, { abortEarly: true });
+  if (error) {
+    throw new ApiError(400, error.details[0].message);
+  }
+  req.params = value;
+  next();
+};
 
-// 🔎 Pagination vs Filtering
-// 🔹 Pagination (basic control)
+const validateAnalysisIdIsCorrect = validateAnalysisId;
 
-// page
+const validateRegenerateAnalysis = (req, res, next) => {
+  const { error, value } = regenerateAnalysisSchema.validate(req.body, { abortEarly: true, stripUnknown: true });
+  if (error) {
+    throw new ApiError(400, error.details[0].message);
+  }
+  req.body = value;
+  next();
+};
 
-// limit
-
-// sort
-
-// These control how results are shown.
-
-// 🔹 Filtering (advanced control)
-
-// resumeId
-
-// jobRoleId
-
-// status
-
-// minMatchScore
-
-// maxMatchScore
-
-// These control which results are shown.
-
-// 📌 Example 1 — Normal Admin View
-// GET /api/analyses?page=1&limit=10
-
-// Shows:
-// All analyses (first 10).
-
-// 📌 Example 2 — Show analyses for one resume only
-// GET /api/analyses?resumeId=65abc...
-
-// Shows:
-// Only analyses related to that resume.
-
-// Very useful when user opens:
-
-// 👉 "View analyses for my resume"
-
-// 📌 Example 3 — Show analyses for one job role
-// GET /api/analyses?jobRoleId=77def...
-
-// Shows:
-// All users compared against this job role.
-
-// Useful for admin dashboard.
-
-// 📌 Example 4 — Show high match scores only
-// GET /api/analyses?minMatchScore=80
-
-// Shows:
-// Only analyses with score ≥ 80.
-
-// Useful for:
-// 👉 “Top candidates”
-
-// 📌 Example 5 — Score Range
-// GET /api/analyses?minMatchScore=50&maxMatchScore=80
-
-// Shows:
-// Analyses between 50–80%.
+export {
+  validateAnalysisId,
+  validateAnalysisIdIsCorrect,
+  validateCompareRoles,
+  validateCreatingAnalysis,
+  validateGetAnalysis,
+  validateRegenerateAnalysis,
+};

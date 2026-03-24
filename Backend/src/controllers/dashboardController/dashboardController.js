@@ -92,8 +92,21 @@ export const getDashboardData = asyncHandler(async (req, res) => {
     }
   }
 
-  // Generate weekly progress (simulated growth over 6 weeks)
-  const weeklyProgress = generateWeeklyProgress(skillProgress);
+  const analysisHistory = analyses
+    .slice()
+    .reverse()
+    .map((analysis, index) => ({
+      label: `Analysis ${index + 1}`,
+      date: analysis.createdAt,
+      matchScore: analysis.matchScore || 0,
+      criticalGaps: analysis.skillGaps?.critical?.length || 0,
+      importantGaps: analysis.skillGaps?.important?.length || 0,
+      niceToHaveGaps: analysis.skillGaps?.niceToHave?.length || 0,
+      totalGaps:
+        (analysis.skillGaps?.critical?.length || 0) +
+        (analysis.skillGaps?.important?.length || 0) +
+        (analysis.skillGaps?.niceToHave?.length || 0),
+    }));
 
   //SKILL GAPS SUMMARY 
   let skillGapsSummary = null;
@@ -180,7 +193,7 @@ export const getDashboardData = asyncHandler(async (req, res) => {
       activities: activities.slice(0, 10),
       skillProgress,
       skillGapsSummary,
-      weeklyProgress,
+      analysisHistory,
       roadmap: roadmapPreview
     }, 'Dashboard data fetched successfully')
   );
@@ -230,33 +243,6 @@ export const getRecentActivities = asyncHandler(async (req, res) => {
 });
 
 // ========== HELPER FUNCTIONS ==========
-
-/**
- * Generate simulated weekly progress data for charts
- */
-function generateWeeklyProgress(skills) {
-  if (!skills || skills.length === 0) {
-    return [];
-  }
-
-  const weeks = ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5', 'Week 6'];
-  
-  return weeks.map((week, weekIndex) => {
-    const weekData = { week };
-    
-    skills.forEach(skill => {
-      // Simulate gradual improvement over weeks
-      const progressStep = (skill.target - (skill.current - 30)) / 6;
-      const weekProgress = Math.max(0, Math.min(100, 
-        (skill.current - 30) + (progressStep * weekIndex)
-      ));
-      
-      weekData[skill.name] = Math.round(weekProgress);
-    });
-    
-    return weekData;
-  });
-}
 
 export default {
   getDashboardData,

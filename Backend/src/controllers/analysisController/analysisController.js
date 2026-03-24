@@ -8,6 +8,58 @@ import skillgapanalysis from "../../services/ai.services/skill_gap_analysis.js"
 import ApiResponse from '../../utils/apiResponse.js'
 import generateAtsScore from "../../services/ai.services/ats_score_generator.js"
 import redisClient from '../../config/redis.js'
+import ApiError from '../../utils/apiError.js'
+import logger from '../../utils/logs.js'
+import RoadmapAnalysis from '../../services/ai.services/roadmap_planner.js'
+
+const extractNumericValue = (value) => {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+        return value;
+    }
+
+    if (typeof value === 'string') {
+        const matches = value.match(/\d+(\.\d+)?/g);
+        if (!matches || matches.length === 0) {
+            return 0;
+        }
+
+        const numbers = matches.map(Number).filter(Number.isFinite);
+        if (numbers.length === 0) {
+            return 0;
+        }
+
+        return Math.max(...numbers);
+    }
+
+    return 0;
+};
+
+// as ai return some difficulty and in our schema it is defined these enums. so we convert it
+const normalizeDifficulty = (value) => {
+    const raw = String(value || '').trim().toLowerCase();
+
+    if (!raw) return 'beginner';
+    if (raw === 'easy') return 'beginner';
+    if (raw === 'medium') return 'intermediate';
+    if (raw === 'hard') return 'advanced';
+    if (['beginner', 'intermediate', 'advanced'].includes(raw)) return raw;
+
+    return 'beginner';
+};
+
+const normalizeReadinessLevel = (value) => {
+    const raw = String(value || '').trim().toLowerCase();
+
+    if (!raw) return 'not-ready';
+    if (raw.includes('over')) return 'overqualified';
+    if (raw.includes('nearly') || raw.includes('moderately') || raw.includes('almost')) {
+        return 'nearly-ready';
+    }
+    if (raw === 'ready' || raw.includes('job ready')) return 'ready';
+    if (raw.includes('not')) return 'not-ready';
+
+    return 'not-ready';
+};
 
 // first create a analysis controller
 /*
@@ -48,6 +100,7 @@ export const createAnalysis = asyncHandler(async (req, res) => {
         resume: resumeId,
         user: req.user._id,
         jobRole: jobRoleId,
+        matchScore: 0,
         status: 'processing',
     });
 
@@ -67,7 +120,7 @@ export const createAnalysis = asyncHandler(async (req, res) => {
             jobRole
         );
 
-        // ========== POPULATE BASIC FIELDS ==========
+        // 
         analysis.matchScore = skillGapAnalysisData.overallAssessment.matchPercentage;
 
         // Calculate match breakdown
@@ -103,22 +156,39 @@ export const createAnalysis = asyncHandler(async (req, res) => {
             }
         };
 
-        //  setting Skill gaps
-        analysis.skillGaps = skillGapAnalysisData.skillGaps;
+        // Normalize AI output to match schema expectations.
+        const normalizedSkillGaps = {
+            // loop through every element of skill based category and 
+            critical: (skillGapAnalysisData.skillGaps?.critical || []).map((item) => ({
+                ...item,
+                difficulty: normalizeDifficulty(item?.difficulty),
+            })),
+            important: (skillGapAnalysisData.skillGaps?.important || []).map((item) => ({
+                ...item,
+                difficulty: normalizeDifficulty(item?.difficulty),
+            })),
+            niceToHave: (skillGapAnalysisData.skillGaps?.niceToHave || []).map((item) => ({
+                ...item,
+                difficulty: normalizeDifficulty(item?.difficulty),
+            })),
+        };
 
-        // ✅ NEW: Populate extractedSkills
+        //  setting Skill gaps
+        analysis.skillGaps = normalizedSkillGaps;
+
+        //  NEW: Populate extractedSkills
         // extractedskills contains both skill which r present and also which r not means they r required
         const extractedSkills = new Set();
 
         // Add from skill gaps (skills they're MISSING)
         // pushing every skills which r not present or they r skill gaps
-        skillGapAnalysisData.skillGaps.critical?.forEach(item => {
+        normalizedSkillGaps.critical?.forEach(item => {
             if (item.skill) extractedSkills.add(item.skill);
         });
-        skillGapAnalysisData.skillGaps.important?.forEach(item => {
+        normalizedSkillGaps.important?.forEach(item => {
             if (item.skill) extractedSkills.add(item.skill);
         });
-        skillGapAnalysisData.skillGaps.niceToHave?.forEach(item => {
+        normalizedSkillGaps.niceToHave?.forEach(item => {
             if (item.skill) extractedSkills.add(item.skill);
         });
 
@@ -131,7 +201,7 @@ export const createAnalysis = asyncHandler(async (req, res) => {
         // adding all extracted skills in model fields
         analysis.extractedSkills = Array.from(extractedSkills);
 
-        // ✅ NEW: Create skillBreakdown
+        //  NEW: Create skillBreakdown
         // Detailed progress of each skill → current level vs required level vs gap
         const skillBreakdown = [];
 
@@ -158,8 +228,8 @@ export const createAnalysis = asyncHandler(async (req, res) => {
             });
         });
 
-        // Add critical skill gaps (skills they DON'T have)
-        skillGapAnalysisData.skillGaps.critical?.forEach(gap => {
+        // Add critical skill gaps the skill which they dont have
+        normalizedSkillGaps.critical?.forEach(gap => {
             // Don't add if already exists from strengths
             const exists = skillBreakdown.some(s => s.skillName === gap.skill);
             if (!exists) {
@@ -173,7 +243,7 @@ export const createAnalysis = asyncHandler(async (req, res) => {
         });
 
         // Add important skill gaps
-        skillGapAnalysisData.skillGaps.important?.forEach(gap => {
+        normalizedSkillGaps.important?.forEach(gap => {
             const exists = skillBreakdown.some(s => s.skillName === gap.skill);
             if (!exists) {
                 skillBreakdown.push({
@@ -184,7 +254,7 @@ export const createAnalysis = asyncHandler(async (req, res) => {
                 });
             }
         });
-        
+
         analysis.skillBreakdown = skillBreakdown;
 
         // Other fields
@@ -192,8 +262,8 @@ export const createAnalysis = asyncHandler(async (req, res) => {
         analysis.transferrableSkills = skillGapAnalysisData.transferableSkills;
 
         // Experience analysis
-        const candidateYears = skillGapAnalysisData.experienceGap?.candidateYears || 0;
-        const requiredYears = skillGapAnalysisData.experienceGap?.typicalRequirement || 0;
+        const candidateYears = extractNumericValue(skillGapAnalysisData.experienceGap?.candidateYears);
+        const requiredYears = extractNumericValue(skillGapAnalysisData.experienceGap?.typicalRequirement);
 
         analysis.experienceAnalysis = {
             candidateYears: candidateYears,
@@ -202,7 +272,10 @@ export const createAnalysis = asyncHandler(async (req, res) => {
             assessment: skillGapAnalysisData.experienceGap?.assessment || ''
         };
 
-        analysis.readinessLevel = skillGapAnalysisData.overallAssessment.readinessLevel;
+        // normalize readinees level does that converts readinees level to predefined enums
+        analysis.readinessLevel = normalizeReadinessLevel(
+            skillGapAnalysisData.overallAssessment.readinessLevel
+        );
         analysis.estimatedTimeToReady = skillGapAnalysisData.overallAssessment.estimatedTimeToReady;
 
         // ATS Score
@@ -306,7 +379,7 @@ export const getMyAnalysis = asyncHandler(async (req, res) => {
         throw new ApiError(401, 'Analysis not found')
     }
     res.status(200).json(
-        new ApiResponse(200, analysed, 'Analysis Fetched successfully')
+        new ApiResponse(200, analyses, 'Analysis Fetched successfully')
       );
 })
 
@@ -342,7 +415,7 @@ export const getAnalysisById = asyncHandler(async (req, res) => {
         throw new ApiError(401, 'No analysis found of user')
     }
     res.status(200)
-        .json(new ApiResponse(201, 'Successfully fetched analysis for user :'`${req.user.email}`, analysis))
+        .json(new ApiResponse(201, analysis,'Successfully fetched analysis for user :'`${req.user.email}`))
 })
 
 export const deleteAnalysis = asyncHandler(async (req, res) => {
@@ -367,7 +440,7 @@ export const deleteAnalysis = asyncHandler(async (req, res) => {
     logger.info(201, 'User succesfuly deleted his analysis . user is :'`${req.user.email}`)
 
     res.status(200)
-        .json(new ApiResponse(201,'User deleted succesfully'))
+        .json(new ApiResponse(201,null,'User deleted succesfully'))
 })
 
 export const compare_Multiple_Job_Role_With_Resume_And_Get_Analysis = asyncHandler(async (req, res) => {
@@ -403,6 +476,10 @@ export const compare_Multiple_Job_Role_With_Resume_And_Get_Analysis = asyncHandl
             try {
 
                 // this only keeps response of comparision. no save in database
+                // later things to optimize this
+                // extract the resume skill and provide he extracted skill
+                //or make 1 api call and pass array of jobroles in one go
+                // or handle or use queue and push the heavy analysis in queue and work in background
                 const analysis = skillgapanalysis.performDeepSkillGapAnalyze(
                     resume, jobRole
                 )
@@ -439,6 +516,7 @@ export const compare_Multiple_Job_Role_With_Resume_And_Get_Analysis = asyncHandl
         .filter((c) => !c.error)
         .sort((a, b) => b.matchScore - a.matchScore);
 
+        // bstFit means the highest matchscore analysis
     const bestFit = sortedComparisons[0];
     const fastestPath = sortedComparisons.reduce((fastest, current) => {
         return current.estimatedTimeToReady.weeks < fastest.estimatedTimeToReady.weeks
@@ -471,7 +549,7 @@ export const regenerateAnalysis = asyncHandler(async (req, res) => {
 
     const { preferences } = req.body;  // ← Get preferences from request
   
-    const analysis = await Analysis.findOne({
+    const analysis = await analysisModel.findOne({
       _id: req.params.id,
       user: req.user._id,
     }).populate('resume jobRole');

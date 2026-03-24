@@ -17,7 +17,7 @@ const SkillProgressChart = ({ skills = [], loading = false }) => {
     );
   }
 
-  if (!skills || skills.length === 0) {
+  if (!skills || skills.length === 0) {         
     return null;
   }
 
@@ -69,7 +69,7 @@ const SkillProgressChart = ({ skills = [], loading = false }) => {
                   )}
                 </div>
               </div>
-
+              
               {/* Progress bar */}
               <div className="relative h-3 bg-neutral-100 dark:bg-neutral-700 rounded-full overflow-hidden">
                 {/* Current progress */}

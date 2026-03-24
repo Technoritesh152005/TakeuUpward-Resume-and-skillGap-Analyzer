@@ -1,4 +1,9 @@
+// React hooks used to store state, run side effects, and derive filtered data.
 import { useEffect, useMemo, useState } from 'react';
+// Router helpers:
+// - useNavigate: move user to another route
+// - useLocation: read current URL details
+// - useParams: read route params like /analysis/:id
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   Sparkles,
@@ -12,12 +17,22 @@ import {
   Trophy,
   Rocket,
   BookOpen,
+  Brain,
+  ScanSearch,
+  Stars,
 } from 'lucide-react';
+// Toasts show small success/error popup messages.
 import toast from 'react-hot-toast';
+// Shared dashboard shell for authenticated pages.
 import DashboardLayout from '../components/layout/DashboardLayout.jsx';
+// Service that calls resume-related backend APIs.
 import resumeService from '../services/resumeService.js';
+// Service that calls analysis and job-role backend APIs.
 import analysisService from '../services/analysisService.js';
 
+// Safe fallback object for the analysis result area.
+// We keep the same shape the UI expects so cards can render
+// even before the first API response arrives.
 const emptyOverview = {
   matchScore: 0,
   readinessLevel: 'not-ready',
@@ -29,13 +44,36 @@ const emptyOverview = {
   aiSuggestion: { summary: '', recommendations: [] },
 };
 
+const createAnalysisStages = [
+  // These labels drive the temporary loading overlay shown while
+  // the backend is generating an analysis.
+  {
+    title: 'Reading your resume',
+    description: 'Pulling parsed skills, experience, and project signals.',
+    icon: ScanSearch,
+  },
+  {
+    title: 'Matching against the role',
+    description: 'Comparing your profile with the selected job role requirements.',
+    icon: Brain,
+  },
+  {
+    title: 'Building the overview',
+    description: 'Preparing strengths, gaps, ATS insights, and recommendations.',
+    icon: Stars,
+  },
+];
+
 const scoreTone = (score) => {
+  // Returns a Tailwind text color based on score quality.
   if (score >= 75) return 'text-emerald-600 dark:text-emerald-400';
   if (score >= 50) return 'text-amber-600 dark:text-amber-400';
   return 'text-red-600 dark:text-red-400';
 };
 
 const parseResumeDocs = (payload) => {
+  // Backend responses are not always shaped exactly the same.
+  // This helper normalizes common formats into one resume array.
   if (Array.isArray(payload?.data?.docs)) return payload.data.docs;
   if (Array.isArray(payload?.docs)) return payload.docs;
   if (Array.isArray(payload?.data)) return payload.data;
@@ -47,15 +85,22 @@ const AnalysisPage = () => {
   const location = useLocation();
   const { id: analysisIdFromRoute } = useParams();
 
+  // If the user lands here from a resume details page, that page can pass
+  // `?resumeId=<resumeObjectId>` in the URL. `location.search` is only the
+  // query-string part after `?`, not the route path.
   const resumeIdFromQuery = new URLSearchParams(location.search).get('resumeId');
 
   const [loadingBase, setLoadingBase] = useState(true);
   const [resumes, setResumes] = useState([]);
   const [jobRoles, setJobRoles] = useState([]);
 
+  // This is the resume id that will be used in create-analysis and compare-role
+  // API calls. It starts with the query value when present.
   const [selectedResumeId, setSelectedResumeId] = useState(resumeIdFromQuery || '');
   const [selectedJobRoleId, setSelectedJobRoleId] = useState('');
   const [compareRoleIds, setCompareRoleIds] = useState([]);
+  const [jobRoleSearch, setJobRoleSearch] = useState('');
+  const [compareRoleSearch, setCompareRoleSearch] = useState('');
 
   const [hoursPerWeek, setHoursPerWeek] = useState(10);
   const [budget, setBudget] = useState('medium');
@@ -64,38 +109,79 @@ const AnalysisPage = () => {
   const [creating, setCreating] = useState(false);
   const [comparing, setComparing] = useState(false);
   const [activeTab, setActiveTab] = useState('create');
+  const [createStageIndex, setCreateStageIndex] = useState(0);
+  const [showCreateOverlay, setShowCreateOverlay] = useState(false);
 
   const [analysisOverview, setAnalysisOverview] = useState(emptyOverview);
   const [comparisonResult, setComparisonResult] = useState(null);
 
+// every time runs boostarp which work is to
   useEffect(() => {
     bootstrapData();
   }, []);
 
+  // 
   useEffect(() => {
     if (analysisIdFromRoute) {
       fetchAnalysisById(analysisIdFromRoute);
     }
   }, [analysisIdFromRoute]);
 
+  // run this when in creating mode
+  useEffect(() => {
+    if (!creating) {
+      setCreateStageIndex(0);
+      return undefined;
+    }
+
+    const interval = window.setInterval(() => {
+      setCreateStageIndex((prev) => (prev + 1) % createAnalysisStages.length);
+    }, 1500);
+
+    return () => window.clearInterval(interval);
+  }, [creating]);
+
   const bootstrapData = async () => {
     try {
       setLoadingBase(true);
-      const [resumeRes, rolesRes] = await Promise.all([
+  
+      const [resumeResult, rolesResult] = await Promise.allSettled([
         resumeService.getMyResume(1, 12),
-        analysisService.getJobRoles({ limit: 12 }),
+        analysisService.getJobRoles({ limit: 60 }),
       ]);
-
-      const resumeDocs = parseResumeDocs(resumeRes);
+  
+      const resumeDocs =
+        resumeResult.status === 'fulfilled'
+          ? parseResumeDocs(resumeResult.value)
+          : [];
+  
+      const rolesRes =
+        rolesResult.status === 'fulfilled'
+          ? rolesResult.value
+          : [];
+  
       setResumes(resumeDocs);
       setJobRoles(Array.isArray(rolesRes) ? rolesRes : []);
-
+  
+      // When the URL does not include `resumeId` (for example `/analysis`),
+      // default to the first fetched resume so the page still works without
+      // showing an id in the address bar.
       if (!selectedResumeId && resumeDocs.length > 0) {
         setSelectedResumeId(resumeDocs[0]._id);
       }
-
+  
       if (!selectedJobRoleId && Array.isArray(rolesRes) && rolesRes.length > 0) {
         setSelectedJobRoleId(rolesRes[0]._id);
+      }
+  
+      if (resumeResult.status === 'rejected') {
+        console.error(resumeResult.reason);
+        toast.error('Failed to load resumes');
+      }
+  
+      if (rolesResult.status === 'rejected') {
+        console.error(rolesResult.reason);
+        toast.error('Failed to load job roles');
       }
     } catch (error) {
       console.error(error);
@@ -126,8 +212,11 @@ const AnalysisPage = () => {
       return;
     }
 
+    const startedAt = Date.now();
+
     try {
       setCreating(true);
+      setShowCreateOverlay(true);
       const payload = await analysisService.createAnalysis({
         resumeId: selectedResumeId,
         jobRoleId: selectedJobRoleId,
@@ -145,7 +234,10 @@ const AnalysisPage = () => {
       console.error(error);
       toast.error(error?.response?.data?.message || 'Failed to create analysis');
     } finally {
+      const elapsed = Date.now() - startedAt;
+      const remaining = Math.max(0, 2200 - elapsed);
       setCreating(false);
+      window.setTimeout(() => setShowCreateOverlay(false), remaining);
     }
   };
 
@@ -192,8 +284,38 @@ const AnalysisPage = () => {
     return jobRoles.find((role) => role._id === selectedJobRoleId)?.title || 'Selected role';
   }, [jobRoles, selectedJobRoleId]);
 
+  const filteredJobRoles = useMemo(() => {
+    const search = jobRoleSearch.trim().toLowerCase();
+    if (!search) return jobRoles;
+
+    return jobRoles.filter((role) =>
+      [role.title, role.category, role.experienceLevel]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(search))
+    );
+  }, [jobRoles, jobRoleSearch]);
+
+  const filteredCompareRoles = useMemo(() => {
+    const search = compareRoleSearch.trim().toLowerCase();
+    if (!search) return jobRoles;
+
+    return jobRoles.filter((role) =>
+      [role.title, role.category, role.experienceLevel]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(search))
+    );
+  }, [jobRoles, compareRoleSearch]);
+
   return (
     <DashboardLayout>
+      <>
+      {showCreateOverlay ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-950/55 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-2xl">
+            <AnalysisGenerationCard activeStage={createStageIndex} />
+          </div>
+        </div>
+      ) : null}
       <div className="space-y-8">
         <section className="rounded-2xl border border-neutral-200 dark:border-neutral-700 bg-gradient-to-br from-primary-600 to-emerald-700 text-white p-6 md:p-8 shadow-card">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -253,7 +375,11 @@ const AnalysisPage = () => {
                 <form onSubmit={handleCreateAnalysis} className="space-y-5">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Field label="Resume">
-                      <select value={selectedResumeId} onChange={(e) => setSelectedResumeId(e.target.value)} className="input dark:bg-neutral-900 dark:text-neutral-100">
+                      <select
+                        value={selectedResumeId}
+                        onChange={(e) => setSelectedResumeId(e.target.value)}
+                        className="input dark:bg-neutral-900 dark:text-neutral-100"
+                      >
                         <option value="">Select your resume</option>
                         {resumes.map((resume) => (
                           <option key={resume._id} value={resume._id}>{resume.originalFileName || resume.fileName}</option>
@@ -262,12 +388,24 @@ const AnalysisPage = () => {
                     </Field>
 
                     <Field label="Target Job Role">
-                      <select value={selectedJobRoleId} onChange={(e) => setSelectedJobRoleId(e.target.value)} className="input dark:bg-neutral-900 dark:text-neutral-100">
-                        <option value="">Select target role</option>
-                        {jobRoles.map((role) => (
-                          <option key={role._id} value={role._id}>{role.title}</option>
-                        ))}
-                      </select>
+                      <div className="space-y-2">
+                        <input
+                          type="text"
+                          value={jobRoleSearch}
+                          onChange={(e) => setJobRoleSearch(e.target.value)}
+                          placeholder="Search job roles"
+                          className="input dark:bg-neutral-900 dark:text-neutral-100"
+                        />
+                        <select value={selectedJobRoleId} onChange={(e) => setSelectedJobRoleId(e.target.value)} className="input dark:bg-neutral-900 dark:text-neutral-100">
+                          <option value="">Select target role</option>
+                          {filteredJobRoles.map((role) => (
+                            <option key={role._id} value={role._id}>{role.title}</option>
+                          ))}
+                        </select>
+                        <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                          Showing {filteredJobRoles.length} of {jobRoles.length} roles
+                        </p>
+                      </div>
                     </Field>
                   </div>
 
@@ -299,11 +437,16 @@ const AnalysisPage = () => {
                     {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Target className="w-4 h-4" />}
                     {creating ? 'Generating analysis...' : `Create analysis for ${selectedRoleName}`}
                   </button>
+
                 </form>
               ) : (
                 <form onSubmit={handleCompareRoles} className="space-y-5">
                   <Field label="Resume for Comparison">
-                    <select value={selectedResumeId} onChange={(e) => setSelectedResumeId(e.target.value)} className="input dark:bg-neutral-900 dark:text-neutral-100">
+                    <select
+                      value={selectedResumeId}
+                      onChange={(e) => setSelectedResumeId(e.target.value)}
+                      className="input dark:bg-neutral-900 dark:text-neutral-100"
+                    >
                       <option value="">Select your resume</option>
                       {resumes.map((resume) => (
                         <option key={resume._id} value={resume._id}>{resume.originalFileName || resume.fileName}</option>
@@ -313,8 +456,17 @@ const AnalysisPage = () => {
 
                   <div>
                     <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-3">Choose 2-5 job roles</p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-72 overflow-auto pr-1 scrollbar-thin">
-                      {jobRoles.map((role) => {
+                    <div className="space-y-3">
+                      <input
+                        type="text"
+                        value={compareRoleSearch}
+                        onChange={(e) => setCompareRoleSearch(e.target.value)}
+                        placeholder="Search by role title or category"
+                        className="input dark:bg-neutral-900 dark:text-neutral-100"
+                      />
+                      <div className="rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50/70 dark:bg-neutral-900/30 p-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-72 overflow-y-auto pr-2 scrollbar-thin">
+                          {filteredCompareRoles.map((role) => {
                         const selected = compareRoleIds.includes(role._id);
                         return (
                           <button
@@ -330,7 +482,12 @@ const AnalysisPage = () => {
                             <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">{role.category || 'Role'}</p>
                           </button>
                         );
-                      })}
+                          })}
+                        </div>
+                      </div>
+                      <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                        Showing {filteredCompareRoles.length} of {jobRoles.length} roles
+                      </p>
                     </div>
                     <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2">Selected: {compareRoleIds.length} / 5</p>
                   </div>
@@ -424,6 +581,7 @@ const AnalysisPage = () => {
           </aside>
         </section>
       </div>
+      </>
     </DashboardLayout>
   );
 };
@@ -494,6 +652,69 @@ const GapPill = ({ label, value, color }) => (
   <div className={`rounded-xl px-3 py-4 ${color}`}>
     <p className="text-2xl font-bold">{value}</p>
     <p className="text-xs font-medium mt-1">{label}</p>
+  </div>
+);
+
+const AnalysisGenerationCard = ({ activeStage = 0 }) => (
+  <div className="relative overflow-hidden rounded-2xl border border-primary-200 bg-gradient-to-br from-primary-50 via-white to-emerald-50 p-5 dark:border-primary-800/40 dark:from-primary-950/30 dark:via-neutral-900 dark:to-emerald-950/20">
+    <div className="absolute inset-0 analysis-generation-sheen opacity-70" />
+    <div className="relative">
+      <div className="flex items-start gap-4">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-600 text-white shadow-lg shadow-primary-600/20">
+          <Sparkles className="h-5 w-5 animate-pulse" />
+        </div>
+        <div>
+          <h3 className="text-base font-semibold text-neutral-900 dark:text-white">Generating your analysis</h3>
+          <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">
+            Hold on while the system scores your resume, checks role fit, and prepares the detailed overview.
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-5 h-2 overflow-hidden rounded-full bg-primary-100 dark:bg-neutral-800">
+        <div className="h-full w-2/3 rounded-full bg-gradient-to-r from-primary-500 via-emerald-500 to-primary-500 analysis-progress-bar" />
+      </div>
+
+      <div className="mt-5 space-y-3">
+        {createAnalysisStages.map((stage, index) => {
+          const isActive = index === activeStage;
+          const isPassed = index < activeStage;
+          const Icon = stage.icon;
+
+          return (
+            <div
+              key={stage.title}
+              className={`flex items-center gap-3 rounded-xl border px-4 py-3 transition-all ${
+                isActive
+                  ? 'border-primary-300 bg-white/90 shadow-sm dark:border-primary-700 dark:bg-neutral-800/80'
+                  : isPassed
+                    ? 'border-emerald-200 bg-emerald-50/80 dark:border-emerald-800/40 dark:bg-emerald-950/20'
+                    : 'border-neutral-200 bg-white/50 dark:border-neutral-800 dark:bg-neutral-900/50'
+              }`}
+            >
+              <div
+                className={`flex h-10 w-10 items-center justify-center rounded-xl ${
+                  isActive
+                    ? 'bg-primary-600 text-white'
+                    : isPassed
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-300'
+                }`}
+              >
+                <Icon className={`h-4 w-4 ${isActive ? 'animate-pulse' : ''}`} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-neutral-900 dark:text-white">{stage.title}</p>
+                <p className="text-xs text-neutral-600 dark:text-neutral-400">{stage.description}</p>
+              </div>
+              <div className="ml-auto text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                {isActive ? 'Running' : isPassed ? 'Done' : 'Queued'}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   </div>
 );
 
