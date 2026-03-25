@@ -147,11 +147,11 @@ const resumePage = ()=> {
                           <span>{(Number(item.fileSize) / 1024 / 1024).toFixed(2)} MB</span>
                           <span>•</span>
                           <span className={`px-2 py-0.5 rounded-full ${
-                            item.parsedData?.processingStatus === 'completed'
+                            item.processingStatus === 'completed'
                               ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
                               : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
                           }`}>
-                            {item.parsedData?.processingStatus || 'Processing'}
+                            {item.processingStatus || 'Processing'}
                           </span>
                         </div>
                       </div>

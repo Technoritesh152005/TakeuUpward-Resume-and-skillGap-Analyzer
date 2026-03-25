@@ -209,18 +209,18 @@ const ResumeDetailPage = () => {
           <div className="mt-4 flex items-center gap-4 text-sm">
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4" />
-              <span>{parsedData.wordCount || 0} words</span>
+              <span>{resume.wordCount || parsedData.wordCount || 0} words</span>
             </div>
             <div className="flex items-center gap-2">
               <FileText className="w-4 h-4" />
-              <span>{parsedData.pageCount || 0} pages</span>
+              <span>{resume.pageCount || parsedData.pageCount || 0} pages</span>
             </div>
             <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-              parsedData.processingStatus === 'completed'
+              resume.processingStatus === 'completed'
                 ? 'bg-green-400/20 text-green-100'
                 : 'bg-amber-400/20 text-amber-100'
             }`}>
-              {parsedData.processingStatus || 'Processing'}
+              {resume.processingStatus || 'Processing'}
             </div>
           </div>
         </div>

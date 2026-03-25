@@ -55,12 +55,12 @@ export const uploadResume = asyncHandler(async (req, res, next) => {
         fileSize: String(size),
         mimeType: mimetype,
         storagetType: 'local',
+        processingStatus: 'completed',
+        rawText,
+        wordCount,
+        pageCount,
         parsedData: {
             ...parsedData,
-            processingStatus: 'completed',
-            rawText,
-            wordCount,
-            pageCount,
         },
     })
 
@@ -238,10 +238,10 @@ export const reparseResume = asyncHandler(async (req, res) => {
                 ...(prev.skills || {}),
                 ...(structuredData.skills || {}),
             },
-            rawText: existingRaw,
-            processingStatus: 'completed',
             version: (prev.version ?? 1) + 1,
         };
+        resume.rawText = existingRaw;
+        resume.processingStatus = 'completed';
 
         // now as u done reparse means u dont need to have old data 
         await resume.save();

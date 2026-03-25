@@ -61,6 +61,18 @@ const normalizeReadinessLevel = (value) => {
     return 'not-ready';
 };
 
+const normalizeProficiency = (value) => {
+    const raw = String(value || '').trim().toLowerCase();
+
+    if (!raw) return 'beginner';
+    if (['beginner', 'novice', 'basic'].includes(raw)) return 'beginner';
+    if (['intermediate', 'medium'].includes(raw)) return 'intermediate';
+    if (['advanced', 'proficient', 'proficiency'].includes(raw)) return 'advanced';
+    if (['expert', 'fluent', 'native'].includes(raw)) return 'expert';
+
+    return 'beginner';
+};
+
 // first create a analysis controller
 /*
 then take resume id and job role id
@@ -161,6 +173,7 @@ export const createAnalysis = asyncHandler(async (req, res) => {
             // loop through every element of skill based category and 
             critical: (skillGapAnalysisData.skillGaps?.critical || []).map((item) => ({
                 ...item,
+                // normalize the diffculty skill cause sometimes ai returns some words which dont fit our validation
                 difficulty: normalizeDifficulty(item?.difficulty),
             })),
             important: (skillGapAnalysisData.skillGaps?.important || []).map((item) => ({
@@ -172,6 +185,12 @@ export const createAnalysis = asyncHandler(async (req, res) => {
                 difficulty: normalizeDifficulty(item?.difficulty),
             })),
         };
+
+        const normalizedStrengths = (skillGapAnalysisData.strengths || []).map((item) => ({
+            ...item,
+            // normalize these alsp
+            proficiency: normalizeProficiency(item?.proficiency),
+        }));
 
         //  setting Skill gaps
         analysis.skillGaps = normalizedSkillGaps;
@@ -194,7 +213,7 @@ export const createAnalysis = asyncHandler(async (req, res) => {
 
         // Add from strengths (skills they HAVE)
         // u r adding the skills u have
-        skillGapAnalysisData.strengths?.forEach(item => {
+        normalizedStrengths.forEach(item => {
             if (item.skill) extractedSkills.add(item.skill);
         });
 
@@ -214,7 +233,7 @@ export const createAnalysis = asyncHandler(async (req, res) => {
         };
 
         // Add skills from strengths (skills they HAVE)
-        skillGapAnalysisData.strengths?.forEach(strength => {
+        normalizedStrengths.forEach(strength => {
             // means it take score of ur analysis and map with levelMap
             const currentLevel = levelMap[strength.proficiency] || 50;
             const targetLevel = 95;
@@ -258,7 +277,7 @@ export const createAnalysis = asyncHandler(async (req, res) => {
         analysis.skillBreakdown = skillBreakdown;
 
         // Other fields
-        analysis.candidateStrength = skillGapAnalysisData.strengths;
+        analysis.candidateStrength = normalizedStrengths;
         analysis.transferrableSkills = skillGapAnalysisData.transferableSkills;
 
         // Experience analysis
@@ -340,7 +359,17 @@ export const getMyAnalysis = asyncHandler(async (req, res) => {
     } = req.query
 
     const userId = req.user._id
-    const cacheKey =`analysis:${userId}`
+    const cacheKey = `analysis:${userId}:${JSON.stringify({
+        page,
+        limit,
+        sort,
+        status,
+        resumeId,
+        jobRoleId,
+        minMatchScore,
+        maxMatchScore,
+        isActive
+    })}`
 
     const cachedData = await redisClient.get(cacheKey)
 
@@ -365,12 +394,12 @@ export const getMyAnalysis = asyncHandler(async (req, res) => {
     }
     
     const analyses = await analysisModel.paginate(filter, {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        sort: sort,
+        page: parseInt(page, 10) || 1,
+        limit: parseInt(limit, 10) || 12,
+        sort: sort || '-createdAt',
         populate: [
-            { path: 'resumeModel', select: 'filename originalName uploadedAt' },
-            { path: 'jobRoleModel', select: 'title category experienceLevel salaryRange' },
+            { path: 'resume', select: 'fileName originalFileName createdAt' },
+            { path: 'jobRole', select: 'title category experienceLevel salaryRange' },
         ]
     })
     // let in cache for 5 minutes
@@ -408,14 +437,14 @@ export const getAnalysisById = asyncHandler(async (req, res) => {
         .populate('resume', 'fileName , originalFileName , parsedData uploadedAt')
         .populate('jobRole')
 
-    await redisClient.setEx(cacheKey,300,JSON.stringify(analysis))
-    // thid will get that analysis document and also give resume of which analaysis is created with their
-    // parsed data and also jobRole target
     if (!analysis) {
         throw new ApiError(401, 'No analysis found of user')
     }
+    await redisClient.setEx(cacheKey,300,JSON.stringify(analysis))
+    // thid will get that analysis document and also give resume of which analaysis is created with their
+    // parsed data and also jobRole target
     res.status(200)
-        .json(new ApiResponse(201, analysis,'Successfully fetched analysis for user :'`${req.user.email}`))
+        .json(new ApiResponse(201, analysis, `Successfully fetched analysis for user: ${req.user.email}`))
 })
 
 export const deleteAnalysis = asyncHandler(async (req, res) => {
@@ -446,7 +475,7 @@ export const deleteAnalysis = asyncHandler(async (req, res) => {
 export const compare_Multiple_Job_Role_With_Resume_And_Get_Analysis = asyncHandler(async (req, res) => {
 
     const userId = req.user._id
-    const { resumeId, jobRoleId } = req.body
+    const { resumeId, jobRolesId } = req.body
 
     const resume = await resumeModel.findOne({
         user: userId,
@@ -462,17 +491,17 @@ export const compare_Multiple_Job_Role_With_Resume_And_Get_Analysis = asyncHandl
     const jobRoles = await jobRoleModel.find(
         {
             // it return all jobrole with the id present in array 
-            _id: { $in: jobRoleId },
+            _id: { $in: jobRolesId },
             isActive: true
         }
     )
 
-    if (!jobRoles) {
+    if (!jobRoles || jobRoles.length === 0) {
         throw new ApiError(401, 'No Job Roles found to compare')
     }
 
     const comparisons = await Promise.all(
-        jobRoles.map((jobRole) => {
+        jobRoles.map(async (jobRole) => {
             try {
 
                 // this only keeps response of comparision. no save in database
@@ -480,8 +509,8 @@ export const compare_Multiple_Job_Role_With_Resume_And_Get_Analysis = asyncHandl
                 // extract the resume skill and provide he extracted skill
                 //or make 1 api call and pass array of jobroles in one go
                 // or handle or use queue and push the heavy analysis in queue and work in background
-                const analysis = skillgapanalysis.performDeepSkillGapAnalyze(
-                    resume, jobRole
+                const analysis = await skillgapanalysis.performDeepSkillGapAnalyze(
+                    resume.parsedData, jobRole
                 )
                 // return inside map() doesn't exit the function - it returns the value for that array item!
                 return {
@@ -505,7 +534,7 @@ export const compare_Multiple_Job_Role_With_Resume_And_Get_Analysis = asyncHandl
                 }
             } catch (error) {
                 logger.error(`Failed to analyze role ${jobRole.title}: ${error.message}`);
-                throw new ApiError('Failed to create job analaysis for this job :', `${jobRole.title}`, 401)
+                throw new ApiError(401, `Failed to analyze ${jobRole.title}: ${error.message}`)
 
             }
         })
@@ -514,7 +543,7 @@ export const compare_Multiple_Job_Role_With_Resume_And_Get_Analysis = asyncHandl
     // Sort by match score
     const sortedComparisons = comparisons
         .filter((c) => !c.error)
-        .sort((a, b) => b.matchScore - a.matchScore);
+        .sort((a, b) => b.matchPercentage - a.matchPercentage);
 
         // bstFit means the highest matchscore analysis
     const bestFit = sortedComparisons[0];
@@ -595,9 +624,25 @@ export const regenerateAnalysis = asyncHandler(async (req, res) => {
   
     // Update analysis
     analysis.matchScore = gapAnalysis.overallAssessment.matchPercentage;
-    analysis.skillGaps = gapAnalysis.skillGaps;
-    analysis.strengths = gapAnalysis.strengths;
-    analysis.readinessLevel = gapAnalysis.overallAssessment.readinessLevel;
+    analysis.skillGaps = {
+      critical: (gapAnalysis.skillGaps?.critical || []).map((item) => ({
+        ...item,
+        difficulty: normalizeDifficulty(item?.difficulty),
+      })),
+      important: (gapAnalysis.skillGaps?.important || []).map((item) => ({
+        ...item,
+        difficulty: normalizeDifficulty(item?.difficulty),
+      })),
+      niceToHave: (gapAnalysis.skillGaps?.niceToHave || []).map((item) => ({
+        ...item,
+        difficulty: normalizeDifficulty(item?.difficulty),
+      })),
+    };
+    analysis.candidateStrength = (gapAnalysis.strengths || []).map((item) => ({
+      ...item,
+      proficiency: normalizeProficiency(item?.proficiency),
+    }));
+    analysis.readinessLevel = normalizeReadinessLevel(gapAnalysis.overallAssessment.readinessLevel);
     analysis.version += 1;
   
     await analysis.save();
