@@ -116,7 +116,7 @@ const resumeSchema = mongoose.Schema(
         },
         processingStatus:{
             type:String,
-            enum:['pending','completed','proccessing','failed'],
+            enum:['pending','completed','processing','failed'],
             default:'pending',
             },
             processError:String,

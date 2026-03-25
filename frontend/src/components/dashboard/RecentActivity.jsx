@@ -34,7 +34,7 @@ const RecentActivity = ({ activities = [], loading = false }) => {
     }
 
     if (activity.type === 'analysis_complete') {
-      navigate('/analysis');
+      navigate(`/analysis/${activity.id}`);
     }
   };
   if (loading) {
@@ -83,10 +83,10 @@ const RecentActivity = ({ activities = [], loading = false }) => {
           Recent Activity
         </h2>
         <button
-          onClick={() => navigate('/resumes')}
+          onClick={() => navigate('/analysis')}
           className="text-sm text-primary-600 dark:text-primary-400 hover:underline"
         >
-          View All
+          View Analyses
         </button>
       </div>
 

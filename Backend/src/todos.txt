@@ -9,3 +9,5 @@ same goes with browse all job roles
 and make a search box or filter where it can browse
 these r the mvp
 
+let our system have fallback . means if ai failed handle it properly or retry after some seconds and before retrying inform user it failed due to some reason should u want to try
+strict validation

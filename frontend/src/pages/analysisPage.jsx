@@ -230,6 +230,9 @@ const AnalysisPage = () => {
       const clean = payload?.data || payload;
       setAnalysisOverview({ ...emptyOverview, ...clean });
       toast.success('Analysis generated successfully');
+      if (clean?._id) {
+        navigate(`/analysis/${clean._id}`);
+      }
     } catch (error) {
       console.error(error);
       toast.error(error?.response?.data?.message || 'Failed to create analysis');
@@ -748,3 +751,9 @@ const MiniMeter = ({ label, value }) => (
 );
 
 export default AnalysisPage;
+
+
+// git checkout -b feature/my-change
+// git add .
+// git commit -m "msg"
+// git push origin feature/my-change

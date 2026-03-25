@@ -13,6 +13,8 @@ import MyResumesPage from './pages/resumePage.jsx'
 import DetailedResumeOverviewPage from './pages/detailedResumeOverviewPage.jsx'
 
 import AnalysisPage from './pages/analysisPage.jsx'
+import AnalysisListPage from './pages/analysisListPage.jsx'
+import AnalysisDetailPage from './pages/analysisDetailPage.jsx'
 // Protected Route Component
 import ProtectedRoute from './components/auth/ProtectedRoute';
 
@@ -74,7 +76,7 @@ function App() {
             path="/analysis"
             element={
               <ProtectedRoute>
-                <AnalysisPage />
+                <AnalysisListPage />
               </ProtectedRoute>
             }
           />
@@ -92,7 +94,7 @@ function App() {
             path="/analysis/:id"
             element={
               <ProtectedRoute>
-                <AnalysisPage />
+                <AnalysisDetailPage />
               </ProtectedRoute>
             }
           />
