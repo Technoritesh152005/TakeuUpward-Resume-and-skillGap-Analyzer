@@ -11,6 +11,18 @@ import resumeService from '../services/resumeService.js'
 import toast from 'react-hot-toast';
 import { formatDistanceToNow, format } from 'date-fns';
 
+const hasText = (value) => typeof value === 'string' && value.trim().length > 0;
+const hasItems = (value) => Array.isArray(value) && value.length > 0;
+const hasObjectValues = (value) =>
+  !!value &&
+  typeof value === 'object' &&
+  !Array.isArray(value) &&
+  Object.values(value).some((entry) => {
+    if (hasText(entry)) return true;
+    if (hasItems(entry)) return true;
+    return !!entry && typeof entry === 'object' && Object.keys(entry).length > 0;
+  });
+
 const ResumeDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -141,6 +153,35 @@ const ResumeDetailPage = () => {
   const projectItems = parsedData.project || parsedData.projects || [];
   const certificationData = parsedData.certification || parsedData.certifications || {};
   const achievementItems = parsedData.achievments || parsedData.achievements || [];
+  const skillGroups = [
+    parsedData.skills?.technical || [],
+    parsedData.skills?.frameworks || [],
+    parsedData.skills?.tools || [],
+    parsedData.skills?.language || parsedData.skills?.languages || [],
+    parsedData.skills?.database || parsedData.skills?.databases || [],
+  ];
+
+  const hasPersonalInfo =
+    hasObjectValues(parsedData.personal) ||
+    hasText(personalLinkedin) ||
+    hasText(personalGithub) ||
+    hasText(personalPortfolio);
+  const hasSummary = hasText(parsedData.summary);
+  const hasExperience = hasItems(parsedData.experience);
+  const hasEducation = hasItems(educationItems);
+  const hasSkills = skillGroups.some((group) => hasItems(group));
+  const hasProjects = hasItems(projectItems);
+  const hasCertifications = hasObjectValues(certificationData);
+  const hasAchievements = hasItems(achievementItems);
+  const hasParsedContent =
+    hasPersonalInfo ||
+    hasSummary ||
+    hasExperience ||
+    hasEducation ||
+    hasSkills ||
+    hasProjects ||
+    hasCertifications ||
+    hasAchievements;
 
   return (
     <DashboardLayout>
@@ -225,8 +266,20 @@ const ResumeDetailPage = () => {
           </div>
         </div>
 
+        {!hasParsedContent && (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-100">
+            <h2 className="text-lg font-semibold">Resume text was extracted poorly</h2>
+            <p className="mt-2 text-sm leading-6 text-amber-800 dark:text-amber-200">
+              This file currently has almost no usable parsed content. In your screenshot it shows only {resume.wordCount || 0} word and {resume.pageCount || 0} pages, which usually means the uploaded file is image-based, scanned, or unreadable by the text extractor.
+            </p>
+            <p className="mt-2 text-sm leading-6 text-amber-800 dark:text-amber-200">
+              Reparse will only help if there is real extracted text. For image-heavy resumes, use a text-based PDF or run OCR before uploading.
+            </p>
+          </div>
+        )}
+
         {/* Personal Information */}
-        {parsedData.personal && (
+        {hasPersonalInfo && (
           <Section
             title="Personal Information"
             icon={User}
@@ -275,7 +328,7 @@ const ResumeDetailPage = () => {
         )}
 
         {/* Summary */}
-        {parsedData.summary && (
+        {hasSummary && (
           <Section
             title="Professional Summary"
             icon={FileText}
@@ -289,7 +342,7 @@ const ResumeDetailPage = () => {
         )}
 
         {/* Experience */}
-        {parsedData.experience && parsedData.experience.length > 0 && (
+        {hasExperience && (
           <Section
             title="Work Experience"
             icon={Briefcase}
@@ -384,7 +437,7 @@ const ResumeDetailPage = () => {
         )}
 
         {/* Education */}
-        {educationItems.length > 0 && (
+        {hasEducation && (
           <Section
             title="Education"
             icon={GraduationCap}
@@ -439,7 +492,7 @@ const ResumeDetailPage = () => {
         )}
 
         {/* Skills */}
-        {parsedData.skills && (
+        {hasSkills && (
           <Section
             title="Skills"
             icon={Code}
@@ -467,7 +520,7 @@ const ResumeDetailPage = () => {
         )}
 
         {/* Projects */}
-        {projectItems.length > 0 && (
+        {hasProjects && (
           <Section
             title="Projects"
             icon={Code}
@@ -527,7 +580,7 @@ const ResumeDetailPage = () => {
         )}
 
         {/* Certifications */}
-        {certificationData && Object.keys(certificationData).length > 0 && (
+        {hasCertifications && (
           <Section
             title="Certifications"
             icon={Award}
@@ -578,7 +631,7 @@ const ResumeDetailPage = () => {
           </Section>
         )}
 
-        {achievementItems.length > 0 && (
+        {hasAchievements && (
           <Section
             title="Achievements"
             icon={Award}

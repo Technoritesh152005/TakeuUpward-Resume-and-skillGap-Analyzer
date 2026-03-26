@@ -25,7 +25,7 @@ const readinessTone = {
 }
 
 const scoreTone = (score)=> {
-if(score >= 75) 'text-emerald-600 dark:text-emerald-400';
+  if (score >= 75) return 'text-emerald-600 dark:text-emerald-400';
   if (score >=50) return 'text-amber-600 dark:text-amber-400';
   return  'text-red-600 dark:text-red-400';
 }
@@ -44,6 +44,13 @@ const getGapTotal = (analysis)=>{
   (analysis?.skillGaps?.niceToHave?.length || 0);
   return total;
 }
+
+const getStatusTone = (status) => {
+  if (status === 'completed') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300';
+  if (status === 'processing') return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300';
+  if (status === 'failed') return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300';
+  return 'bg-neutral-100 text-neutral-700 dark:bg-neutral-700 dark:text-neutral-200';
+};
 
 const AnalysisListPage = ()=>{
 
@@ -66,7 +73,6 @@ const AnalysisListPage = ()=>{
         limit :50,
         sort:'-createdAt'
       })
-      console.log(response,'I am here at view all analysses')
       setAnalyses(Array.isArray(response?.docs) ? response.docs : [])
 
     }catch(error){
@@ -112,7 +118,8 @@ const AnalysisListPage = ()=>{
 // whenever some analyses adds or deletes do this summary count
 const summary = useMemo(()=>{
   const completed = analyses.filter((item) => item.status === 'completed')
-  const averageScore = completed.length ? Math.round((sum,item)=> sum + (item.matchScore || 0) ,0) / completed.length : 0
+  const totalScore = completed.reduce((sum, item) => sum + (item.matchScore || 0), 0)
+  const averageScore = completed.length ? Math.round(totalScore / completed.length) : 0
 
   return {
     total : analyses.length,
@@ -221,7 +228,7 @@ return (
                     <span className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${readinessTone[analysis.readinessLevel] || 'bg-neutral-100 text-neutral-700 dark:bg-neutral-700 dark:text-neutral-200'}`}>
                       {String(analysis.readinessLevel || 'unknown').replace('-', ' ')}
                     </span>
-                    <span className="rounded-full bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-600 dark:bg-neutral-700 dark:text-neutral-300">
+                    <span className={`rounded-full px-3 py-1 text-xs font-medium ${getStatusTone(analysis.status)}`}>
                       {analysis.status || 'unknown'}
                     </span>
                     <span className="text-xs text-neutral-500 dark:text-neutral-400">
@@ -243,27 +250,31 @@ return (
                   </div>
 
                   <p className="mt-4 line-clamp-2 text-sm leading-6 text-neutral-600 dark:text-neutral-300">
-                    {analysis?.aiSuggestion?.summary || 'Open this analysis to review detailed strengths, gaps, ATS signals, and recommendations.'}
+                    {analysis.status === 'failed'
+                      ? (analysis?.error || 'Analysis failed before completion.')
+                      : analysis.status === 'processing'
+                        ? 'Analysis is still running. Metrics can be incomplete until processing finishes.'
+                        : analysis?.aiSuggestion?.summary || 'Open this analysis to review detailed strengths, gaps, ATS signals, and recommendations.'}
                   </p>
                 </div>
 
                 <div className="grid min-w-full grid-cols-2 gap-3 lg:min-w-[320px]">
                   <MetricCard
                     label="Match Score"
-                    value={`${analysis.matchScore || 0}%`}
-                    valueClass={scoreTone(analysis.matchScore || 0)}
+                    value={analysis.status === 'completed' ? `${analysis.matchScore || 0}%` : 'Pending'}
+                    valueClass={analysis.status === 'completed' ? scoreTone(analysis.matchScore || 0) : 'text-neutral-500 dark:text-neutral-400'}
                   />
                   <MetricCard
                     label="Time to Ready"
-                    value={`${analysis?.estimatedTimeToReady?.weeks || 0} weeks`}
+                    value={analysis.status === 'completed' ? `${analysis?.estimatedTimeToReady?.weeks || 0} weeks` : 'Pending'}
                   />
                   <MetricCard
                     label="Skill Gaps"
-                    value={getGapTotal(analysis)}
+                    value={analysis.status === 'completed' ? getGapTotal(analysis) : 'Pending'}
                   />
                   <MetricCard
                     label="ATS Score"
-                    value={`${analysis?.atsScore?.overall || 0}%`}
+                    value={analysis.status === 'completed' ? `${analysis?.atsScore?.overall || 0}%` : 'Pending'}
                   />
                 </div>
               </div>

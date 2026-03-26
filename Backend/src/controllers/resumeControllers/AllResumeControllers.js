@@ -20,7 +20,7 @@ import resumeStructureInstance from '../../services/ai.services/analyze_resume_s
 // inside reparseResume:
 // clear cache based on user resume
 const clearResumeUserCaches = async (userId) => {
-    const keys = await redisClient.keys(`Resume:user:${userId}*`);
+    const keys = await redisClient.keys(`Resume:user:${String(userId)}*`);
     if (keys.length > 0) {
         await redisClient.del(...keys);
     }
@@ -28,7 +28,7 @@ const clearResumeUserCaches = async (userId) => {
 
 const clearResumeDetailCache = async (resumeId, userId) => {
     await redisClient.del(`Resume:id:${resumeId}`);
-    await redisClient.del(`Resume:id:${resumeId}:user:${userId}`);
+    await redisClient.del(`Resume:id:${resumeId}:user:${String(userId)}`);
 };
 
 export const uploadResume = asyncHandler(async (req, res, next) => {
@@ -124,7 +124,7 @@ export const getResumeById = asyncHandler(async (req, res, next) => {
     // get resume id first from params
     // for every resume id there will be only one resume . so no need to paginate as u will get only one resume
     // user id is given cause of security reason
-    const cacheKey = `Resume:id:${req.params.id}`
+    const cacheKey = `Resume:id:${req.params.id}:user:${String(req.user._id)}`
     const cachedData = await redisClient.get(cacheKey)
 
     if (cachedData) {
@@ -206,13 +206,13 @@ export const reparseResume = asyncHandler(async (req, res) => {
     const resume = await resumeModel.findOne({
         _id: req.params.id,
         user: req.user._id,
-    }).select('+parsedData.rawText');
+    }).select('+rawText');
 
     if (!resume) {
         throw new ApiError(404, 'Resume not found');
     }
 
-    const existingRaw = resume.parsedData?.rawText;
+    const existingRaw = resume.rawText;
     if (!existingRaw) {
         throw new ApiError(400, 'Original resume text not available for re-parsing');
     }

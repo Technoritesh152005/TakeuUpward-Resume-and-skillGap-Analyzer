@@ -2,6 +2,155 @@ import { getModel } from '../../config/gemini.js';
 import logger from '../../utils/logs.js';
 
 class AtsScoreGenerator {
+    toScore(value, fallback = 0) {
+        if (typeof value === 'number' && Number.isFinite(value)) {
+            return Math.max(0, Math.min(100, Math.round(value)));
+        }
+
+        if (typeof value === 'string') {
+            const match = value.match(/\d+(\.\d+)?/);
+            if (match) {
+                return this.toScore(Number(match[0]), fallback);
+            }
+        }
+
+        return fallback;
+    }
+
+    toStringArray(value, fallback = []) {
+        if (Array.isArray(value)) {
+            return value
+                .map((item) => String(item || '').trim())
+                .filter(Boolean);
+        }
+
+        if (typeof value === 'string' && value.trim()) {
+            return [value.trim()];
+        }
+
+        return fallback;
+    }
+
+    normalizeSection(section, fallback = {}) {
+        const source = section && typeof section === 'object' ? section : {};
+
+        return {
+            score: this.toScore(
+                source.score ??
+                source.value ??
+                source.rating ??
+                source.percentage,
+                this.toScore(fallback.score, 0)
+            ),
+            issues: this.toStringArray(
+                source.issues ??
+                source.problems ??
+                source.concerns ??
+                source.improvements ??
+                source.strengths,
+                this.toStringArray(fallback.issues)
+            ),
+            recommendations: this.toStringArray(
+                source.recommendations ??
+                source.suggestions ??
+                source.actions ??
+                source.nextSteps,
+                this.toStringArray(fallback.recommendations)
+            ),
+        };
+    }
+
+    normalizeKeywordSection(section, fallback = {}) {
+        const source = section && typeof section === 'object' ? section : {};
+
+        return {
+            score: this.toScore(
+                source.score ??
+                source.value ??
+                source.rating ??
+                source.percentage,
+                this.toScore(fallback.score, 0)
+            ),
+            matched: this.toStringArray(
+                source.matched ??
+                source.present ??
+                source.found,
+                this.toStringArray(fallback.matched)
+            ),
+            missing: this.toStringArray(
+                source.missing ??
+                source.absent ??
+                source.missingKeywords,
+                this.toStringArray(fallback.missing)
+            ),
+            suggestions: this.toStringArray(
+                source.suggestions ??
+                source.recommendations ??
+                source.actions,
+                this.toStringArray(fallback.suggestions)
+            ),
+        };
+    }
+
+    normalizeAtsPayload(rawData, fallbackData) {
+        const source = rawData && typeof rawData === 'object' ? rawData : {};
+        const fallback = fallbackData && typeof fallbackData === 'object' ? fallbackData : this.buildFallbackAtsScore({}, {});
+        const breakdownSource = source.breakdown && typeof source.breakdown === 'object' ? source.breakdown : {};
+        const fallbackBreakdown = fallback.breakdown || {};
+
+        const formatting = this.normalizeSection(
+            breakdownSource.formatting ?? source.formatting,
+            fallbackBreakdown.formatting
+        );
+
+        const keywords = this.normalizeKeywordSection(
+            breakdownSource.keywords ?? source.keywords,
+            fallbackBreakdown.keywords
+        );
+
+        const structure = this.normalizeSection(
+            breakdownSource.structure ?? source.structure,
+            fallbackBreakdown.structure
+        );
+
+        const content = this.normalizeSection(
+            breakdownSource.content ?? source.content,
+            fallbackBreakdown.content
+        );
+
+        const derivedOverall = Math.round(
+            (formatting.score + keywords.score + structure.score + content.score) / 4
+        );
+
+        return {
+            overallScore: this.toScore(
+                source.overallScore ??
+                source.overall_score ??
+                source.overall ??
+                source.score,
+                derivedOverall
+            ),
+            breakdown: {
+                formatting,
+                keywords,
+                structure,
+                content,
+            },
+            topPriorities: this.toStringArray(
+                source.topPriorities ??
+                source.priorities ??
+                source.recommendations,
+                this.toStringArray(fallback.topPriorities)
+            ),
+            estimatedImprovement: String(
+                source.estimatedImprovement ??
+                source.estimated_improvement ??
+                fallback.estimatedImprovement ??
+                ''
+            ),
+        };
+    }
+
     extractJsonObject(content) {
         const start = content.indexOf('{');
         const end = content.lastIndexOf('}');
@@ -201,7 +350,9 @@ Return ONLY the JSON object, no markdown formatting.
                 .replace(/```\n?/g, '')
                 .trim();
 
-            const properData = this.parseAtsResponse(cleanedContent) || this.buildFallbackAtsScore(resumeData, jobRole);
+            const fallbackData = this.buildFallbackAtsScore(resumeData, jobRole);
+            const parsedData = this.parseAtsResponse(cleanedContent);
+            const properData = this.normalizeAtsPayload(parsedData, fallbackData);
 
             if (!properData || properData.overallScore === undefined || properData.overallScore === null) {
                 throw new Error('Invalid ATS score response from AI');
