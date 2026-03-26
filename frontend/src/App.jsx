@@ -15,8 +15,12 @@ import DetailedResumeOverviewPage from './pages/detailedResumeOverviewPage.jsx'
 import AnalysisPage from './pages/analysisPage.jsx'
 import AnalysisListPage from './pages/analysisListPage.jsx'
 import AnalysisDetailPage from './pages/analysisDetailPage.jsx'
+import RoadmapListPage from './pages/roadmapListPage.jsx'
+import RoadmapDetailPage from './pages/roadmapDetailPage.jsx'
 // Protected Route Component
 import ProtectedRoute from './components/auth/ProtectedRoute';
+
+import roadmapListPage from './pages/roadmapListPage.jsx';
 
 // Create a client for React Query
 const queryClient = new QueryClient({
@@ -103,22 +107,16 @@ function App() {
             path="/roadmap"
             element={
               <ProtectedRoute>
-                <div className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-neutral-900">
-                  <div className="text-center">
-                    <h1 className="text-3xl font-bold text-neutral-900 dark:text-white mb-4">
-                      🗺️ Roadmap Page
-                    </h1>
-                    <p className="text-neutral-600 dark:text-neutral-400 mb-4">
-                      Coming soon! Track your learning roadmap here.
-                    </p>
-                    <a
-                      href="/dashboard"
-                      className="inline-block px-6 py-3 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors"
-                    >
-                      Back to Dashboard
-                    </a>
-                  </div>
-                </div>
+                <RoadmapListPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/roadmap/:id"
+            element={
+              <ProtectedRoute>
+                <RoadmapDetailPage />
               </ProtectedRoute>
             }
           />
@@ -231,4 +229,5 @@ function App() {
 }
 
 export default App;
+
 

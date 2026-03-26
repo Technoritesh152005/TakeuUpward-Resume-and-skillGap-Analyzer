@@ -12,6 +12,15 @@ import {
     markItemComplete
 }
 from '../controllers/roadmapController/roadmapController.js'
+import {
+    validateRoadmapCreate,
+    validateRoadmapId,
+    validateRoadmapAnalysisId,
+    validateMarkItemComplete,
+    validateRoadmapPreferencesUpdate,
+    validateRoadmapListQuery
+}
+from '../validation/roadmap.validation.js'
 // rouets in roadmap
 // 1.generate roadmap
 /*
@@ -24,24 +33,25 @@ from '../controllers/roadmapController/roadmapController.js'
 */
 
 // 1. create roadmap for user
-router.post('/',protectAccess,createRoadmap)
+router.post('/',protectAccess,validateRoadmapCreate,createRoadmap)
 
 // 2. get all roadmap
-router.get('/',protectAccess,getMyRoadmaps)
+router.get('/',protectAccess,validateRoadmapListQuery,getMyRoadmaps)
 
 // 3.get roadmap by analysis Id
-router.get('/analysis/:analysisId',protectAccess,getRoadmapByAnalysis)
+router.get('/analysis/:analysisId',protectAccess,validateRoadmapAnalysisId,getRoadmapByAnalysis)
 
 // 4.get roadmap by id
-router.get('/:id',protectAccess,getRoadmapById)
+router.get('/:id',protectAccess,validateRoadmapId,getRoadmapById)
 
 // 5. get users progress on roadmap
-router.get('/:id/progress',protectAccess,getProgressOfUser)
+router.get('/:id/progress',protectAccess,validateRoadmapId,getProgressOfUser)
 
 // 6. mark item complete
-router.put('/:id/mark-item-complete',protectAccess,markItemComplete)
+router.put('/:id/mark-item-complete',protectAccess,validateRoadmapId,validateMarkItemComplete,markItemComplete)
 
 // 7.update roadmap prefernce
-router.put('/:id/update-prefrenece',protectAccess,updateReference)
+router.put('/:id/update-preference',protectAccess,validateRoadmapId,validateRoadmapPreferencesUpdate,updateReference)
+
 
 export default router

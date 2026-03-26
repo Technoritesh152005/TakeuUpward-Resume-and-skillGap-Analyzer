@@ -26,7 +26,7 @@ const analysisService = {
       jobRoleId,
       ...(preference ? { preference } : {}),
     });
-    console.log(response)
+    console.log('im at analysis create',response)
     return extractPayload(response);
   },
 
@@ -55,7 +55,6 @@ const analysisService = {
 
     const response = await api.get(`/analysis/all-analysis${params.toString() ? `?${params.toString()}` : ''}`);
     const payload = extractPayload(response);
-    console.log(payload)
     return {
       raw: payload,
       docs: asArray(payload),

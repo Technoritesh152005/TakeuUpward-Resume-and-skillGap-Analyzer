@@ -34,6 +34,121 @@ const extractNumericValue = (value) => {
     return 0;
 };
 
+const parseMonthYearToDate = (value) => {
+    if (!value) return null;
+
+    const raw = String(value).trim();
+    if (!raw) return null;
+
+    if (/present|current|now/i.test(raw)) {
+        return new Date();
+    }
+
+    const normalized = raw
+        .replace(/\./g, ' ')
+        .replace(/,/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    const direct = new Date(normalized);
+    if (!Number.isNaN(direct.getTime())) {
+        return new Date(direct.getFullYear(), direct.getMonth(), 1);
+    }
+
+    const monthMap = {
+        jan: 0, january: 0,
+        feb: 1, february: 1,
+        mar: 2, march: 2,
+        apr: 3, april: 3,
+        may: 4,
+        jun: 5, june: 5,
+        jul: 6, july: 6,
+        aug: 7, august: 7,
+        sep: 8, sept: 8, september: 8,
+        oct: 9, october: 9,
+        nov: 10, november: 10,
+        dec: 11, december: 11,
+    };
+
+    const monthYearMatch = normalized.match(/([A-Za-z]+)\s+(\d{4})/);
+    if (monthYearMatch) {
+        const month = monthMap[monthYearMatch[1].toLowerCase()];
+        const year = Number(monthYearMatch[2]);
+        if (month !== undefined && Number.isFinite(year)) {
+            return new Date(year, month, 1);
+        }
+    }
+
+    const yearOnlyMatch = normalized.match(/\b(19|20)\d{2}\b/);
+    if (yearOnlyMatch) {
+        return new Date(Number(yearOnlyMatch[0]), 0, 1);
+    }
+
+    return null;
+};
+
+// basically counts the months of experience for candidate
+const calculateExperienceYearsFromResume = (parsedData) => {
+    // check if there exist experience in parsed data of resume
+    const experience = Array.isArray(parsedData?.experience) ? parsedData.experience : [];
+    if (!experience.length) return 0;
+
+    // map through experience obj
+    const intervals = experience
+        .map((item) => {
+            const start = parseMonthYearToDate(item?.startDate);
+            const end = item?.current ? new Date() : parseMonthYearToDate(item?.endDate);
+
+            if (!start || !end || end < start) {
+                return null;
+            }
+
+            return {
+                start: new Date(start.getFullYear(), start.getMonth(), 1),
+                end: new Date(end.getFullYear(), end.getMonth(), 1),
+            };
+        })
+        .filter(Boolean)
+        .sort((a, b) => a.start - b.start);
+
+    if (!intervals.length) return 0;
+
+    const merged = [];
+
+    for (const interval of intervals) {
+        const last = merged[merged.length - 1];
+
+        if (!last || interval.start > last.end) {
+            merged.push({ ...interval });
+            continue;
+        }
+
+        if (interval.end > last.end) {
+            last.end = interval.end;
+        }
+    }
+
+    const totalMonths = merged.reduce((sum, interval) => {
+        const months = ((interval.end.getFullYear() - interval.start.getFullYear()) * 12) +
+            (interval.end.getMonth() - interval.start.getMonth()) + 1;
+        return sum + Math.max(0, months);
+    }, 0);
+
+    return Math.round((totalMonths / 12) * 10) / 10;
+};
+
+const clearAnalysisCache = async (userId, analysisId = null) => {
+    const normalizedUserId = String(userId);
+    const userCacheKeys = await redisClient.keys(`analysis:${normalizedUserId}:*`);
+    if (userCacheKeys.length) {
+        await redisClient.del(...userCacheKeys);
+    }
+
+    if (analysisId) {
+        await redisClient.del(`analysis:${normalizedUserId}:${analysisId}`);
+    }
+};
+
 // as ai return some difficulty and in our schema it is defined these enums. so we convert it
 const normalizeDifficulty = (value) => {
     const raw = String(value || '').trim().toLowerCase();
@@ -117,7 +232,7 @@ export const createAnalysis = asyncHandler(async (req, res) => {
     });
 
     // Clear old cache
-    await redisClient.del(`analysis:${req.user._id}`);
+    await clearAnalysisCache(req.user._id);
 
     try {
         // Get skill gap analysis from Claude
@@ -281,7 +396,9 @@ export const createAnalysis = asyncHandler(async (req, res) => {
         analysis.transferrableSkills = skillGapAnalysisData.transferableSkills;
 
         // Experience analysis
-        const candidateYears = extractNumericValue(skillGapAnalysisData.experienceGap?.candidateYears);
+        const parsedExperienceYears = calculateExperienceYearsFromResume(resume.parsedData);
+        const aiCandidateYears = extractNumericValue(skillGapAnalysisData.experienceGap?.candidateYears);
+        const candidateYears = parsedExperienceYears || aiCandidateYears;
         const requiredYears = extractNumericValue(skillGapAnalysisData.experienceGap?.typicalRequirement);
 
         analysis.experienceAnalysis = {
@@ -321,6 +438,7 @@ export const createAnalysis = asyncHandler(async (req, res) => {
         analysis.processingTime = Date.now() - analysis.createdAt;
 
         await analysis.save();
+        await clearAnalysisCache(req.user._id, analysis._id);
 
         logger.info(`Analysis generated successfully for user: ${req.user._id}`);
 
@@ -336,6 +454,7 @@ export const createAnalysis = asyncHandler(async (req, res) => {
         analysis.error = error.message;
         analysis.status = 'failed';
         await analysis.save();
+        await clearAnalysisCache(req.user._id, analysis._id);
         
         logger.error(`Error while generating analysis: ${error.message}`);
         throw new ApiError(401, 'Failed to generate analysis');
@@ -357,9 +476,10 @@ export const getMyAnalysis = asyncHandler(async (req, res) => {
         maxMatchScore,
         isActive
     } = req.query
+    
 
     const userId = req.user._id
-    const cacheKey = `analysis:${userId}:${JSON.stringify({
+    const cacheKey = `analysis:${String(userId)}:${JSON.stringify({
         page,
         limit,
         sort,
@@ -380,12 +500,12 @@ export const getMyAnalysis = asyncHandler(async (req, res) => {
           );
     }
 
-    const filter = { user: userId }
+    const filter = { user: userId, isActive: true }
 
     if (resumeId) filter.resume = resumeId
     if (jobRoleId) filter.jobRole = jobRoleId
     if (status) filter.status = status
-    if (isActive) filter.isActive = isActive
+    if (typeof isActive === 'boolean') filter.isActive = isActive
 
     if (minMatchScore || maxMatchScore) {
         filter.matchScore = {};
@@ -418,7 +538,7 @@ export const getAnalysisById = asyncHandler(async (req, res) => {
     // analysis:analysisId
     // cause each analysis is of some id
     const userId = req.user._id
-    const cacheKey = `analysis:${req.params.id}`
+    const cacheKey = `analysis:${String(userId)}:${req.params.id}`
 
     const cachedData = await redisClient.get(cacheKey)
     if(cachedData){
@@ -465,6 +585,7 @@ export const deleteAnalysis = asyncHandler(async (req, res) => {
 
     analaysis.isActive = false
     await analaysis.save()
+    await clearAnalysisCache(userId, analysisId)
 
     logger.info(201, 'User succesfuly deleted his analysis . user is :'`${req.user.email}`)
 
@@ -649,8 +770,7 @@ export const regenerateAnalysis = asyncHandler(async (req, res) => {
 
     // after regenerating user cache may have old cache of analysis
     
-    await redisClient.del(`analysis:${analysis._id}`);
-    await redisClient.del(`analysis:${req.user._id}`);
+    await clearAnalysisCache(req.user._id, analysis._id);
   
     res.status(200).json(new ApiResponse(200, analysis, 'Analysis regenerated successfully'));
   });

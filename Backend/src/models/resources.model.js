@@ -8,7 +8,6 @@ const resourceSchema = new mongoose.Schema(
         user: {
             type: mongoose.Types.ObjectId,
             ref: 'userModel',
-            required: true,
             index: true,
         },
         title: {
@@ -65,7 +64,7 @@ const resourceSchema = new mongoose.Schema(
             type:Boolean,
             default:false,
             required:true,
-            indec:true,
+            index:true,
         },
         hasFreeVersion:Boolean,
         rating:{
@@ -105,7 +104,7 @@ const resourceSchema = new mongoose.Schema(
             required:true,
             index:true,
         },
-        polularity:{
+        popularity:{
             type:Number,
             default:0,
         },
@@ -117,7 +116,7 @@ const resourceSchema = new mongoose.Schema(
 
 // Indexes
 // creates index for skills, difficulty, and isPremium
-resourceSchema.index({ skills: 1, difficulty: 1, isPremium: 1 });
+resourceSchema.index({ skillsCovered: 1, difficulty: 1, isPremium: 1 });
 // creates index for category and rating
 resourceSchema.index({ category: 1, rating: -1 });
 // creates index for title and description
