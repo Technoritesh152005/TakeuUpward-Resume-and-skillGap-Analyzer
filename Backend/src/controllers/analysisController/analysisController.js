@@ -513,6 +513,7 @@ export const getMyAnalysis = asyncHandler(async (req, res) => {
         if (maxMatchScore) filter.matchScore.$lte = parseFloat(maxMatchScore);
     }
     
+    // paginate helps to go through deep searching and return docs
     const analyses = await analysisModel.paginate(filter, {
         page: parseInt(page, 10) || 1,
         limit: parseInt(limit, 10) || 12,
@@ -567,6 +568,7 @@ export const getAnalysisById = asyncHandler(async (req, res) => {
         .json(new ApiResponse(201, analysis, `Successfully fetched analysis for user: ${req.user.email}`))
 })
 
+// controller to delete nalaysis
 export const deleteAnalysis = asyncHandler(async (req, res) => {
 
     const userId = req.user._id
@@ -621,6 +623,7 @@ export const compare_Multiple_Job_Role_With_Resume_And_Get_Analysis = asyncHandl
         throw new ApiError(401, 'No Job Roles found to compare')
     }
 
+    // basicaally u r doing comparing multiple job role with a single resume but n times req . trying to optimize till then service is closed
     const comparisons = await Promise.all(
         jobRoles.map(async (jobRole) => {
             try {
@@ -717,6 +720,7 @@ export const regenerateAnalysis = asyncHandler(async (req, res) => {
     );
     
     // ✅ FIX: If preferences provided, generate NEW roadmap with them
+    // prefernce change the structure of roadmap also changes
     if (preferences) {
       const roadmap = await roadmapModel.findOne({ analysis: analysis._id });
       
