@@ -9,6 +9,14 @@ import progressModel from '../../models/progress.model.js'
 import roadmapModel from '../../models/roadmap.model.js'
 import redisClient from '../../config/redis.js'
 
+const RESOURCE_TYPE_FALLBACKS = {
+    course: ['course', 'tutorial', 'documentation', 'article', 'video'],
+    tutorial: ['tutorial', 'documentation', 'article', 'video', 'course'],
+    practice: ['practice', 'project', 'tutorial', 'course', 'video'],
+    project: ['project', 'practice', 'tutorial', 'course'],
+    book: ['book', 'article', 'documentation'],
+}
+
 // used to check whether the value is number or not if not then 
 const extractNumber = (value, fallback = 0) => {
     if (typeof value === 'number' && Number.isFinite(value)) return value
@@ -31,6 +39,222 @@ const clearRoadmapCache = async (analysisId, userId) => {
     await redisClient.del(roadmapCachekey(analysisId, userId))
 }
 
+const escapeRegex = (value = '') => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+//used to get skills covered in project section and to determine whether it i sarray
+const getSkillVariants = (item) => {
+    // take all its skillscovered and title of project in one object
+    const rawValues = [
+        ...(Array.isArray(item?.skillsCovered) ? item.skillsCovered : []),
+        item?.title,
+    ]
+    // removes null undefined or ''
+        .filter(Boolean)
+        // split text using , / 
+        // "React, Node.js" → ["React", " Node.js"]
+// "Frontend Developer (React)" → ["Frontend Developer ", "React"]
+        .flatMap((value) => String(value)
+            .split(/[,/()|-]/g)
+            // clean each part 
+            .map((part) => part.trim())
+            .filter(Boolean));
+
+            // set removes raw value
+            // Spread operator (...) is used when you want to expand or copy values
+    return [...new Set(rawValues)]
+}
+
+// if resource not found from our resource data then for the sake of fallback we create a query for resource.
+const buildResourceSearchLink = (item) => {
+    // It is used to convert a string into a safe format for URLs.
+    const query = encodeURIComponent(`${item?.title || 'learning resource'} ${item?.skillsCovered?.join(' ') || ''}`.trim())
+
+    // if roadmap 
+    if (item?.type === 'video' || item?.type === 'tutorial') {
+        return `https://www.youtube.com/results?search_query=${query}`
+    }
+
+    // generate query when the type of res is documebtaion or article
+    if (item?.type === 'documentation' || item?.type === 'article') {
+        return `https://www.google.com/search?q=${query}`
+    }
+
+    return `https://www.google.com/search?q=${query}`
+}
+
+const isGeneratedResourceLink = (url = '') => {
+    if (!url) return false
+
+    return [
+        'https://www.youtube.com/results?search_query=',
+        'https://www.google.com/search?q=',
+    ].some((prefix) => String(url).startsWith(prefix))
+}
+
+const scoreResourceMatch = (resource, item, skillVariants) => {
+    let score = 0
+    let overlapCount = 0
+
+    if (resource?.resourceType === item?.type) score += 40
+    if (Array.isArray(resource?.skillsCovered)) {
+        const resourceSkills = resource.skillsCovered.map((skill) => String(skill).toLowerCase())
+        overlapCount = skillVariants.filter((skill) => resourceSkills.includes(skill.toLowerCase())).length
+        score += overlapCount * 20
+    }
+
+    const searchableText = `${resource?.title || ''} ${resource?.description || ''} ${resource?.provider || ''}`.toLowerCase()
+    let titleOverlap = 0
+    for (const variant of skillVariants) {
+        if (searchableText.includes(String(variant).toLowerCase())) {
+            score += 10
+            titleOverlap += 1
+        }
+    }
+
+    score += Math.round((resource?.rating || 0) * 5)
+    score += Math.min(10, resource?.reviewcount || 0)
+
+    return {
+        score,
+        overlapCount,
+        titleOverlap,
+        sameType: resource?.resourceType === item?.type,
+    }
+}
+
+// what does it do is for every item in roadmap it try to get the best matching resource for that item type and category
+const findBestResourceForItem = async (item, preference) => {
+    // find the reosurce type it needs
+    // if type is tutorial it dont only find tutorial but also doc article
+    const typeOptions = RESOURCE_TYPE_FALLBACKS[item?.type] || [item?.type, 'tutorial', 'course']
+    const skillVariants = getSkillVariants(item)
+    // condition for searching
+    const regexConditions = skillVariants.map((skill) => ({
+        // “any one condition can be true”. this is the search qyery or condition need to search in resource
+        $or: [
+            { title: { $regex: escapeRegex(skill), $options: 'i' } },
+            { description: { $regex: escapeRegex(skill), $options: 'i' } },
+            { skillsCovered: { $regex: escapeRegex(skill), $options: 'i' } },
+        ],
+    }))
+
+    const baseQuery = {
+        isActive: true,
+        // only take res type whose type matches
+        resourceType: { $in: typeOptions.filter(Boolean) },
+    }
+
+    if (preference?.budget === 'free') {
+        baseQuery.isPremium = false
+    }
+
+    // Start with skill-aware matching, then relax to broader type-only suggestions.
+    // creating multiple query startegy starting from best to worst
+    const candidateQueries = [
+        skillVariants.length ? { ...baseQuery, $or: regexConditions.flatMap((condition) => condition.$or) } : null,
+        Array.isArray(item?.skillsCovered) && item.skillsCovered.length
+            ? { ...baseQuery, skillsCovered: { $in: item.skillsCovered } }
+            : null,
+        baseQuery,
+    ].filter(Boolean)
+
+    for (const query of candidateQueries) {
+        const candidates = await resourceModel.find(query)
+            .sort({ rating: -1, reviewcount: -1, popularity: -1 })
+            .limit(12)
+
+        if (!candidates.length) continue
+
+        const bestMatch = [...candidates]
+            .map((resource) => ({
+                resource,
+                meta: scoreResourceMatch(resource, item, skillVariants),
+            }))
+            .sort((a, b) => b.meta.score - a.meta.score)[0]
+
+        if (bestMatch) {
+            const hasStrongSkillSignal =
+                bestMatch.meta.overlapCount > 0 ||
+                bestMatch.meta.titleOverlap > 0
+
+            const strongEnough =
+                hasStrongSkillSignal &&
+                (
+                    bestMatch.meta.overlapCount >= 1 ||
+                    (bestMatch.meta.sameType && bestMatch.meta.titleOverlap >= 1)
+                ) &&
+                bestMatch.meta.score >= 45
+
+            if (strongEnough) {
+                return bestMatch.resource
+            }
+        }
+    }
+
+    return null
+}
+
+// detailed view of resources
+// we do retyr finding best resource for roadmap even when created cause old roadmap may still have roadmap data. so suppose our db is filled with new res we want them also to try our resource if not available
+// if the roadmap item dont hve res and url we just try to find it and if not found we just use fallback mechanis
+const enrichRoadmapResources = async (roadmap) => {
+    if (!roadmap?.phases?.length) return roadmap
+
+    let hasChanges = false
+
+    for (const phase of roadmap.phases) {
+        for (const week of phase.weeklyBreakdown || []) {
+            for (const item of week.learningItems || []) {
+                const hasRealUrl = item?.url && !isGeneratedResourceLink(item.url)
+
+                // if resource exists and url is already a real link, trust the existing enrichment result
+                if (item?.resource && hasRealUrl) continue
+
+                const matchedResource = await findBestResourceForItem(item, roadmap.userPreferences || {})
+
+                if (matchedResource && !item.resource) {
+                    item.resource = matchedResource._id
+                    hasChanges = true
+                }
+
+                if (matchedResource?.url && (!item.url || isGeneratedResourceLink(item.url))) {
+                    item.url = matchedResource.url
+                    hasChanges = true
+                }
+
+                if (matchedResource?.title && !item.title) {
+                    item.title = matchedResource.title
+                    hasChanges = true
+                }
+
+                if (!matchedResource && !item.url) {
+                    item.url = buildResourceSearchLink(item)
+                    hasChanges = true
+                }
+            }
+        }
+    }
+
+    // if u found some new data then update the
+    if (hasChanges) {
+        await roadmap.save()
+    }
+
+    return roadmap
+}
+
+const roadmapDetailPopulate = [
+    {
+        path: 'analysis',
+        populate: { path: 'jobRole', select: 'title category' },
+    },
+    {
+        // Populate matched learning resources so the frontend can show more than a bare URL.
+        path: 'phases.weeklyBreakdown.learningItems.resource',
+        select: 'title provider url platform rating difficulty isPremium estimatedTimeToComplete resourceType',
+    },
+];
+
 // to return an object body we wrap it with () cause {} is for fxn body
 const normalizeCertification = (item) => ({
 
@@ -44,11 +268,12 @@ const normalizeCertification = (item) => ({
     completed: false
 })
 
-const normalizeMileStone = (item) => ({
+const normalizeMilestone = (item) => ({
     title: item?.title || item?.achievement || `Week ${extractNumber(item?.week, 0)} milestone`,
     completed: false
 })
 
+// data directly tranfer here to take proper data
 const normalizeRoadmapPayload = (roadmapData) => {
     const phases = Array.isArray(roadmapData?.phases)
 
@@ -182,28 +407,19 @@ export const createRoadmap = asyncHandler(async (req, res) => {
     for (const phase of normalizedRoadmap.phases) {
         for (const week of phase.weeklyBreakdown) {
             for (const item of week.learningItems) {
-                const query = {
-                    resourceType: item.type,
-                    isActive: true
-                };
+                const learningResource = await findBestResourceForItem(item, preference)
 
-                if (Array.isArray(item.skillsCovered) && item.skillsCovered.length > 0) {
-                    query.skillsCovered = { $in: item.skillsCovered };
+                if (learningResource) {
+                    item.resource = learningResource._id;
+                    if (learningResource.url && (!item.url || isGeneratedResourceLink(item.url))) {
+                        item.url = learningResource.url;
+                    }
+                    item.title = learningResource.title || item.title;
                 }
-
-                if (preference.budget === 'free') {
-                    query.isPremium = false;
-                }
-
-                // get the resource based on resource type and user eference
-                const learningResource = await resourceModel.find(query)
-                    .sort({ rating: -1, reviewcount: -1 })
-                    .limit(1);
-
-                if (learningResource.length > 0) {
-                    item.resource = learningResource[0]._id;
-                    item.url = learningResource[0].url || item.url;
-                    item.title = learningResource[0].title || item.title;
+                // if we dont have resource just make a query
+                else if (!item.url) {
+                    // Keep every item actionable even when the resource catalog has no exact match yet.
+                    item.url = buildResourceSearchLink(item)
                 }
             }
         }
@@ -297,12 +513,24 @@ export const getRoadmapById = asyncHandler(async (req, res) => {
         _id: roadmapId,
         user: req.user._id
     })
-        .populate('analysis')
     if (!roadmap) {
         throw new ApiError(404, 'Roadmap not found');
     }
 
-    res.json(new ApiResponse(200, roadmap, 'Roadmap fetched successfully'));
+    await enrichRoadmapResources(roadmap)
+
+    // it goes deep down to toadmap - phases - week - items - resource :id
+    // “Populate replaces referenced ObjectIds with actual documents from another collection, allowing us to fetch related data in a single query.”
+    const populatedRoadmap = await roadmapModel.findOne({
+        _id: roadmapId,
+        user: req.user._id
+    }).populate(roadmapDetailPopulate)
+
+    if (!populatedRoadmap) {
+        throw new ApiError(404, 'Roadmap not found');
+    }
+
+    res.json(new ApiResponse(200, populatedRoadmap, 'Roadmap fetched successfully'));
 })
 
 export const markItemComplete = asyncHandler(async (req, res) => {
@@ -362,8 +590,13 @@ export const markItemComplete = asyncHandler(async (req, res) => {
     await roadmap.updateProgress()
     await clearRoadmapCache(roadmap.analysis, req.user._id)
 
+    const populatedRoadmap = await roadmapModel.findOne({
+        _id: roadmap._id,
+        user: req.user._id
+    }).populate(roadmapDetailPopulate)
+
     res.status(200).json(
-        new ApiResponse(201, roadmap, 'Item Marked completed'))
+        new ApiResponse(201, populatedRoadmap || roadmap, 'Item Marked completed'))
 })
 
 export const updateReference = asyncHandler(async (req, res) => {

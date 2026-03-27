@@ -30,7 +30,7 @@ const roadmapListPage = ()=>{
 
   useEffect(()=>{
     fetchAllRoadmap()
-  },[roadmap])
+  },[])
 
   const fetchAllRoadmap = async()=>{
 
@@ -61,7 +61,7 @@ const roadmapListPage = ()=>{
     // but reduce is used when we want op in a single value
     const completedItems = roadmap.reduce((sum,item)=> sum + (item?.progress?.completedItems || 0) ,0) 
     const totalItems = roadmap.reduce((sum,item)=> sum + (item?.progress?.totalItems || 0) ,0)
-    const avgProgress = total ? Math.round(roadmaps.reduce((sum, item) => sum + getProgressValue(item), 0) / total) : 0;
+    const avgProgress = total ? Math.round(roadmap.reduce((sum, item) => sum + getProgressValue(item), 0) / total) : 0;
 
     return {
       total,
@@ -111,8 +111,8 @@ const roadmapListPage = ()=>{
             Array.from({ length: 4 }).map((_, index) => (
               <div key={index} className="h-48 animate-pulse rounded-3xl border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800" />
             ))
-          ) : roadmaps.length > 0 ? (
-            roadmaps.map((roadmap) => (
+          ) : roadmap.length > 0 ? (
+            roadmap.map((roadmap) => (
               <button
                 key={roadmap._id}
                 type="button"

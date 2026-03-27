@@ -17,10 +17,9 @@ import AnalysisListPage from './pages/analysisListPage.jsx'
 import AnalysisDetailPage from './pages/analysisDetailPage.jsx'
 import RoadmapListPage from './pages/roadmapListPage.jsx'
 import RoadmapDetailPage from './pages/roadmapDetailPage.jsx'
+import RoadmapCreatePage from './pages/roadmapCreatePage.jsx'
 // Protected Route Component
 import ProtectedRoute from './components/auth/ProtectedRoute';
-
-import roadmapListPage from './pages/roadmapListPage.jsx';
 
 // Create a client for React Query
 const queryClient = new QueryClient({
@@ -108,6 +107,15 @@ function App() {
             element={
               <ProtectedRoute>
                 <RoadmapListPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/roadmap/create"
+            element={
+              <ProtectedRoute>
+                <RoadmapCreatePage />
               </ProtectedRoute>
             }
           />

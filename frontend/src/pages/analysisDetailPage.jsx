@@ -2,6 +2,7 @@ import {useEffect, useState , useMemo} from 'react'
 import {useNavigate , useParams} from 'react-router-dom'
 import {
   ArrowLeft,
+  ArrowRight,
   Briefcase,
   CheckCircle2,
   Clock3,
@@ -11,6 +12,7 @@ import {
   Rocket,
   ScanSearch,
   Target,
+  Trash2,
   TrendingUp,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -43,6 +45,7 @@ const AnalysisDetailPage = ()=>{
   const {id} = useParams()
   const [loading , setLoading] = useState(false)
   const [analysis , setAnalysis] = useState(emptyOverview)
+  const [deleting , setDeleting] = useState(false)
 
   // whenever there is a change in id in params call these means someone want analysis detail
   useEffect(()=>{
@@ -72,6 +75,24 @@ const AnalysisDetailPage = ()=>{
     important: analysis?.skillGaps?.important?.length || 0,
     niceToHave: analysis?.skillGaps?.niceToHave?.length || 0,
   }), [analysis]);
+
+  const handleDeleteAnalysis = async()=> {
+    const confirmed = window.confirm('Delete this analysis? This will remove it from your active analysis history.')
+
+    if (!confirmed) return
+
+    try{
+      setDeleting(true)
+      await analysisService.deleteAnalysis(id)
+      toast.success('Analysis deleted successfully')
+      navigate('/analysis')
+    }catch(error){
+      console.error(error)
+      toast.error('Failed to delete analysis')
+    }finally{
+      setDeleting(false)
+    }
+  }
 
   return (
     <DashboardLayout>
@@ -115,15 +136,41 @@ const AnalysisDetailPage = ()=>{
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={() => navigate(`/analysis/create?resumeId=${analysis?.resume?._id || ''}`)}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary-700"
-          >
-            <Target className="h-4 w-4" />
-            Create Another Analysis
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => navigate(`/analysis/create?resumeId=${analysis?.resume?._id || ''}`)}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary-700"
+            >
+              <Target className="h-4 w-4" />
+              Create Another Analysis
+            </button>
+
+            <button
+              type="button"
+              onClick={handleDeleteAnalysis}
+              disabled={deleting}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-5 py-3 text-sm font-semibold text-red-700 transition hover:bg-red-100 disabled:opacity-60 dark:border-red-900/40 dark:bg-red-900/15 dark:text-red-300"
+            >
+              <Trash2 className="h-4 w-4" />
+              {deleting ? 'Deleting...' : 'Delete Analysis'}
+            </button>
+          </div>
         </div>
+
+        {analysis?.status === 'completed' ? (
+          <div className="mt-5 border-t border-neutral-200 pt-5 dark:border-neutral-700">
+            <button
+              type="button"
+              onClick={() => navigate(`/roadmap/create?analysisId=${analysis?._id || id}`)}
+              className="inline-flex items-center gap-2 rounded-2xl border border-primary-200 bg-primary-50 px-5 py-3 text-sm font-semibold text-primary-700 transition hover:bg-primary-100 dark:border-primary-900/40 dark:bg-primary-900/15 dark:text-primary-300"
+            >
+              <Rocket className="h-4 w-4" />
+              Generate Roadmap From This Analysis
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+        ) : null}
       </section>
 
       {loading ? (

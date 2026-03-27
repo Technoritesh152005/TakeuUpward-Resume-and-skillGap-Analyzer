@@ -4,6 +4,7 @@ import {
   ArrowRight,
   CalendarDays,
   ClipboardList,
+  Trash2,
   FileText,
   Filter,
   Plus,
@@ -60,6 +61,7 @@ const AnalysisListPage = ()=>{
   const [searchTerm , setSearchTerm] = useState('')
   const [statusFilter , setStatusFilter] = useState('all')
   const [sortBy , setSortBy] = useState('newest')
+  const [deletingId, setDeletingId] = useState('')
 
   useEffect(()=>{
      fetchAnalysis()
@@ -80,6 +82,24 @@ const AnalysisListPage = ()=>{
       toast.error('Failed to load analysis')
     }finally{
       setLoading(false)
+    }
+  }
+
+  const handleDeleteAnalysis = async(analysisId) => {
+    const confirmed = window.confirm('Delete this analysis? This will remove it from your active analysis history.')
+
+    if (!confirmed) return
+
+    try{
+      setDeletingId(analysisId)
+      await analysisService.deleteAnalysis(analysisId)
+      setAnalyses((current) => current.filter((item) => item?._id !== analysisId))
+      toast.success('Analysis deleted successfully')
+    }catch(error){
+      console.error(error)
+      toast.error('Failed to delete analysis')
+    }finally{
+      setDeletingId('')
     }
   }
   
@@ -216,10 +236,17 @@ return (
           ))
         ) : filteredAnalyses.length > 0 ? (
           filteredAnalyses.map((analysis) => (
-            <button
+            <div
               key={analysis._id}
-              type="button"
+              role="button"
+              tabIndex={0}
               onClick={() => navigate(`/analysis/${analysis._id}`)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  navigate(`/analysis/${analysis._id}`);
+                }
+              }}
               className="group w-full rounded-3xl border border-neutral-200 bg-white p-6 text-left shadow-soft transition hover:-translate-y-0.5 hover:border-primary-300 hover:shadow-lg dark:border-neutral-700 dark:bg-neutral-800 dark:hover:border-primary-700"
             >
               <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
@@ -279,9 +306,9 @@ return (
                 </div>
               </div>
 
-              <div className="mt-6 flex items-center justify-between border-t border-neutral-200 pt-4 text-sm dark:border-neutral-700">
-                <div className="flex flex-wrap gap-2">
-                  {(analysis?.candidateStrength || []).slice(0, 3).map((item, index) => (
+                <div className="mt-6 flex items-center justify-between border-t border-neutral-200 pt-4 text-sm dark:border-neutral-700">
+                  <div className="flex flex-wrap gap-2">
+                    {(analysis?.candidateStrength || []).slice(0, 3).map((item, index) => (
                     <span
                       key={`${item?.skill || 'strength'}-${index}`}
                       className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300"
@@ -291,12 +318,40 @@ return (
                   ))}
                 </div>
 
-                <span className="inline-flex items-center gap-2 font-semibold text-primary-600 transition group-hover:translate-x-1 dark:text-primary-400">
-                  View details
-                  <ArrowRight className="h-4 w-4" />
-                </span>
+                <div className="flex items-center gap-3">
+                  {analysis?.status === 'completed' ? (
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        navigate(`/roadmap/create?analysisId=${analysis._id}`);
+                      }}
+                      className="inline-flex items-center gap-2 rounded-full border border-primary-200 bg-primary-50 px-4 py-2 text-xs font-semibold text-primary-700 transition hover:bg-primary-100 dark:border-primary-900/40 dark:bg-primary-900/15 dark:text-primary-300"
+                    >
+                      Build roadmap
+                    </button>
+                  ) : null}
+
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleDeleteAnalysis(analysis._id);
+                    }}
+                    disabled={deletingId === analysis._id}
+                    className="inline-flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-4 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-100 disabled:opacity-60 dark:border-red-900/40 dark:bg-red-900/15 dark:text-red-300"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    {deletingId === analysis._id ? 'Deleting...' : 'Delete'}
+                  </button>
+
+                  <span className="inline-flex items-center gap-2 font-semibold text-primary-600 transition group-hover:translate-x-1 dark:text-primary-400">
+                    View details
+                    <ArrowRight className="h-4 w-4" />
+                  </span>
+                </div>
               </div>
-            </button>
+            </div>
           ))
         ) : (
           <div className="rounded-3xl border border-dashed border-neutral-300 bg-white px-6 py-16 text-center dark:border-neutral-700 dark:bg-neutral-800">

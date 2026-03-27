@@ -66,6 +66,11 @@ const analysisService = {
     return extractPayload(response);
   },
 
+  deleteAnalysis: async (analysisId) => {
+    const response = await api.delete(`/analysis/${analysisId}`);
+    return extractPayload(response);
+  },
+
   getJobRoles: async ({ limit = 60, page = 1, trending = false } = {}) => {                                                 
       const safeLimit = Math.min(500, Math.max(1, Number(limit) || 60));                                                      
    const safePage = Math.max(1, Number(page) || 1);                                                                        
