@@ -9,6 +9,7 @@ const useAuthStore = create((set, get) => ({
     user: null,
     isAuthenticated: false,
     isLoading: false,
+    hasCheckedAuth: false,
     error: null,
 
     login: async (credentials) => {
@@ -108,7 +109,7 @@ const useAuthStore = create((set, get) => ({
   loadUser: async () => {
     // Check if token exists
     if (!authService.isAuthenticated()) {
-      set({ isAuthenticated: false, user: null, isLoading: false });
+      set({ isAuthenticated: false, user: null, isLoading: false, hasCheckedAuth: true });
       return;
     }
 
@@ -121,6 +122,7 @@ const useAuthStore = create((set, get) => ({
         user: userData,
         isAuthenticated: true,
         isLoading: false,
+        hasCheckedAuth: true,
         error: null,
       });
     } catch (error) {
@@ -128,6 +130,7 @@ const useAuthStore = create((set, get) => ({
         user: null,
         isAuthenticated: false,
         isLoading: false,
+        hasCheckedAuth: true,
         error: null,
       });
     }

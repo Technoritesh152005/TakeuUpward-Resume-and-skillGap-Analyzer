@@ -1,15 +1,15 @@
-import { Map, CheckCircle, Clock, ArrowRight } from 'lucide-react';
+import { Map, CheckCircle, Clock, ArrowRight, ShieldCheck, Sparkles } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
 const RoadmapPreview = ({ roadmap, loading = false }) => {
   if (loading) {
     return (
-      <div className="bg-white dark:bg-neutral-800 rounded-2xl p-6 border border-neutral-200 dark:border-neutral-700 animate-pulse">
-        <div className="h-6 w-32 bg-neutral-200 dark:bg-neutral-700 rounded mb-4" />
-        <div className="h-3 w-full bg-neutral-200 dark:bg-neutral-700 rounded mb-6" />
-        <div className="space-y-3">
+      <div className="bg-white/4 backdrop-blur-xl rounded-[32px] p-7 border border-white/8 animate-pulse">
+        <div className="h-4 w-32 bg-white/10 rounded-full mb-8" />
+        <div className="h-2.5 w-full bg-white/5 rounded-full mb-8" />
+        <div className="space-y-4">
           {[1, 2].map((i) => (
-            <div key={i} className="h-12 bg-neutral-200 dark:bg-neutral-700 rounded" />
+            <div key={i} className="h-14 bg-white/5 rounded-2xl" />
           ))}
         </div>
       </div>
@@ -21,134 +21,124 @@ const RoadmapPreview = ({ roadmap, loading = false }) => {
   }
 
   return (
-    <div className="bg-white dark:bg-neutral-800 rounded-2xl p-6 border border-neutral-200 dark:border-neutral-700">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-          <Map className="w-5 h-5 text-primary-600" />
-          Learning Roadmap
+    <div className="bg-white/4 backdrop-blur-xl rounded-[32px] p-7 border border-white/8 shadow-2xl relative group overflow-hidden flex flex-col h-full">
+      
+      {/* Background Flare */}
+      <div className="absolute top-0 right-0 h-48 w-48 bg-primary-500/5 rounded-full blur-[100px] opacity-0 group-hover:opacity-100 transition-opacity duration-1000 pointer-events-none" />
+
+      <div className="flex items-center justify-between mb-8 relative z-10">
+        <h2 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-accent-600/20 border border-accent-500/30 flex items-center justify-center">
+            <Map className="w-4 h-4 text-accent-400" />
+          </div>
+          Strategic Roadmap
         </h2>
-        <button className="text-sm text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1">
-        View Full 
-          <ArrowRight className="w-3.5 h-3.5" />
+        <button className="text-[10px] font-black text-primary-400 uppercase tracking-widest hover:text-primary-300 transition-all flex items-center gap-1 group/btn">
+          Full Access 
+          <ArrowRight className="w-3 h-3 group-hover/btn:translate-x-1 transition-transform" />
         </button>
       </div>
 
-      {/* Progress bar */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-neutral-900 dark:text-white">
+      {/* Progress Section */}
+      <div className="mb-8 relative z-10">
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-xs font-black text-neutral-300 uppercase tracking-tight">
             {roadmap.title}
           </span>
-          <span className="text-sm font-bold text-primary-600 dark:text-primary-400">
+          <span className="text-sm font-black text-primary-400 tracking-tighter">
             {roadmap.progress}%
           </span>
         </div>
         
-        <div className="relative h-2.5 bg-neutral-100 dark:bg-neutral-700 rounded-full overflow-hidden">
+        <div className="relative h-2 bg-white/5 rounded-full overflow-hidden border border-white/5">
           <div
-            className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary-500 to-primary-600 rounded-full transition-all duration-1000"
+            className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary-500 to-primary-600 rounded-full transition-all duration-1000 ease-out shadow-[0_0_12px_rgba(124,58,237,0.3)]"
             style={{ width: `${roadmap.progress}%` }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
-          </div>
+          />
         </div>
 
-        <div className="flex items-center justify-between mt-2 text-xs text-neutral-600 dark:text-neutral-400">
-          <span>{roadmap.completedItems} completed</span>
-          <span>{roadmap.totalItems} total items</span>
+        <div className="flex items-center justify-between mt-3 text-[10px] font-bold text-neutral-500 uppercase tracking-widest">
+          <span className="flex items-center gap-1.5"><ShieldCheck className="w-3 h-3 text-success-500" /> {roadmap.completedItems} Nodes Hit</span>
+          <span>{roadmap.totalItems} Total</span>
         </div>
       </div>
 
-      {/* Upcoming items */}
-      {roadmap.upcomingItems && roadmap.upcomingItems.length > 0 && (
-        <div className="mb-6">
-          <h3 className="text-sm font-semibold text-neutral-900 dark:text-white mb-3 flex items-center gap-2">
-            <Clock className="w-4 h-4 text-amber-600" />
-            Coming Up
-          </h3>
-          <div className="space-y-2">
-            {roadmap.upcomingItems.map((item, index) => (
-              <div
-                key={item.id || index}
-                className="flex items-start gap-3 p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-lg hover:shadow-md transition-shadow"
-              >
-                <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0">
-                  <span className="text-sm font-bold text-amber-600 dark:text-amber-500">
-                    {index + 1}
+      {/* Content Grid - Scrollable area */}
+      <div className="flex-1 space-y-6 overflow-y-auto no-scrollbar pr-1 relative z-10">
+        
+        {/* Upcoming items */}
+        {roadmap.upcomingItems && roadmap.upcomingItems.length > 0 && (
+          <div>
+            <h3 className="text-[10px] font-black text-neutral-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+              <Clock className="w-3 h-3 text-amber-500" />
+              Immediate Next Steps
+            </h3>
+            <div className="space-y-3">
+              {roadmap.upcomingItems.slice(0, 2).map((item, index) => (
+                <div
+                  key={item.id || index}
+                  className="flex items-start gap-4 p-4 bg-white/5 border border-white/5 rounded-2xl hover:bg-white/8 transition-all hover:scale-[1.02] duration-300"
+                >
+                  <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center flex-shrink-0">
+                    <span className="text-xs font-black text-amber-500">
+                      I{index + 1}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-black text-white truncate uppercase tracking-tight">
+                      {item.title}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[9px] font-black text-neutral-500 uppercase tracking-widest">
+                        {item.phase}
+                      </span>
+                      {item.estimatedHours && (
+                        <span className="text-[9px] font-black text-primary-400 bg-primary-500/10 px-1.5 rounded uppercase">
+                          {item.estimatedHours}H
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Recently completed */}
+        {roadmap.recentCompleted && roadmap.recentCompleted.length > 0 && (
+          <div>
+            <h3 className="text-[10px] font-black text-neutral-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+              <Sparkles className="w-3 h-3 text-success-500" />
+              Recent Conquests
+            </h3>
+            <div className="space-y-2 opacity-70 hover:opacity-100 transition-opacity">
+              {roadmap.recentCompleted.slice(0, 2).map((item, index) => (
+                <div
+                  key={item.id || index}
+                  className="flex items-center gap-4 px-4 py-3 bg-white/[0.02] border border-white/[0.05] rounded-xl"
+                >
+                  <CheckCircle className="w-3.5 h-3.5 text-success-500" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] font-bold text-neutral-300 truncate tracking-tight uppercase">
+                      {item.title}
+                    </p>
+                  </div>
+                  <span className="text-[9px] font-black text-neutral-600 uppercase">
+                    Done
                   </span>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-neutral-900 dark:text-white truncate">
-                    {item.title}
-                  </p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs text-neutral-600 dark:text-neutral-400">
-                      {item.phase}
-                    </span>
-                    {item.estimatedHours && (
-                      <>
-                        <span className="text-neutral-400 dark:text-neutral-600">•</span>
-                        <span className="text-xs text-neutral-600 dark:text-neutral-400">
-                          ~{item.estimatedHours}h
-                        </span>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Recently completed */}
-      {roadmap.recentCompleted && roadmap.recentCompleted.length > 0 && (
-        <div>
-          <h3 className="text-sm font-semibold text-neutral-900 dark:text-white mb-3 flex items-center gap-2">
-            <CheckCircle className="w-4 h-4 text-green-600" />
-            Recently Completed
-          </h3>
-          <div className="space-y-2">
-            {roadmap.recentCompleted.map((item, index) => (
-              <div
-                key={item.id || index}
-                className="flex items-start gap-3 p-3 bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 rounded-lg"
-              >
-                <div className="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0">
-                  <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-500" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-neutral-900 dark:text-white truncate">
-                    {item.title}
-                  </p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs text-neutral-600 dark:text-neutral-400">
-                      {item.phase}
-                    </span>
-                    <span className="text-neutral-400 dark:text-neutral-600">•</span>
-                    <span className="text-xs text-green-600 dark:text-green-500">
-                      {item.completedAt ? formatDistanceToNow(new Date(item.completedAt), { addSuffix: true }) : 'Recently'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      </div>
 
-      {/* Empty state */}
-      {(!roadmap.upcomingItems || roadmap.upcomingItems.length === 0) &&
-       (!roadmap.recentCompleted || roadmap.recentCompleted.length === 0) && (
-        <div className="text-center py-8">
-          <div className="w-16 h-16 bg-neutral-100 dark:bg-neutral-700 rounded-full flex items-center justify-center mx-auto mb-3">
-            <Map className="w-8 h-8 text-neutral-400" />
-          </div>
-          <p className="text-sm text-neutral-600 dark:text-neutral-400">
-            No items in your roadmap yet
-          </p>
-        </div>
-      )}
+      <style>{`
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
     </div>
   );
 };

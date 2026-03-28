@@ -18,6 +18,8 @@ import AnalysisDetailPage from './pages/analysisDetailPage.jsx'
 import RoadmapListPage from './pages/roadmapListPage.jsx'
 import RoadmapDetailPage from './pages/roadmapDetailPage.jsx'
 import RoadmapCreatePage from './pages/roadmapCreatePage.jsx'
+import JobRoleListPage from './pages/jobRolesPage.jsx'
+import JobRoleDetailPage from './pages/jobRoleDetailPage.jsx'
 // Protected Route Component
 import ProtectedRoute from './components/auth/ProtectedRoute';
 
@@ -133,22 +135,15 @@ function App() {
             path="/job-roles"
             element={
               <ProtectedRoute>
-                <div className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-neutral-900">
-                  <div className="text-center">
-                    <h1 className="text-3xl font-bold text-neutral-900 dark:text-white mb-4">
-                      💼 Job Roles Page
-                    </h1>
-                    <p className="text-neutral-600 dark:text-neutral-400 mb-4">
-                      Coming soon! Browse 50+ job roles here.
-                    </p>
-                    <a
-                      href="/dashboard"
-                      className="inline-block px-6 py-3 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors"
-                    >
-                      Back to Dashboard
-                    </a>
-                  </div>
-                </div>
+               <JobRoleListPage/>
+              </ProtectedRoute>
+            }
+          />
+           <Route
+            path="/job-roles/:id"
+            element={
+              <ProtectedRoute>
+               <JobRoleDetailPage/>
               </ProtectedRoute>
             }
           />

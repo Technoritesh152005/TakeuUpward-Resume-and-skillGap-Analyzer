@@ -115,3 +115,51 @@ If you say this:
 "I reduced multiple API calls into a single aggregated backend request with controlled concurrency and caching"
 
 🔥 That’s very strong answer
+
+
+ANALYSIS PERFORMANCE PLAN
+
+Current problem:
+- createAnalysis waits for 2 expensive AI calls in the same request
+- skill gap analysis runs first
+- ATS score runs after that
+- total response time becomes too high
+
+Why it is slow:
+- current flow is sequential, not parallel
+- full request stays open until all AI work finishes
+- ATS likely does not need to be a full AI call every time
+
+Immediate optimization:
+1. Run skill gap analysis and ATS generation in parallel using Promise.all
+2. Keep DB save after both results are ready
+3. Measure new latency after parallelization
+
+Better architecture:
+1. User requests analysis creation
+2. Backend creates analysis with status = processing
+3. Backend returns immediately with analysisId and 202 Accepted
+4. Background worker processes heavy tasks
+5. Worker updates analysis status through stages:
+   - queued
+   - running_skill_gap
+   - running_ats
+   - merging_results
+   - completed
+   - failed
+6. Frontend polls analysis by id until completed
+
+Best long-term optimization:
+1. Move analysis generation to background jobs using Redis + BullMQ
+2. Deduplicate repeated analysis requests for same resume + role
+3. Cache/reuse results where possible
+4. Reduce prompt payload size sent to AI
+5. Make ATS mostly deterministic/rule-based
+6. Use AI mainly for skill-gap intelligence and summaries
+7. Add timeouts/fallbacks so one slow AI step does not block everything
+
+Recommended implementation order:
+1. Parallelize skill gap + ATS now
+2. Add background queue next
+3. Make ATS deterministic later
+4. Add caching and deduplication after that

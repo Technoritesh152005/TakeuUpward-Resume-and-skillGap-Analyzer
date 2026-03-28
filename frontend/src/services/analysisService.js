@@ -70,34 +70,6 @@ const analysisService = {
     const response = await api.delete(`/analysis/${analysisId}`);
     return extractPayload(response);
   },
-
-  getJobRoles: async ({ limit = 60, page = 1, trending = false } = {}) => {                                                 
-      const safeLimit = Math.min(500, Math.max(1, Number(limit) || 60));                                                      
-   const safePage = Math.max(1, Number(page) || 1);                                                                        
-      const extractRoles = (payload) => {                                                                                     
-        if (Array.isArray(payload)) return payload;                                                                           
-       if (Array.isArray(payload?.docs)) return payload.docs;                                                                
-       if (Array.isArray(payload?.jobRoles)) return payload.jobRoles;                                                        
-          if (Array.isArray(payload?.data)) return payload.data;                                                                
-       return [];                                                                                                            
-      };                                                                                                                      
-                                                                                                                              
-    const loadFromEndpoint = async (endpoint) => {                                                                          
-       const response = await api.get(`${endpoint}?page=${safePage}&limit=${safeLimit}`);                                    
-        return extractRoles(extractPayload(response));                                                                        
-       };                                                                                                                      
-                                                                                                                             
-      if (trending) {                                                                                                         
-      return loadFromEndpoint('/job-roles/trending-job-roles');                                                             
-       }                                                                                                                       
-                                                                                                                            
-      try {                                                                                                                   
-      return await loadFromEndpoint('/job-roles');                                                                          
-      } catch (error) {                                                                                                       
-       console.warn('Falling back to trending job roles after full catalog load failed', error);                             
-      return loadFromEndpoint('/job-roles/trending-job-roles');                                                             
-       }                                                                                                                       
-      },        
 };
 
 export default analysisService;

@@ -109,11 +109,15 @@ api.interceptors.response.use(
         )
 
         const accessToken = response?.data?.data?.accessToken
+        const nextRefreshToken = response?.data?.data?.refreshToken
         if (!accessToken) {
           return Promise.reject(error)
         }
 
         localStorage.setItem('accessToken', accessToken)
+        if (nextRefreshToken) {
+          localStorage.setItem('refreshToken', nextRefreshToken)
+        }
         originalRequest.headers = originalRequest.headers || {}
         originalRequest.headers.Authorization = `Bearer ${accessToken}`
 

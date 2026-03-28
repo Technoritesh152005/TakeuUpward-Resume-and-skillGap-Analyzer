@@ -27,7 +27,7 @@ router.get('/categories-list',getAllJobCategory)
 router.get('/job-from-category/:category',getJobRolesByCategory)
 
 // get job role by slug
-router.get('/slug:/slug',optionalAuth,getJobRoleFromSlug)
+router.get('/slug/:slug',optionalAuth,getJobRoleFromSlug)
 
 // to get single job role by id
 router.get('/:id',optionalAuth,getJobRolesFromId)

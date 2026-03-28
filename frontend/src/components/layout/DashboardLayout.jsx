@@ -14,10 +14,11 @@ import {
   Bell,
   Search,
   PanelLeftClose,
-  PanelLeftOpen,
+  PanelLeftOpen
 } from 'lucide-react';
 import useAuthStore from '../../services/authStore.js';
 import ThemeToggle from '../common components/themeToggle.jsx';
+import Logo from '../common components/Logo.jsx';
 
 const DashboardLayout = ({ children }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -25,6 +26,8 @@ const DashboardLayout = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuthStore();
+  const displayName = user?.fullName || user?.name || 'User';
+  const initial = displayName.charAt(0).toUpperCase() || 'U';
 
   const handleLogout = async () => {
     await logout();
@@ -47,37 +50,57 @@ const DashboardLayout = ({ children }) => {
         /^\/resumes\/[^/]+/.test(location.pathname)
       );
     }
-
     if (path === '/analysis') {
       return location.pathname === '/analysis' || location.pathname.startsWith('/analysis/');
     }
-
     if (path === '/roadmap') {
       return location.pathname === '/roadmap' || location.pathname.startsWith('/roadmap/');
     }
-
     return location.pathname === path;
   };
 
-  const desktopSidebarWidth = isDesktopSidebarCollapsed ? 'lg:w-24' : 'lg:w-72';
-  const desktopContentOffset = isDesktopSidebarCollapsed ? 'lg:pl-24' : 'lg:pl-72';
+  const desktopSidebarWidth = isDesktopSidebarCollapsed ? 'lg:w-[88px]' : 'lg:w-[280px]';
+  const desktopContentOffset = isDesktopSidebarCollapsed ? 'lg:pl-[88px]' : 'lg:pl-[280px]';
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900">
-      <aside className={`hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col ${desktopSidebarWidth}`}>
-        <div className="flex flex-grow flex-col overflow-y-auto border-r border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800">
-          <div className={`flex items-center border-b border-neutral-200 px-6 py-6 dark:border-neutral-700 ${isDesktopSidebarCollapsed ? 'justify-center' : 'gap-3'}`}>
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary-600 to-primary-700">
-              <FileText className="h-6 w-6 text-white" />
-            </div>
-            {!isDesktopSidebarCollapsed ? (
-              <span className="text-xl font-bold text-neutral-900 dark:text-white">
-                TakeU<span className="text-primary-600 dark:text-primary-500">Upward</span>
-              </span>
-            ) : null}
+    <div className="min-h-screen bg-neutral-950 text-neutral-200 font-inter overflow-hidden flex">
+
+      <style>{`
+        @keyframes aurora1 {
+          0%,100% { transform: translate(0, 0) scale(1); }
+          50% { transform: translate(5%, -5%) scale(1.1); }
+        }
+        .animate-aurora-1 { animation: aurora1 20s ease-in-out infinite; }
+        .glass-panel {
+          backdrop-filter: blur(24px);
+          background: rgba(255, 255, 255, 0.03);
+          border-color: rgba(255, 255, 255, 0.08);
+        }
+        .active-glow {
+          box-shadow: 0 0 20px rgba(124, 58, 237, 0.25);
+        }
+      `}</style>
+      
+      {/* ── Background Aurora ─────────────── */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <div className="absolute -top-[10%] -left-[10%] w-[600px] h-[600px] bg-primary-900/10 rounded-full blur-[120px] animate-aurora-1" />
+        <div className="absolute bottom-[-5%] right-[-5%] w-[500px] h-[500px] bg-accent-900/5 rounded-full blur-[100px] animate-aurora-1" style={{ animationDelay: '-10s' }} />
+      </div>
+
+      {/* ── Desktop Sidebar ───────────────── */}
+      <aside className={`hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col ${desktopSidebarWidth} transition-all duration-500 ease-in-out z-40`}>
+        <div className="flex flex-grow flex-col overflow-y-auto glass-panel border-r">
+          
+          {/* Sidebar Header / Logo */}
+          <div className={`px-6 py-10 flex items-center ${isDesktopSidebarCollapsed ? 'justify-center px-0' : ''}`}>
+            <Logo 
+              size={isDesktopSidebarCollapsed ? 'sm' : 'md'} 
+              showText={!isDesktopSidebarCollapsed} 
+            />
           </div>
 
-          <nav className="flex-1 space-y-1 px-4 py-6">
+          {/* Navigation Links */}
+          <nav className="flex-1 space-y-1.5 px-4 py-4">
             {navItems.map((item) => {
               const Icon = item.icon;
               const active = isActivePath(item.path);
@@ -87,106 +110,91 @@ const DashboardLayout = ({ children }) => {
                   key={item.path}
                   to={item.path}
                   title={isDesktopSidebarCollapsed ? item.name : undefined}
-                  className={`flex items-center rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 ${
-                    isDesktopSidebarCollapsed ? 'justify-center' : 'gap-3'
+                  className={`relative group flex items-center rounded-xl px-4 py-3.5 text-sm font-bold transition-all duration-300 overflow-hidden ${
+                    isDesktopSidebarCollapsed ? 'justify-center' : 'gap-4'
                   } ${
                     active
-                      ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/20 dark:text-primary-500'
-                      : 'text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-700'
+                      ? 'bg-white/10 text-white active-glow border border-white/10'
+                      : 'text-neutral-500 hover:text-neutral-200 hover:bg-white/5 border border-transparent'
                   }`}
                 >
-                  <Icon className="h-5 w-5 shrink-0" />
-                  {!isDesktopSidebarCollapsed ? <span>{item.name}</span> : null}
+                  {active && (
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-primary-400 to-accent-400" />
+                  )}
+                  <Icon className={`h-5 w-5 shrink-0 transition-colors duration-300 ${active ? 'text-primary-400' : 'group-hover:text-primary-400'}`} />
+                  {!isDesktopSidebarCollapsed && <span>{item.name}</span>}
                 </Link>
               );
             })}
           </nav>
 
-          <div className="border-t border-neutral-200 p-4 dark:border-neutral-700">
-            <div className={`rounded-xl bg-neutral-50 px-4 py-3 dark:bg-neutral-700/50 ${isDesktopSidebarCollapsed ? 'flex justify-center' : 'flex items-center gap-3'}`}>
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary-600 to-blue-600">
-                <span className="text-sm font-semibold text-white">
-                  {user?.fullName?.charAt(0).toUpperCase() || 'U'}
+          {/* Sidebar Footer User Section */}
+          <div className="border-t border-white/8 p-4">
+            <div className={`rounded-2xl bg-white/5 border border-white/5 p-3 transition-all duration-300 ${isDesktopSidebarCollapsed ? 'flex justify-center p-2' : 'flex items-center gap-3'}`}>
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary-500 to-accent-500 border border-white/10 shadow-inner">
+                <span className="text-sm font-black text-white">
+                  {initial}
                 </span>
               </div>
-              {!isDesktopSidebarCollapsed ? (
+              {!isDesktopSidebarCollapsed && (
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-neutral-900 dark:text-white">
-                    {user?.fullName || 'User'}
+                  <p className="truncate text-xs font-black text-white uppercase tracking-wider">
+                    {displayName}
                   </p>
-                  <p className="truncate text-xs text-neutral-500 dark:text-neutral-400">
+                  <p className="truncate text-[10px] text-neutral-500 font-bold tracking-tight">
                     {user?.email || 'user@example.com'}
                   </p>
                 </div>
-              ) : null}
+              )}
             </div>
 
-            <div className="mt-3 space-y-1">
+            <div className="mt-4 space-y-1 px-1">
               <Link
                 to="/settings"
-                title={isDesktopSidebarCollapsed ? 'Settings' : undefined}
-                className={`flex rounded-lg px-4 py-2 text-sm text-neutral-700 transition-colors hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-700 ${
+                className={`flex rounded-xl px-3 py-2 text-xs font-bold text-neutral-500 transition-colors hover:text-white hover:bg-white/5 ${
                   isDesktopSidebarCollapsed ? 'justify-center' : 'items-center gap-3'
                 }`}
               >
                 <Settings className="h-4 w-4" />
-                {!isDesktopSidebarCollapsed ? <span>Settings</span> : null}
+                {!isDesktopSidebarCollapsed && <span className="uppercase tracking-widest">Settings</span>}
               </Link>
               <button
                 onClick={handleLogout}
-                title={isDesktopSidebarCollapsed ? 'Logout' : undefined}
-                className={`flex w-full rounded-lg px-4 py-2 text-sm text-red-600 transition-colors hover:bg-red-50 dark:text-red-500 dark:hover:bg-red-900/20 ${
+                className={`flex w-full rounded-xl px-3 py-2 text-xs font-bold text-danger-400 transition-colors hover:bg-danger-500/10 ${
                   isDesktopSidebarCollapsed ? 'justify-center' : 'items-center gap-3'
                 }`}
               >
                 <LogOut className="h-4 w-4" />
-                {!isDesktopSidebarCollapsed ? <span>Logout</span> : null}
+                {!isDesktopSidebarCollapsed && <span className="uppercase tracking-widest text-danger-500">Sign Out</span>}
               </button>
             </div>
           </div>
         </div>
       </aside>
 
-      {isSidebarOpen ? (
+      {/* ── Mobile Sidebar Header ─────────── */}
+      {isSidebarOpen && (
         <>
-          <div
-            className="fixed inset-0 z-40 bg-black/50 lg:hidden"
-            onClick={() => setIsSidebarOpen(false)}
-          />
-
-          <aside className="fixed inset-y-0 left-0 z-50 w-72 overflow-y-auto border-r border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800 lg:hidden">
+          <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm lg:hidden" onClick={() => setIsSidebarOpen(false)} />
+          <aside className="fixed inset-y-0 left-0 z-50 w-72 overflow-y-auto glass-panel border-r lg:hidden">
             <div className="flex h-full flex-col">
-              <div className="flex items-center justify-between border-b border-neutral-200 px-6 py-6 dark:border-neutral-700">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary-600 to-primary-700">
-                    <FileText className="h-6 w-6 text-white" />
-                  </div>
-                  <span className="text-xl font-bold text-neutral-900 dark:text-white">
-                    TakeU<span className="text-primary-600">Upward</span>
-                  </span>
-                </div>
-                <button
-                  onClick={() => setIsSidebarOpen(false)}
-                  className="rounded-lg p-2 hover:bg-neutral-100 dark:hover:bg-neutral-700"
-                >
+              <div className="flex items-center justify-between border-b border-white/8 px-6 py-8">
+                <Logo size="md" />
+                <button onClick={() => setIsSidebarOpen(false)} className="rounded-lg p-2 text-neutral-400 hover:bg-white/10 transition-colors">
                   <X className="h-5 w-5" />
                 </button>
               </div>
-
-              <nav className="flex-1 space-y-1 px-4 py-6">
+              <nav className="flex-1 space-y-2 px-4 py-6">
                 {navItems.map((item) => {
                   const Icon = item.icon;
                   const active = isActivePath(item.path);
-
                   return (
                     <Link
                       key={item.path}
                       to={item.path}
                       onClick={() => setIsSidebarOpen(false)}
-                      className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all ${
-                        active
-                          ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/20 dark:text-primary-500'
-                          : 'text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-700'
+                      className={`flex items-center gap-4 rounded-xl px-4 py-4 text-sm font-bold transition-all ${
+                        active ? 'bg-white/10 text-white' : 'text-neutral-500 hover:text-white'
                       }`}
                     >
                       <Icon className="h-5 w-5" />
@@ -195,69 +203,69 @@ const DashboardLayout = ({ children }) => {
                   );
                 })}
               </nav>
-
-              <div className="border-t border-neutral-200 p-4 dark:border-neutral-700">
-                <button
-                  onClick={handleLogout}
-                  className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                >
-                  <LogOut className="h-4 w-4" />
-                  <span>Logout</span>
-                </button>
-              </div>
             </div>
           </aside>
         </>
-      ) : null}
+      )}
 
-      <div className={desktopContentOffset}>
-        <header className="sticky top-0 z-30 border-b border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800">
-          <div className="flex items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
+      {/* ── Main Content Container ────────── */}
+      <div className={`flex-1 flex flex-col relative z-10 transition-all duration-500 ${desktopContentOffset}`}>
+        
+        {/* Header / Top Nav */}
+        <header className="sticky top-0 z-30 glass-panel border-b border-white/8">
+          <div className="flex items-center justify-between px-6 py-4">
             <div className="flex items-center gap-4">
               <button
                 onClick={() => setIsSidebarOpen(true)}
-                className="rounded-lg p-2 hover:bg-neutral-100 dark:hover:bg-neutral-700 lg:hidden"
+                className="rounded-xl p-2.5 text-neutral-400 hover:bg-white/5 transition-colors lg:hidden"
               >
-                <Menu className="h-6 w-6" />
+                <Menu className="h-5 w-5" />
               </button>
 
               <button
                 onClick={() => setIsDesktopSidebarCollapsed((current) => !current)}
-                className="hidden rounded-lg p-2 hover:bg-neutral-100 dark:hover:bg-neutral-700 lg:flex"
-                title={isDesktopSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                className="hidden lg:flex rounded-xl p-2.5 text-neutral-400 hover:bg-white/5 hover:text-white transition-all duration-300"
               >
                 {isDesktopSidebarCollapsed ? <PanelLeftOpen className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
               </button>
 
-              <div className="hidden max-w-md items-center gap-2 rounded-xl bg-neutral-100 px-4 py-2 dark:bg-neutral-700 sm:flex">
-                <Search className="h-5 w-5 text-neutral-400" />
+              <div className="hidden max-w-sm items-center gap-3 rounded-2xl bg-white/5 border border-white/8 px-4 py-2.5 transition-all focus-within:bg-white/10 focus-within:border-primary-500/50 sm:flex">
+                <Search className="h-4 w-4 text-neutral-500" />
                 <input
                   type="text"
-                  placeholder="Search resumes, analyses..."
-                  className="w-full border-none bg-transparent text-sm text-neutral-900 outline-none placeholder:text-neutral-400 dark:text-white"
+                  placeholder="Search roadmap tools..."
+                  className="w-full border-none bg-transparent text-xs font-medium text-white outline-none placeholder:text-neutral-600 tracking-tight"
                 />
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-5">
+              <div className="hidden lg:block h-8 w-px bg-white/10" />
               <ThemeToggle />
 
-              <button className="relative rounded-lg p-2 hover:bg-neutral-100 dark:hover:bg-neutral-700">
-                <Bell className="h-5 w-5 text-neutral-700 dark:text-neutral-300" />
-                <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500" />
+              <button className="relative rounded-xl p-2.5 text-neutral-400 hover:bg-white/5 hover:text-white transition-all group">
+                <Bell className="h-5 w-5" />
+                <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-accent-500 ring-2 ring-neutral-950 group-hover:animate-ping" />
               </button>
 
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primary-600 to-blue-600 lg:hidden">
-                <span className="text-sm font-semibold text-white">
-                  {user?.fullName?.charAt(0).toUpperCase() || 'U'}
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primary-600 to-accent-600 shadow-xl shadow-primary-900/40 lg:hidden focus-within:ring-2 ring-primary-500/50 cursor-pointer">
+                <span className="text-sm font-black text-white">
+                  {initial}
                 </span>
               </div>
             </div>
           </div>
         </header>
 
-        <main className="p-4 sm:p-6 lg:p-8">
-          {children}
+        {/* Content Area */}
+        <main className="flex-1 p-6 sm:p-8 lg:p-10 flex flex-col h-[calc(100vh-80px)] overflow-hidden">
+          <div className="max-w-[1600px] w-full mx-auto flex-1 flex flex-col h-full bg-transparent no-scrollbar overflow-y-auto">
+             <style>{`
+               .no-scrollbar::-webkit-scrollbar { display: none; }
+               .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+             `}</style>
+             {children}
+          </div>
         </main>
       </div>
     </div>

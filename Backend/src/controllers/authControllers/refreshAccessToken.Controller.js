@@ -1,9 +1,8 @@
 import {asyncHandler} from "../../utils/asyncHandler.js"
 import {ApiError} from "../../utils/apiError.js"
-
 import logger from "../../utils/logs.js"
-
 import {refreshTokenModel} from "../../models/refreshToken.js"
+import { ApiResponse } from "../../utils/apiResponse.js"
 
 export const refreshToken = asyncHandler(async(req,res,next)=>{
 
@@ -14,7 +13,7 @@ export const refreshToken = asyncHandler(async(req,res,next)=>{
     }
     // to generate access token first we need to check whether that refresh token is of user
     const token = await refreshTokenModel.findOne({token:refreshToken}).populate('user')
-    console.log(token)
+    
     if(!token){
         throw new ApiError(401,"This is not refresh Token Of this user")
     }
@@ -42,7 +41,7 @@ export const refreshToken = asyncHandler(async(req,res,next)=>{
     })
 
     if(!updateOldToken){
-        throw new ApiError(401,'Old Token has not been revoked / Cancelled. Therefore new Refresh Token cannot be created by:'`${req.ip}`)
+        throw new ApiError(401, `Old token could not be revoked before refresh for IP: ${req.ip}`)
     }
 
     const finalrefreshToken = await refreshTokenModel.create({
@@ -59,5 +58,8 @@ export const refreshToken = asyncHandler(async(req,res,next)=>{
     logger.info(`New refresh Token has been created for this email: ${user.email}`)
 
     res.status(200)
-    .json(201,'New refresh Token has been generated Succesfully' , {refreshToken:finalrefreshToken, accessToken:newaccessToken})
+    .json(new ApiResponse(200, {
+        refreshToken: newrefreshToken,
+        accessToken: newaccessToken
+    }, 'New refresh token has been generated successfully'))
 })

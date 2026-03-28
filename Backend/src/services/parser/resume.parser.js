@@ -2,6 +2,113 @@ import logger from '../../utils/logs.js';
 import textextractor from './text_extractor.parser.js';
 import resumeStructureInstance from '../ai.services/analyze_resume_structure.js';
 
+const parseFlexibleResumeDate = (value) => {
+    if (!value) return null;
+    if (value instanceof Date && !Number.isNaN(value.getTime())) return value;
+
+    const raw = String(value).trim();
+    if (!raw) return null;
+
+    if (/present|current|now/i.test(raw)) {
+        return new Date();
+    }
+
+    const monthMap = {
+        jan: 0, january: 0,
+        feb: 1, february: 1,
+        mar: 2, march: 2,
+        apr: 3, april: 3,
+        may: 4,
+        jun: 5, june: 5,
+        jul: 6, july: 6,
+        aug: 7, august: 7,
+        sep: 8, sept: 8, september: 8,
+        oct: 9, october: 9,
+        nov: 10, november: 10,
+        dec: 11, december: 11,
+    };
+
+    const normalized = raw
+        .replace(/\./g, ' ')
+        .replace(/,/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    const numericMonthYearMatch = raw.match(/^\s*(\d{1,2})\s*[-/]\s*(\d{4})\s*$/);
+    if (numericMonthYearMatch) {
+        const month = Number(numericMonthYearMatch[1]);
+        const year = Number(numericMonthYearMatch[2]);
+
+        if (month >= 1 && month <= 12 && Number.isFinite(year)) {
+            return new Date(year, month - 1, 1);
+        }
+    }
+
+    const numericYearMonthMatch = raw.match(/^\s*(\d{4})\s*[-/]\s*(\d{1,2})\s*$/);
+    if (numericYearMonthMatch) {
+        const year = Number(numericYearMonthMatch[1]);
+        const month = Number(numericYearMonthMatch[2]);
+
+        if (month >= 1 && month <= 12 && Number.isFinite(year)) {
+            return new Date(year, month - 1, 1);
+        }
+    }
+
+    const monthYearMatch = normalized.match(/([A-Za-z]+)\s+(\d{4})/);
+    if (monthYearMatch) {
+        const month = monthMap[monthYearMatch[1].toLowerCase()];
+        const year = Number(monthYearMatch[2]);
+
+        if (month !== undefined && Number.isFinite(year)) {
+            return new Date(year, month, 1);
+        }
+    }
+
+    const yearOnlyMatch = normalized.match(/\b(19|20)\d{2}\b/);
+    if (yearOnlyMatch) {
+        return new Date(Number(yearOnlyMatch[0]), 0, 1);
+    }
+
+    const direct = new Date(normalized);
+    if (!Number.isNaN(direct.getTime())) {
+        return new Date(direct.getFullYear(), direct.getMonth(), 1);
+    }
+
+    return null;
+};
+
+const normalizeResumeDateFields = (parsedData = {}) => ({
+    ...parsedData,
+    education: Array.isArray(parsedData.education)
+        ? parsedData.education.map((item) => ({
+            ...item,
+            startDate: parseFlexibleResumeDate(item?.startDate),
+            endDate: parseFlexibleResumeDate(item?.endDate),
+        }))
+        : [],
+    experience: Array.isArray(parsedData.experience)
+        ? parsedData.experience.map((item) => ({
+            ...item,
+            startDate: parseFlexibleResumeDate(item?.startDate),
+            endDate: item?.current ? null : parseFlexibleResumeDate(item?.endDate),
+        }))
+        : [],
+    project: Array.isArray(parsedData.project)
+        ? parsedData.project.map((item) => ({
+            ...item,
+            startDate: parseFlexibleResumeDate(item?.startDate),
+            endDate: parseFlexibleResumeDate(item?.endDate),
+        }))
+        : [],
+    certification: parsedData.certification
+        ? {
+            ...parsedData.certification,
+            issueDate: parseFlexibleResumeDate(parsedData.certification?.issueDate),
+            expiryDate: parseFlexibleResumeDate(parsedData.certification?.expiryDate),
+        }
+        : parsedData.certification,
+});
+
 class resumeParser {
 
     async parseResume(buffer, mimetype) {
@@ -11,7 +118,6 @@ class resumeParser {
             logger.info(`Fetching text from resume : ${buffer}`)
             // we get all text from parser
             const textdata = await textextractor.textExtractorFromDifferentTypes(buffer, mimetype)
-            console.log(textdata)
             if (!textdata) {
                 logger.error(`Failed to fetch text from resume`)  
                 throw new Error("Failed to extract text from resume")  
@@ -28,7 +134,7 @@ class resumeParser {
             const phone = textextractor.extractPhone(textdata.text)
             const urls = textextractor.extractUrls(textdata.text)
 
-            const parsedData = {
+            const parsedData = normalizeResumeDateFields({
                 personal: {
                     ...aiStructuredData.personal,
                     email: emails[0] || aiStructuredData.personal?.email || null,
@@ -54,7 +160,7 @@ class resumeParser {
                     : aiStructuredData.certifications || {},
                 achievments: aiStructuredData.achievements || [],
                 language: aiStructuredData.languages || [],
-            }
+            })
 
             const wordCount = textextractor.countWords(textdata.text)
             const rawText = textextractor.cleanText(textdata.text)
@@ -106,3 +212,4 @@ class resumeParser {
 
 const resumeParserInstance = new resumeParser();
 export default resumeParserInstance
+export { normalizeResumeDateFields };
