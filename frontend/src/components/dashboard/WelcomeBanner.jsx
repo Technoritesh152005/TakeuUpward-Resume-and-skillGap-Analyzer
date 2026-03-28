@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Sparkles, TrendingUp } from 'lucide-react';
+import { Sparkles, TrendingUp, Target, Rocket, ShieldCheck } from 'lucide-react';
 import useAuthStore from '../../services/authStore.js'
 
 const WelcomeBanner = () => {
@@ -8,73 +8,81 @@ const WelcomeBanner = () => {
 
   useEffect(() => {
     const hour = new Date().getHours();
-    if (hour < 12) setGreeting('Good morning');
-    else if (hour < 18) setGreeting('Good afternoon');
-    else setGreeting('Good evening');
+    if (hour < 12) setGreeting('Good Morning');
+    else if (hour < 18) setGreeting('Good Afternoon');
+    else setGreeting('Good Evening');
   }, []);
 
-  const firstName = user?.name?.split(' ')[0] || 'there';
+  const displayName = user?.fullName || user?.name || '';
+  const firstName = displayName.split(' ')[0] || 'Strategic Lead';
 
   return (
-    <div className="relative overflow-hidden bg-gradient-to-br from-primary-600 via-primary-700 to-primary-900 dark:from-primary-800 dark:via-primary-900 dark:to-neutral-900 rounded-3xl p-8 md:p-10">
-      {/* Animated background elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-24 -right-24 w-96 h-96 bg-primary-500/20 rounded-full blur-3xl animate-float" />
-        <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-primary-400/20 rounded-full blur-3xl animate-float-delayed" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-white/5 rounded-full blur-3xl" />
-      </div>
+    <div className="relative overflow-hidden group">
+      
+      {/* ── Glass Container ─────────────── */}
+      <div className="relative z-10 p-7 xl:p-9 rounded-[32px] border border-white/8 bg-white/4 backdrop-blur-xl transition-all duration-500 hover:bg-white/6 hover:border-white/12 shadow-2xl">
+        
+        {/* Subtle accent line at top */}
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary-500/50 to-transparent opacity-60" />
 
-      {/* Content */}
-      <div className="relative z-10">
-        <div className="flex items-start justify-between flex-wrap gap-4">
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <h1 className="text-3xl md:text-4xl font-bold text-white">
-                {greeting}, {firstName}! 👋
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+          
+          <div className="space-y-5 max-w-2xl">
+            <div className="flex items-center gap-3">
+              <div className="px-3 py-1 rounded-full bg-primary-600/20 border border-primary-500/30 text-[10px] font-black text-primary-400 uppercase tracking-widest animate-pulse">
+                Mission Active
+              </div>
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-success-600/20 border border-success-500/30 text-[10px] font-black text-success-400 uppercase tracking-widest">
+                <ShieldCheck className="w-3 h-3" />
+                Verified Profile
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <h1 className="text-3xl xl:text-4xl font-black text-white tracking-tight leading-tight">
+                {greeting}, <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-400 to-accent-400">{firstName}</span>.
               </h1>
-              <Sparkles className="w-6 h-6 text-amber-300 animate-pulse" />
+              <p className="text-neutral-400 text-sm xl:text-base font-medium leading-relaxed">
+                Your career trajectory is currently <span className="text-white font-bold italic underline decoration-primary-500/50 underline-offset-4 tracking-tight">Accelerating</span>. 
+                Ready for your daily strategic briefing?
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-4 pt-2">
+              <div className="flex items-center gap-2.5 px-4 py-2.5 bg-white/5 rounded-2xl border border-white/5 transition-all hover:bg-white/10 group/item">
+                <Target className="w-4 h-4 text-accent-400 group-hover/item:scale-110 transition-transform" />
+                <span className="text-xs font-bold text-neutral-300 uppercase tracking-wider">Skill Gap: -12% Improved</span>
+              </div>
+              <div className="flex items-center gap-2.5 px-4 py-2.5 bg-white/5 rounded-2xl border border-white/5 transition-all hover:bg-white/10 group/item">
+                <Rocket className="w-4 h-4 text-fresh-400 group-hover/item:scale-110 transition-transform" />
+                <span className="text-xs font-bold text-neutral-300 uppercase tracking-wider">Next Target: Tier 1 FAANG</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="lg:w-px lg:h-24 bg-white/10 hidden lg:block" />
+
+          {/* Quick Metrics */}
+          <div className="flex items-center gap-6">
+            <div className="text-center px-6 py-4 bg-primary-600/10 rounded-3xl border border-primary-600/20 min-w-[120px]">
+              <div className="text-[10px] font-black text-primary-400 uppercase tracking-widest mb-1.5 opacity-70">Readiness</div>
+              <div className="text-3xl font-black text-white leading-none tracking-tighter">84<span className="text-sm font-normal text-neutral-500 ml-0.5">%</span></div>
             </div>
             
-            <p className="text-lg text-primary-100 max-w-2xl">
-              Ready to take your career to the next level? Let's analyze your progress and plan your journey.
-            </p>
-
-            <div className="flex flex-wrap items-center gap-3 pt-2">
-              <div className="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full border border-white/20">
-                <TrendingUp className="w-4 h-4 text-green-300" />
-                <span className="text-sm font-medium text-white">
-                  Career Growth Tracker
-                </span>
-              </div>
-              
-              <div className="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full border border-white/20">
-                <span className="text-sm font-medium text-white">
-                  🎯 Skill-Based Matching
-                </span>
-              </div>
+            <div className="text-center px-6 py-4 bg-accent-600/10 rounded-3xl border border-accent-600/20 min-w-[120px]">
+              <div className="text-[10px] font-black text-accent-400 uppercase tracking-widest mb-1.5 opacity-70">Impact</div>
+              <div className="text-3xl font-black text-white leading-none tracking-tighter">Gold</div>
             </div>
           </div>
 
-          {/* Quick Stats */}
-          <div className="hidden lg:flex items-center gap-3">
-            <div className="text-center px-6 py-4 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20">
-              <div className="text-2xl font-bold text-white mb-1">
-                {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-              </div>
-              <div className="text-xs text-primary-100">Today</div>
-            </div>
-          </div>
         </div>
       </div>
 
-      {/* Decorative pattern */}
-      <div className="absolute bottom-0 right-0 opacity-10">
-        <svg width="200" height="200" viewBox="0 0 200 200" fill="none">
-          <circle cx="100" cy="100" r="80" stroke="white" strokeWidth="2" />
-          <circle cx="100" cy="100" r="60" stroke="white" strokeWidth="2" />
-          <circle cx="100" cy="100" r="40" stroke="white" strokeWidth="2" />
-        </svg>
+      {/* ── Background Detail ─────────────── */}
+      <div className="absolute top-1/2 right-0 -translate-y-1/2 opacity-[0.03] pointer-events-none group-hover:opacity-[0.06] transition-opacity duration-700">
+        <Sparkles className="w-64 h-64 text-white" />
       </div>
+
     </div>
   );
 };

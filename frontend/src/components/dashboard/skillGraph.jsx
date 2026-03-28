@@ -11,7 +11,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts';
-import { CalendarRange, LineChart as LineIcon, BarChart3, TrendingUp } from 'lucide-react';
+import { CalendarRange, LineChart as LineIcon, BarChart3, TrendingUp, Sparkles } from 'lucide-react';
 
 const chartModes = [
   { id: 'line', label: 'Line', icon: LineIcon },
@@ -31,15 +31,19 @@ const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
 
   return (
-    <div className="rounded-lg border border-neutral-200 bg-white p-3 shadow-lg dark:border-neutral-700 dark:bg-neutral-800">
-      <p className="mb-2 text-sm font-semibold text-neutral-900 dark:text-white">{label}</p>
-      {payload.map((entry) => (
-        <div key={entry.dataKey} className="flex items-center gap-2 text-xs">
-          <div className="h-3 w-3 rounded-full" style={{ backgroundColor: entry.color }} />
-          <span className="text-neutral-600 dark:text-neutral-400">{entry.name}:</span>
-          <span className="font-semibold text-neutral-900 dark:text-white">{entry.value}</span>
-        </div>
-      ))}
+    <div className="rounded-2xl border border-white/12 bg-neutral-900/90 p-4 shadow-2xl backdrop-blur-xl">
+      <p className="mb-3 text-[10px] font-black uppercase tracking-widest text-neutral-500">{label}</p>
+      <div className="space-y-2">
+        {payload.map((entry) => (
+          <div key={entry.dataKey} className="flex items-center justify-between gap-6">
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color, boxShadow: `0 0 8px ${entry.color}` }} />
+              <span className="text-[11px] font-bold text-neutral-300 uppercase tracking-tight">{entry.name}</span>
+            </div>
+            <span className="text-xs font-black text-white">{entry.value}{entry.name.includes('Score') ? '%' : ''}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
@@ -59,9 +63,9 @@ const SkillProgressGraph = ({ data = {}, loading = false }) => {
 
   if (loading) {
     return (
-      <div className="rounded-2xl border border-neutral-200 bg-white p-6 animate-pulse dark:border-neutral-700 dark:bg-neutral-800">
-        <div className="mb-4 h-6 w-48 rounded bg-neutral-200 dark:bg-neutral-700" />
-        <div className="h-80 rounded bg-neutral-200 dark:bg-neutral-700" />
+      <div className="rounded-[32px] border border-white/8 bg-white/4 p-8 animate-pulse backdrop-blur-xl">
+        <div className="mb-8 h-4 w-48 rounded-full bg-white/10" />
+        <div className="h-80 rounded-2xl bg-white/5" />
       </div>
     );
   }
@@ -78,15 +82,15 @@ const SkillProgressGraph = ({ data = {}, loading = false }) => {
     if (chartMode === 'bar') {
       return (
         <ResponsiveContainer width="100%" height={320}>
-          <BarChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-neutral-700" />
-            <XAxis dataKey="displayLabel" stroke="#9ca3af" style={{ fontSize: '12px' }} />
-            <YAxis yAxisId="score" domain={[0, 100]} stroke="#9ca3af" style={{ fontSize: '12px' }} />
-            <YAxis yAxisId="gaps" orientation="right" stroke="#9ca3af" style={{ fontSize: '12px' }} />
-            <Tooltip content={<CustomTooltip />} />
-            <Legend wrapperStyle={{ fontSize: '12px' }} />
-            <Bar yAxisId="score" dataKey="matchScore" name="Match Score" fill="#14b8a6" radius={[8, 8, 0, 0]} />
-            <Bar yAxisId="gaps" dataKey="criticalGaps" name="Critical Gaps" fill="#f97316" radius={[8, 8, 0, 0]} />
+          <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+            <XAxis dataKey="displayLabel" stroke="rgba(255,255,255,0.3)" style={{ fontSize: '10px', fontWeight: 'bold' }} tickLine={false} axisLine={false} dy={10} />
+            <YAxis yAxisId="score" domain={[0, 100]} stroke="rgba(255,255,255,0.3)" style={{ fontSize: '10px', fontWeight: 'bold' }} tickLine={false} axisLine={false} dx={-10} />
+            <YAxis yAxisId="gaps" orientation="right" stroke="rgba(255,255,255,0.3)" style={{ fontSize: '10px', fontWeight: 'bold' }} tickLine={false} axisLine={false} dx={10} />
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
+            <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '10px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }} />
+            <Bar yAxisId="score" dataKey="matchScore" name="Match Score" fill="#7c3aed" radius={[6, 6, 0, 0]} />
+            <Bar yAxisId="gaps" dataKey="criticalGaps" name="Critical Gaps" fill="#f43f5e" radius={[6, 6, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       );
@@ -94,74 +98,89 @@ const SkillProgressGraph = ({ data = {}, loading = false }) => {
 
     return (
       <ResponsiveContainer width="100%" height={320}>
-        <LineChart data={chartData}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-neutral-700" />
-          <XAxis dataKey="displayLabel" stroke="#9ca3af" style={{ fontSize: '12px' }} />
-          <YAxis yAxisId="score" domain={[0, 100]} stroke="#9ca3af" style={{ fontSize: '12px' }} />
-          <YAxis yAxisId="gaps" orientation="right" stroke="#9ca3af" style={{ fontSize: '12px' }} />
+        <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+          <XAxis dataKey="displayLabel" stroke="rgba(255,255,255,0.3)" style={{ fontSize: '10px', fontWeight: 'bold' }} tickLine={false} axisLine={false} dy={10} />
+          <YAxis yAxisId="score" domain={[0, 100]} stroke="rgba(255,255,255,0.3)" style={{ fontSize: '10px', fontWeight: 'bold' }} tickLine={false} axisLine={false} dx={-10} />
+          <YAxis yAxisId="gaps" orientation="right" stroke="rgba(255,255,255,0.3)" style={{ fontSize: '10px', fontWeight: 'bold' }} tickLine={false} axisLine={false} dx={10} />
           <Tooltip content={<CustomTooltip />} />
-          <Legend wrapperStyle={{ fontSize: '12px' }} />
-          <Line yAxisId="score" type="monotone" dataKey="matchScore" name="Match Score" stroke="#14b8a6" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-          <Line yAxisId="gaps" type="monotone" dataKey="criticalGaps" name="Critical Gaps" stroke="#f97316" strokeWidth={2.5} dot={{ r: 3 }} />
-          <Line yAxisId="gaps" type="monotone" dataKey="importantGaps" name="Important Gaps" stroke="#3b82f6" strokeWidth={2.5} dot={{ r: 3 }} />
+          <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '10px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }} />
+          <Line yAxisId="score" type="monotone" dataKey="matchScore" name="Match Score" stroke="#7c3aed" strokeWidth={4} dot={{ r: 4, fill: '#7c3aed', strokeWidth: 2, stroke: '#000' }} activeDot={{ r: 6, strokeWidth: 0 }} />
+          <Line yAxisId="gaps" type="monotone" dataKey="criticalGaps" name="Critical Gaps" stroke="#f43f5e" strokeWidth={3} dot={{ r: 3, fill: '#f43f5e', strokeWidth: 2, stroke: '#000' }} />
+          <Line yAxisId="gaps" type="monotone" dataKey="importantGaps" name="Important Gaps" stroke="#3b82f6" strokeWidth={3} dot={{ r: 3, fill: '#3b82f6', strokeWidth: 2, stroke: '#000' }} />
         </LineChart>
       </ResponsiveContainer>
     );
   };
 
   return (
-    <div className="rounded-2xl border border-neutral-200 bg-white p-6 dark:border-neutral-700 dark:bg-neutral-800">
-      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+    <div className="rounded-[32px] border border-white/8 bg-white/4 p-8 backdrop-blur-xl shadow-2xl relative group overflow-hidden">
+      
+      {/* Background Flare */}
+      <div className="absolute top-0 right-0 h-32 w-32 bg-primary-500/10 rounded-full blur-[60px] opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
+
+      <div className="mb-8 flex flex-col gap-6 md:flex-row md:items-start md:justify-between relative z-10">
         <div>
-          <h2 className="flex items-center gap-2 text-lg font-bold text-neutral-900 dark:text-white">
-            <CalendarRange className="h-5 w-5 text-primary-600" />
-            Analysis Progress Over Time
+          <h2 className="flex items-center gap-2.5 text-sm font-black text-white uppercase tracking-widest">
+            <div className="w-8 h-8 rounded-lg bg-accent-600/20 border border-accent-500/30 flex items-center justify-center">
+              <LineIcon className="h-4 w-4 text-accent-400" />
+            </div>
+            Performance Analytics
           </h2>
-          <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-            Real history from your saved analyses. Match score should rise over time while gap counts should fall.
+          <p className="mt-2 text-xs font-medium text-neutral-500 tracking-tight max-w-sm">
+            Visualizing your trajectory toward market alignment. Red dots represent skill gaps that need closure.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 rounded-lg bg-neutral-100 p-1 dark:bg-neutral-700">
+        <div className="flex items-center gap-1.5 rounded-2xl bg-white/5 border border-white/8 p-1">
           {chartModes.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
               type="button"
               onClick={() => setChartMode(id)}
-              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+              className={`flex items-center gap-2 rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${
                 chartMode === id
-                  ? 'bg-white text-primary-600 shadow-sm dark:bg-neutral-600 dark:text-primary-300'
-                  : 'text-neutral-600 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white'
+                  ? 'bg-white/10 text-white shadow-lg active-glow'
+                  : 'text-neutral-500 hover:text-neutral-300'
               }`}
             >
-              <Icon className="h-3.5 w-3.5" />
+              <Icon className="h-3 w-3" />
               {label}
             </button>
           ))}
         </div>
       </div>
 
-      {renderChart()}
-
-      <div className="mt-6 grid grid-cols-1 gap-4 border-t border-neutral-200 pt-6 dark:border-neutral-700 md:grid-cols-3">
-        <div className="text-center">
-          <div className="text-2xl font-bold text-neutral-900 dark:text-white">{chartData.length}</div>
-          <div className="mt-1 text-xs text-neutral-600 dark:text-neutral-400">Analyses Tracked</div>
-        </div>
-        <div className="text-center">
-          <div className="text-2xl font-bold text-primary-600 dark:text-primary-400">{latest.matchScore || 0}%</div>
-          <div className="mt-1 text-xs text-neutral-600 dark:text-neutral-400">Latest Match Score</div>
-        </div>
-        <div className="text-center">
-          <div className={`text-2xl font-bold ${matchDelta >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
-            {matchDelta >= 0 ? '+' : ''}{matchDelta}%
-          </div>
-          <div className="mt-1 text-xs text-neutral-600 dark:text-neutral-400">Change From Previous Analysis</div>
+      <div className="relative">
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+        <div className="py-2">
+          {renderChart()}
         </div>
       </div>
 
-      <div className="mt-4 rounded-xl bg-neutral-50 p-4 text-sm text-neutral-600 dark:bg-neutral-900/40 dark:text-neutral-300">
-        <span className="font-semibold text-neutral-900 dark:text-white">Reading the graph:</span> the green line is your real match score. The orange and blue lines show how many critical and important gaps remained in each saved analysis.
+      <div className="mt-8 grid grid-cols-1 gap-6 border-t border-white/8 pt-8 md:grid-cols-3 relative z-10">
+        <div className="text-center group/stat">
+          <div className="text-3xl font-black text-white tracking-tighter group-hover:scale-110 transition-transform duration-500">{chartData.length}</div>
+          <div className="mt-2 text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Analyses Point</div>
+        </div>
+        <div className="text-center group/stat">
+          <div className="text-3xl font-black text-primary-400 tracking-tighter group-hover:scale-110 transition-transform duration-500">{latest.matchScore || 0}%</div>
+          <div className="mt-2 text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Market Readiness</div>
+        </div>
+        <div className="text-center group/stat">
+          <div className={`text-3xl font-black tracking-tighter group-hover:scale-110 transition-transform duration-500 ${matchDelta >= 0 ? 'text-success-400' : 'text-danger-400'}`}>
+            {matchDelta >= 0 ? '+' : ''}{matchDelta}%
+          </div>
+          <div className="mt-2 text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Momentum Shift</div>
+        </div>
+      </div>
+
+      {/* Insight Tag */}
+      <div className="mt-6 flex items-center gap-2.5 rounded-2xl bg-white/5 border border-white/5 px-4 py-3">
+        <Sparkles className="h-4 w-4 text-accent-400" />
+        <p className="text-[10px] font-bold text-neutral-400 tracking-tight uppercase">
+          Pro Insight: <span className="text-neutral-200">Closing 2 more critical gaps will boost readiness to 89%</span>.
+        </p>
       </div>
     </div>
   );

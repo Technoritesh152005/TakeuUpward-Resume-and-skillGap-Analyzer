@@ -10,7 +10,7 @@ import ApiError from '../../utils/apiError.js'
 import userModel from '../../models/user.model.js'
 import resumeModel from '../../models/resume.model.js'
 import logger from '../../utils/logs.js'
-import resumeParserInstance from '../../services/parser/resume.parser.js'
+import resumeParserInstance, { normalizeResumeDateFields } from '../../services/parser/resume.parser.js'
 import redisClient from '../../config/redis.js'
 import ApiResponse from '../../utils/apiResponse.js'
 import resumeStructureInstance from '../../services/ai.services/analyze_resume_structure.js';
@@ -225,7 +225,7 @@ export const reparseResume = asyncHandler(async (req, res) => {
         // prev means get old data
         // if the given data is in mongoose doc convert in js object plain
         const prev = resume.parsedData?.toObject?.() ?? { ...resume.parsedData };
-        resume.parsedData = {
+        resume.parsedData = normalizeResumeDateFields({
             // means old or new data ko spread karo as u can further pick any key
             ...prev,
             ...structuredData,
@@ -239,7 +239,7 @@ export const reparseResume = asyncHandler(async (req, res) => {
                 ...(structuredData.skills || {}),
             },
             version: (prev.version ?? 1) + 1,
-        };
+        });
         resume.rawText = existingRaw;
         resume.processingStatus = 'completed';
 

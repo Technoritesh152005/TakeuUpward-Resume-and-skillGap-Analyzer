@@ -39,7 +39,7 @@ export const getAllJobRoles = asyncHandler(async (req, res) => {
         sort: sort,
         select: '-requiredSkills.critical.description -requiredSkills.important.description',
     })
-
+    console.log('Iam here at getalljobroles in controller',jobRoles)
     if (!jobRoles || !Array.isArray(jobRoles.docs) || jobRoles.docs.length === 0) {
         throw new ApiError(401, 'No Job roles found')
     }
@@ -66,19 +66,19 @@ export const getJobRolesFromId = asyncHandler(async (req, res, next) => {
     const getSingleJobRole = await jobRoleModel.findOne({
         _id: jobRoleId,
         isActive: true,
-    })
+    }).populate('relatedRoles', 'title slug category experienceLevel description')
     if (!getSingleJobRole) {
         throw new ApiError(400, 'No Job Role found from this Id')
     }
 
-    console.log(getSingleJobRole)
-    getSingleJobRole.views = views + 1
+    getSingleJobRole.views = (getSingleJobRole.views || 0) + 1
     await getSingleJobRole.save({ validateBeforeSave: false })
 
-    await redisClient.setEx(cacheKey, 500, JSON.stringify(cacheKey))
+    await redisClient.setEx(cacheKey, 500, JSON.stringify(getSingleJobRole))
 
+    console.log('heu i am here at jobController',getSimilarJobRoles)
     res.status(200)
-        .json(201, 'Job role fetched successfully for this ID', getSingleJobRole)
+        .json(new ApiResponse(200, getSingleJobRole, 'Job role fetched successfully for this ID'))
 })
 
 export const getJobRoleFromSlug = asyncHandler(async (req, res, next) => {
@@ -98,17 +98,17 @@ export const getJobRoleFromSlug = asyncHandler(async (req, res, next) => {
     const jobRole = await jobRoleModel.findOne({
         slug: slug,
         isActive: true
-    }).populate('relatedRoles', 'title', 'description', 'category', 'experienceLevel')
+    }).populate('relatedRoles', 'title description category experienceLevel slug')
 
     if (!jobRole) {
         throw new ApiError(401, 'No job role found for it')
     }
-    jobRole.views = views + 1
+    jobRole.views = (jobRole.views || 0) + 1
     await jobRole.save({ validateBeforeSave: false })
 
     await redisClient.setEx(cacheKey, 300, JSON.stringify(jobRole))
     res.status(200)
-        .json(201,jobRole, 'Jobs role is fetched from the required slug successfully')
+        .json(new ApiResponse(200, jobRole, 'Jobs role is fetched from the required slug successfully'))
 })
 
 export const searchJobRoles = asyncHandler(async (req, res, next) => {
@@ -131,14 +131,15 @@ export const searchJobRoles = asyncHandler(async (req, res, next) => {
     }
 
     // u cannot use select after paginate cause it alreadys send u that much only req data. so while getting first clearify them
-    await jobRoleModel.paginate(filter, {
+    const results = await jobRoleModel.paginate(filter, {
+        page: 1,
         limit: parseInt(limit),
         sort: '-views',
         select: ('title slug category experienceLevel description salaryRange demandLevel')
     })
 
     res.status(200)
-        .json(201, 'All job roles from the searching query fetched successfully',)
+        .json(new ApiResponse(200, results, 'All job roles from the searching query fetched successfully'))
 })
 
 export const getTrendingJobRoles = asyncHandler(async (req, res, next) => {
@@ -185,7 +186,7 @@ await redisClient.setEx(cacheKey, 300, JSON.stringify(trendingJobRole))
 export const getJobRolesByCategory = asyncHandler(async (req, res, next) => {
 
     // to get job roles by category we will use
-    const category = req.params
+    const category = req.params.category
     const { experienceLevel, limit = 10 } = req.query
 
     const filter = { isActive: true }
@@ -203,7 +204,7 @@ export const getJobRolesByCategory = asyncHandler(async (req, res, next) => {
         .limit(parseInt(limit));
 
     res.status(200)
-        .json(201, jobRoles ,'All jon roles of this category fetched succesfully')
+        .json(new ApiResponse(200, jobRoles ,'All jon roles of this category fetched succesfully'))
 
 })
 
@@ -222,7 +223,7 @@ export const getAllJobCategory = asyncHandler(async (req, res, next) => {
     }
     const getAllCategory = await Promise.all(
         categories.map(async (category) => {
-            const count = jobRoleModel.findDocuments({
+            const count = await jobRoleModel.countDocuments({
                 category: category,
                 isActive: true
             })
@@ -233,7 +234,7 @@ export const getAllJobCategory = asyncHandler(async (req, res, next) => {
     )
 
     res.status(200)
-        .json('201', 'All job categories fetched succesfully', getAllCategory)
+        .json(new ApiResponse(200, getAllCategory, 'All job categories fetched succesfully'))
 
 })
 
@@ -243,12 +244,15 @@ export const getSimilarJobRoles = asyncHandler(async (req, res, next) => {
 
     // we will first fetch the job
 
-
-    const job = await jobRoleModel.findOne({ _id: req.params.id })
+    // req.params.id = abc123
+    // req.query.limit = 6
+    // i just want to say that to take id they do like this and also for limit and exp level as they r sent in obj
+    // so query value comes from url only
+    const job = await jobRoleModel.findOne({ _id: req.params.id, isActive: true })
     const { limit = 10, experienceLevel } = req.query
 
     const cacheKey = `SimilarJobRoles:${req.params.id}:limit:${limit}`
-    const cachedData = await redisClient.getEx(cacheKey)
+    const cachedData = await redisClient.get(cacheKey)
 
     if (cachedData) {
         const data = JSON.parse(cachedData)
@@ -256,15 +260,23 @@ export const getSimilarJobRoles = asyncHandler(async (req, res, next) => {
             .json(new ApiResponse(201, data, 'Cached data of get similar job roles fetched'))
     }
 
-    const similarJob = await job.getSimilarJobRoles(job.category, limit, job.experienceLevel)
+    if (!job) {
+        throw new ApiError(404, 'Job role not found')
+    }
 
-    if (!similarJob) {
+    const similarJob = await jobRoleModel.findSimilarRoles(
+        job.category,
+        parseInt(limit),
+        experienceLevel || job.experienceLevel
+    )
+
+    if (!Array.isArray(similarJob) || similarJob.length === 0) {
         throw new ApiError(400, 'No similar job found for this')
     }
 
     // getting filtered means dont show current job roles
     const filtered = similarJob.filter(
-        (role) => role._id.toString() !== jobRole._id.toString()
+        (role) => role._id.toString() !== job._id.toString()
     );
 
     await redisClient.setEx(cacheKey, 500, JSON.stringify(filtered));

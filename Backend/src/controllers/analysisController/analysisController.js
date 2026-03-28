@@ -50,6 +50,26 @@ const parseMonthYearToDate = (value) => {
         .replace(/\s+/g, ' ')
         .trim();
 
+    const numericMonthYearMatch = raw.match(/^\s*(\d{1,2})\s*[-/]\s*(\d{4})\s*$/);
+    if (numericMonthYearMatch) {
+        const month = Number(numericMonthYearMatch[1]);
+        const year = Number(numericMonthYearMatch[2]);
+
+        if (month >= 1 && month <= 12 && Number.isFinite(year)) {
+            return new Date(year, month - 1, 1);
+        }
+    }
+
+    const numericYearMonthMatch = raw.match(/^\s*(\d{4})\s*[-/]\s*(\d{1,2})\s*$/);
+    if (numericYearMonthMatch) {
+        const year = Number(numericYearMonthMatch[1]);
+        const month = Number(numericYearMonthMatch[2]);
+
+        if (month >= 1 && month <= 12 && Number.isFinite(year)) {
+            return new Date(year, month - 1, 1);
+        }
+    }
+
     const direct = new Date(normalized);
     if (!Number.isNaN(direct.getTime())) {
         return new Date(direct.getFullYear(), direct.getMonth(), 1);
@@ -235,17 +255,16 @@ export const createAnalysis = asyncHandler(async (req, res) => {
     await clearAnalysisCache(req.user._id);
 
     try {
-        // Get skill gap analysis from Claude
-        const skillGapAnalysisData = await skillgapanalysis.performDeepSkillGapAnalyze(
-            resume.parsedData, 
-            jobRole
-        );
-
-        // Get ATS score
-        const atsScore = await generateAtsScore.getAtsScore(
-            resume.parsedData, 
-            jobRole
-        );
+        const [skillGapAnalysisData, atsScore] = await Promise.all([
+            skillgapanalysis.performDeepSkillGapAnalyze(
+                resume.parsedData,
+                jobRole
+            ),
+            generateAtsScore.getAtsScore(
+                resume.parsedData,
+                jobRole
+            ),
+        ]);
 
         // 
         analysis.matchScore = skillGapAnalysisData.overallAssessment.matchPercentage;
@@ -589,7 +608,7 @@ export const deleteAnalysis = asyncHandler(async (req, res) => {
     await analaysis.save()
     await clearAnalysisCache(userId, analysisId)
 
-    logger.info(201, 'User succesfuly deleted his analysis . user is :'`${req.user.email}`)
+    logger.info(201, `User succesfuly deleted his analysis. user is: ${req.user.email}`)
 
     res.status(200)
         .json(new ApiResponse(201,null,'User deleted succesfully'))

@@ -6,7 +6,7 @@ import LoadingSpinner from '../common components/LoadingSpinner';
 // While accessing any protected route: check auth; if not logged in, save location and redirect to login.
 const ProtectedRoute = ({ children }) => {
   const location = useLocation();
-  const { isAuthenticated, isLoading, loadUser } = useAuthStore();
+  const { isAuthenticated, isLoading, hasCheckedAuth, loadUser } = useAuthStore();
 
   // Load user on mount if not already loaded
 // when components loads it checks if valid
@@ -15,7 +15,7 @@ const ProtectedRoute = ({ children }) => {
   }, [loadUser]);
 
   // Show loading spinner while checking auth
-  if (isLoading) {
+  if (isLoading || !hasCheckedAuth) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-neutral-900">
         <div className="text-center">

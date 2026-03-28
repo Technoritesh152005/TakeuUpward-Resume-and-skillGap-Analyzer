@@ -178,7 +178,7 @@ jobRoleSchema.statics.findSimilarRoles = async function(category , limit =5, exp
         category,
         experienceLevel,
     }).limit(limit)
-    .select('title slug description category , experienceLevel , salaryRange')
+    .select('title slug description category experienceLevel salaryRange demandLevel views')
 }
 
 const jobRoleModel = mongoose.model('jobRoleModel', jobRoleSchema);

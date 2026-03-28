@@ -27,8 +27,9 @@ import toast from 'react-hot-toast';
 import DashboardLayout from '../components/layout/DashboardLayout.jsx';
 // Service that calls resume-related backend APIs.
 import resumeService from '../services/resumeService.js';
-// Service that calls analysis and job-role backend APIs.
+// Service that calls analysis backend APIs.
 import analysisService from '../services/analysisService.js';
+import jobRoleService from '../services/jobRoleService.js';
 
 // Safe fallback object for the analysis result area.
 // We keep the same shape the UI expects so cards can render
@@ -89,6 +90,7 @@ const AnalysisPage = () => {
   // `?resumeId=<resumeObjectId>` in the URL. `location.search` is only the
   // query-string part after `?`, not the route path.
   const resumeIdFromQuery = new URLSearchParams(location.search).get('resumeId');
+  const jobRoleIdFromQuery = new URLSearchParams(location.search).get('jobRoleId');
 
   const [loadingBase, setLoadingBase] = useState(true);
   const [resumes, setResumes] = useState([]);
@@ -97,7 +99,7 @@ const AnalysisPage = () => {
   // This is the resume id that will be used in create-analysis and compare-role
   // API calls. It starts with the query value when present.
   const [selectedResumeId, setSelectedResumeId] = useState(resumeIdFromQuery || '');
-  const [selectedJobRoleId, setSelectedJobRoleId] = useState('');
+  const [selectedJobRoleId, setSelectedJobRoleId] = useState(jobRoleIdFromQuery || '');
   const [compareRoleIds, setCompareRoleIds] = useState([]);
   const [jobRoleSearch, setJobRoleSearch] = useState('');
   const [compareRoleSearch, setCompareRoleSearch] = useState('');
@@ -147,7 +149,7 @@ const AnalysisPage = () => {
   
       const [resumeResult, rolesResult] = await Promise.allSettled([
         resumeService.getMyResume(1, 12),
-        analysisService.getJobRoles({ limit: 60 }),
+        jobRoleService.getJobRoles({ limit: 60 }),
       ]);
   
       const resumeDocs =
@@ -170,7 +172,9 @@ const AnalysisPage = () => {
         setSelectedResumeId(resumeDocs[0]._id);
       }
   
-      if (!selectedJobRoleId && Array.isArray(rolesRes) && rolesRes.length > 0) {
+      if (jobRoleIdFromQuery && Array.isArray(rolesRes) && rolesRes.some((role) => role?._id === jobRoleIdFromQuery)) {
+        setSelectedJobRoleId(jobRoleIdFromQuery);
+      } else if (!selectedJobRoleId && Array.isArray(rolesRes) && rolesRes.length > 0) {
         setSelectedJobRoleId(rolesRes[0]._id);
       }
   

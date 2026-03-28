@@ -17,7 +17,7 @@ const protectAccess = asyncHandler(async (req, res, next) => {
 
     }
     if (!token) {
-        throw new ApiError('Token is not present.Unauthicated User')
+        throw new ApiError(401, 'Token is not present. Unauthenticated user')
     }
 
     // we should wrap them in try catch bcz they may sent errpr while verifying and we sent custom api error to user
@@ -28,17 +28,17 @@ const protectAccess = asyncHandler(async (req, res, next) => {
 
         if (!verifiedToken) {
             logger.error(`Invalid token send by user: ${req.ip}`)
-            throw new ApiError('Invalid Token send by user')
+            throw new ApiError(401, 'Invalid token sent by user')
         }
 
         const user = await userModel.findById(verifiedToken._id).select('-password')
 
         if (!user) {
-            throw new ApiError("User not found... Invalid login")
+            throw new ApiError(401, 'User not found. Invalid login')
         }
 
         if (!(user.isActive)) {
-            throw new ApiError('User account have been disconnected / terminated.. Please connect customer support or take this emaiil khilariritesh61@gmail.com')
+            throw new ApiError(401, 'User account has been deactivated')
         }
 
         req.user = user;
@@ -50,11 +50,12 @@ const protectAccess = asyncHandler(async (req, res, next) => {
 
         // this catch will catch error while verifying jwt
         if (err.name == 'JsonWebTokenError') {
-            throw new ApiError(400, 'Invalid token')
+            throw new ApiError(401, 'Invalid token')
         }
         if (err.name == 'TokenExpiredError') {
-            throw new ApiError(400, 'Please login again.. token expired')
+            throw new ApiError(401, 'Token expired')
         }
+        throw err
     }
 })
 
