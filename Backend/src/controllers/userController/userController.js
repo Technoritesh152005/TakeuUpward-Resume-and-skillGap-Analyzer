@@ -1,21 +1,3 @@
-// in user controller
-/*
-1. get by profile
-2.update profile like name,phone,loc,bio,pref
-3. get dashboard stats-
-get the count of resume analysis and analysis
-calculate avg match score
-get skill count from latest resume
-take it from their resume parsed data that how much skill does he have
-return all these
-
-4.get user activity - 
-get recent activities of user like analysis and resume 
-combine multiple resume and analysis and sort them in latest
-
-5. Delete account - 
-also soft delete all their resume and analysis
-*/
 import redisClient from '../../config/redis.js'
 import asyncHandler from '../../utils/asyncHandler.js'
 import ApiError from '../../utils/apiError.js'
@@ -25,212 +7,266 @@ import logger from '../../utils/logs.js'
 import resumeModel from '../../models/resume.model.js'
 import analysisModel from '../../models/analysis.model.js'
 
-export const getMyProfile = asyncHandler(async (req, res) => {
+// defineing the schema . that whenever data is given we return acc to this schema
+const formatProfile = (user) => {
+    // we always try to keep it in object
+    const profile = user.toObject ? user.toObject() : user
 
-    // just return the user from user model
-    const user = await userModel.findOne(req.user._id).select('-password')
+    return {
+        _id: profile._id,
+        name: profile.name,
+        email: profile.email,
+        phone: profile.phone || '',
+        location: profile.location || '',
+        bio: profile.bio || '',
+        avatar: profile.avatar || profile.profilePicture || '',
+        profilePicture: profile.profilePicture || profile.avatar || '',
+        authProvider: profile.authProvider || 'local',
+        isEmailVerified: Boolean(profile.isEmailVerified),
+        careerPreferences: profile.careerPreferences || {},
+        preferences: profile.preference || profile.preferences || {},
+        createdAt: profile.createdAt,
+        updatedAt: profile.updatedAt,
+    }
+}
+
+export const getMyProfile = asyncHandler(async (req, res) => {
+    const userId = req.user;
+    const user = await userModel.findById(userId._id).select('-password')
+
     if (!user) {
-        throw new ApiError(400, 'User not found')
+        throw new ApiError(404, 'User not found')
     }
 
-    res.status(200)
-        .json(201, user, 'User succesfully been fetched')
+    res.status(200).json(
+        new ApiResponse(200, formatProfile(user), 'User profile fetched successfully')
+    )
 })
 
 export const updateProfile = asyncHandler(async (req, res) => {
+    const {
+        name,
+        phone,
+        location,
+        bio,
+        avatar,
+        profilePicture,
+        preferences,
+        careerPreferences,
+    } = req.body
 
-    const { name, phone, location, bio, preference } = req.body
+    const user = await userModel.findById(req.user._id).select('-password')
 
-    const user = userModel.findById(req.user._id).select('-password')
+    if (!user) {
+        throw new ApiError(404, 'User not found')
+    }
 
-    if (name) user.name = name
-    if (phone) user.phone = phone
-    if (location) user.location = location
-    if (user.bio) user.bio = bio
-    if (preference) {
-        if (preference.hoursPerWeek) {
-            user.preference.hoursPerWeek = hoursPerWeek
+    if (name !== undefined) user.name = name
+    if (phone !== undefined) user.phone = phone
+    if (location !== undefined) user.location = location
+    if (bio !== undefined) user.bio = bio
+    if (avatar !== undefined) user.avatar = avatar
+    if (profilePicture !== undefined) user.profilePicture = profilePicture
+
+    if (preferences) {
+        user.preference = user.preference || {}
+
+        if (preferences.hoursPerWeek !== undefined) {
+            user.preference.hoursPerWeek = preferences.hoursPerWeek
         }
-        if (preference.budget) {
-            user.preference.budget = budget
+        if (preferences.budget !== undefined) {
+            user.preference.budget = preferences.budget
         }
-        if (preference.learningStyle) {
-            user.preference.learningStyle = learningStyle
+        if (preferences.learningStyle !== undefined) {
+            user.preference.learningStyle = preferences.learningStyle
+        }
+    }
+
+    if (careerPreferences) {
+        user.careerPreferences = user.careerPreferences || {}
+
+        if (careerPreferences.targetRole !== undefined) {
+            user.careerPreferences.targetRole = careerPreferences.targetRole
+        }
+        if (careerPreferences.experienceLevel !== undefined) {
+            user.careerPreferences.experienceLevel = careerPreferences.experienceLevel
+        }
+        if (careerPreferences.preferredJobType !== undefined) {
+            user.careerPreferences.preferredJobType = careerPreferences.preferredJobType
+        }
+        if (careerPreferences.preferredLocation !== undefined) {
+            user.careerPreferences.preferredLocation = careerPreferences.preferredLocation
+        }
+        if (careerPreferences.remotePreference !== undefined) {
+            user.careerPreferences.remotePreference = careerPreferences.remotePreference
+        }
+        if (careerPreferences.industryInterest !== undefined) {
+            user.careerPreferences.industryInterest = careerPreferences.industryInterest
         }
     }
 
     await user.save()
-    logger.info(200, 'User updated his profile')
 
-    res.status(200)
-        .json(201, user, 'User details has been successfully changed')
+    logger.info(`User profile updated: ${user._id}`)
+
+    res.status(200).json(
+        new ApiResponse(200, formatProfile(user), 'User profile updated successfully')
+    )
 })
 
 export const getDashboardStats = asyncHandler(async (req, res) => {
-    // for dashboard stats u need first user? no dont need
-    // gets first get count of how much resume and analysis u created and show them their analysis
-    // promise . all runs all query at once 
-
     const cacheKey = `Dashboard:user:${req.user._id}`
     const cachedData = await redisClient.get(cacheKey)
 
     if (cachedData) {
         const data = JSON.parse(cachedData)
-        return res.status(200)
-            .json(new ApiResponse(201, data, 'Dashboard cache data fetched succesfully'))
+        return res.status(200).json(
+            new ApiResponse(200, data, 'Dashboard cache data fetched successfully')
+        )
     }
 
-    const [resumeCount, analysisCount, analysis] = await Promise.all(
-        [
-            resumeModel.countDocuments({ user: req.user._id, isActive: true }),
-            analysisModel.countDocuments({ user: req.user._id, isActive: true }),
-            analysisModel.find({ user: req.user._id, isActive: true })
-                .limit(5)
-                .sort({ createdAT: -1 })
-                .populate('jobRole', 'title category')
-                .select('matchScore  readinesslevel createdAt'),
-        ]
-    )
+    // promise . all runs all process in parallel
+    const [resumeCount, analysisCount, analyses, latestResume] = await Promise.all([
 
-    let avgMatchScore = 0;
+        resumeModel.countDocuments({ user: req.user._id, isActive: true }),
+        analysisModel.countDocuments({ user: req.user._id, isActive: true }),
+        analysisModel.find({ user: req.user._id, isActive: true })
+            .limit(5)
+            .sort({ createdAt: -1 })
+            .populate('jobRole', 'title category')
+            .select('matchScore readinessLevel createdAt'),
 
-    if (analysis.length > 0) {
-        const totalScore = analysis.reduce((sum, a) => sum + a.matchScore, 0);
-        avgMatchScore = Math.round(totalScore / analysis.length);
+        resumeModel.findOne({
+            user: req.user._id,
+            isActive: true,
+            processingStatus: 'completed'
+        }).sort({ createdAt: -1 }),
+    ])
+
+    let avgMatchScore = 0
+
+    if (analyses.length > 0) {
+        const totalScore = analyses.reduce((sum, item) => sum + (item.matchScore || 0), 0)
+        avgMatchScore = Math.round(totalScore / analyses.length)
     }
 
-    // get skill count from latest resume
-    const latestResume = resumeModel.findOne({
-        user: req.user._id,
-        isActive: true,
-        processingStatus: 'completed'
-    }).sort({ createdAt: -1 })
+    let skillCount = 0
+    const skills = latestResume?.parsedData?.skills
 
-    if (!latestResume) {
-        throw new ApiError(400, 'Resume not found')
-    }
-    const skillCount = 0;
-    if (latestResume?.parsedData?.skills) {
-        // skill has a pinter to skill object in resume
-        const skill =
-            latestResume.parsedData.skills
-        console.log(skill)
-
-        skillCount = (skill.technical?.length || 0) +
-            (skill.language?.length || 0) +
-            (skill.tools?.length || 0)
+    if (skills) {
+        skillCount =
+            (skills.technical?.length || 0) +
+            (skills.language?.length || 0) +
+            (skills.tools?.length || 0)
     }
 
     const data = {
         resumeUploadedCount: resumeCount,
         analysisUploadedCount: analysisCount,
-        rececntAnalysis: analysis,
+        rececntAnalysis: analyses,
         averageMatchScore: avgMatchScore,
         skillsCount: skillCount
     }
-    await redisClient.setEx(cacheKey,1200,JSON.stringify(data))
-    res.status(200)
-        .json(201,
-            {
-                resumeUploadedCount: resumeCount,
-                analysisUploadedCount: analysisCount,
-                rececntAnalysis: analysis,
-                averageMatchScore: avgMatchScore,
-                skillsCount: skillCount
-            },
-            'All stats of dashboard have been taken successfully'
-        )
+
+    await redisClient.setEx(cacheKey, 1200, JSON.stringify(data))
+
+    res.status(200).json(
+        new ApiResponse(200, data, 'All dashboard stats fetched successfully')
+    )
 })
 
 export const getUserActivity = asyncHandler(async (req, res) => {
     const { limit = 10 } = req.query
+    const parsedLimit = Number.parseInt(limit, 10) || 10
 
-    const cacheKey = `userActivity:user:${req.user._id}:limit:${limit}`
+    const cacheKey = `userActivity:user:${req.user._id}:limit:${parsedLimit}`
     const cachedData = await redisClient.get(cacheKey)
 
-    if(cachedData){
-        const data = await JSON.parse(cachedData)
-        return res.status(200)
-        .json(new ApiResponse(201,data,'User activity cached data fetched succesfully'))
+    if (cachedData) {
+        const data = JSON.parse(cachedData)
+        return res.status(200).json(
+            new ApiResponse(200, data, 'User activity cached data fetched successfully')
+        )
     }
-    const [resume, analysis] = await Promise.all(
-        [
-            await resumeModel.find({
-                user: req.user._id,
-                status: isActive,
-            }).sort({ createdAt: -1 })
-                .limit(parseInt(limit))
-                .select('fileName originalFileName createdAt processingStatus'),
 
-            await analysisModel.find({
-                user: req.user._id,
-                isActive: true,
-            })
-                .sort({ createdAt: -1 })
-                .select('matchScore status createdAt')
-                .populate('jobRole', 'title category')
-                .limit(parseInt(limit))
+    const [resumes, analyses] = await Promise.all([
+        resumeModel.find({
+            user: req.user._id,
+            isActive: true,
+        }).sort({ createdAt: -1 })
+            .limit(parsedLimit)
+            .select('fileName originalFileName createdAt processingStatus'),
 
-        ]
-    )
-    // Combine and sort by date
+        analysisModel.find({
+            user: req.user._id,
+            isActive: true,
+        })
+            .sort({ createdAt: -1 })
+            .select('matchScore status createdAt')
+            .populate('jobRole', 'title category')
+            .limit(parsedLimit)
+    ])
+
     const activities = [
-        ...resume.map((r) => ({
+        ...resumes.map((resume) => ({
             type: 'resume_upload',
-            data: r,
-            timestamp: r.createdAt,
+            data: resume,
+            timestamp: resume.createdAt,
         })),
-        ...analysis.map((a) => ({
+        ...analyses.map((analysis) => ({
             type: 'analysis',
-            data: a,
-            timestamp: a.createdAt,
+            data: analysis,
+            timestamp: analysis.createdAt,
         })),
-    ].sort((a, b) => b.timestamp - a.timestamp);
+    ].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
 
-    await redisClient.setEx(cacheKey,300, JSON.stringify(activities))
-    res.status(200)
-        .json(new ApiResponse(201, activities, 'Sucesfully got the user activity'))
+    await redisClient.setEx(cacheKey, 300, JSON.stringify(activities))
+
+    res.status(200).json(
+        new ApiResponse(200, activities, 'Successfully got the user activity')
+    )
 })
 
 export const deleteAccount = asyncHandler(async (req, res) => {
     const { password } = req.body
 
     if (!password) {
-        throw new ApiError('Password not provided. Please Provide password')
+        throw new ApiError(400, 'Password not provided. Please provide password')
     }
 
     const user = await userModel.findById(req.user._id).select('+password')
+
     if (!user) {
-        throw new ApiError(400, 'No user found')
+        throw new ApiError(404, 'No user found')
     }
 
     const isPasswordTrue = await user.comparePassword(password)
 
     if (!isPasswordTrue) {
-        throw new ApiError(400, 'Password is wrong!.. Please Provide correct password')
+        throw new ApiError(400, 'Password is wrong. Please provide correct password')
     }
 
-    user.isActive = false;
+    user.isActive = false
     await user.save()
 
     await Promise.all([
-        resumeModel.updateMany({ user: req.user._id }, { isActive: true },
-            analysisModel.updateMany({ user: req.user._id }, { isActive: false }),
-        )
-    ]
+        resumeModel.updateMany({ user: req.user._id }, { isActive: false }),
+        analysisModel.updateMany({ user: req.user._id }, { isActive: false }),
+    ])
+
+    logger.info(`Successfully deleted the account of the user: ${req.user._id}`)
+
+    res.status(200).json(
+        new ApiResponse(200, null, 'User account successfully deleted')
     )
-
-    logger.info('Successfully deleted the account of the user: '`${req.user._id}`)
-
-    res.status(200)
-        .json(new ApiResponse(201, null, 'User account successfully got DELETED'))
 })
 
 export const exportUserData = asyncHandler(async (req, res) => {
-
     const user = await userModel.findById(req.user._id).select('-password')
+
     if (!user) {
-        throw new ApiError(400, 'No user found')
+        throw new ApiError(404, 'No user found')
+        
     }
 
     const [resumedata, analysisdata] = await Promise.all([
@@ -239,35 +275,42 @@ export const exportUserData = asyncHandler(async (req, res) => {
     ])
 
     const exportData = {
-        userData: user,
+        userData: formatProfile(user),
         resumeData: resumedata,
         analysisData: analysisdata,
         exportedAt: new Date()
     }
 
-    res.status(200)
-        .json(201, exportData, 'User data has been successfully exported')
-
+    res.status(200).json(
+        new ApiResponse(200, exportData, 'User data has been successfully exported')
+    )
 })
 
 export const updateNotificationPreference = asyncHandler(async (req, res) => {
-
     const { email, roadMapUpdates, weeklyProgess } = req.body
 
-    const user = await resumeModel.findById(req.user._id).select('-password')
-    console.log(user)
+    const user = await userModel.findById(req.user._id).select('-password')
 
-    if (email) {
+    if (!user) {
+        throw new ApiError(404, 'User not found')
+    }
+
+    user.preference = user.preference || {}
+    user.preference.notification = user.preference.notification || {}
+
+    if (email !== undefined) {
         user.preference.notification.email = email
     }
-    if (roadMapUpdates) {
+    if (roadMapUpdates !== undefined) {
         user.preference.notification.roadMapUpdates = roadMapUpdates
     }
-    if (weeklyProgess) {
+    if (weeklyProgess !== undefined) {
         user.preference.notification.weeklyProgess = weeklyProgess
     }
 
     await user.save()
-    res.status(200)
-        .json(new ApiResponse(201, user, 'user notification succesfully updated'))
+
+    res.status(200).json(
+        new ApiResponse(200, formatProfile(user), 'User notification preferences updated successfully')
+    )
 })

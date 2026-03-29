@@ -57,6 +57,28 @@ class AuthService {
         }
     }
 
+   async forgotPassword (email){
+
+    try{
+        const response = await api.post('/auth/forgot-password',{email})
+        return response;
+    }catch(error){
+        throw error.message
+    }
+   }
+
+   async resetPassword ({token,newPassword}){
+    try{
+        const response = await api.post('/auth/reset-password',{
+            token,
+            newPassword
+        })
+        return response;
+    }catch(error){
+        throw error.response?.data || error
+    }
+   }
+
     isAuthenticated(){
         // !! return truw or false
         return !!localStorage.getItem('accessToken')

@@ -12,8 +12,9 @@ export const login = asyncHandler(async(req,res,next)=>{
     // if same generate refresh and access token , store the refresh token in db and return
 
     const {email,password} = req.body;
+    const normalizedEmail = String(email || '').trim().toLowerCase()
     // findone req an object
-    const user = await userModel.findOne({email}).select('+password')
+    const user = await userModel.findOne({email: normalizedEmail}).select('+password')
     console.log(user)
 
     if(!user){

@@ -184,6 +184,44 @@ const validateUpdateProfile = (req, res, next) => {
                 .valid('visual', 'auditory', 'reading', 'kinesthetic', 'mixed')
                 .optional(),
         }).optional(),
+
+        careerPreferences: joi.object({
+            targetRole: joi.string()
+                .trim()
+                .max(100)
+                .optional(),
+
+            experienceLevel: joi.string()
+                .valid('student', 'fresher', 'junior', 'mid', 'senior', 'lead')
+                .optional(),
+
+            preferredJobType: joi.string()
+                .valid('full-time', 'internship', 'contract', 'freelance', 'part-time')
+                .optional(),
+
+            preferredLocation: joi.string()
+                .trim()
+                .max(100)
+                .optional(),
+
+            remotePreference: joi.string()
+                .valid('remote', 'hybrid', 'onsite', 'flexible')
+                .optional(),
+
+            industryInterest: joi.array()
+                .items(joi.string().trim().max(100))
+                .optional(),
+        }).optional(),
+
+        avatar: joi.string()
+            .trim()
+            .uri()
+            .optional(),
+
+        profilePicture: joi.string()
+            .trim()
+            .uri()
+            .optional(),
     });
 
     const { error } = schema.validate(req.body, { abortEarly: false });
@@ -196,4 +234,21 @@ const validateUpdateProfile = (req, res, next) => {
     next();
 };
 
-export { validateLogin, validatePasswordChange, validateSignUp, validateUpdateProfile }
+const validateUpdateNotifications = (req, res, next) => {
+    const schema = joi.object({
+        email: joi.boolean().optional(),
+        roadMapUpdates: joi.boolean().optional(),
+        weeklyProgess: joi.boolean().optional(),
+    }).min(1);
+
+    const { error } = schema.validate(req.body, { abortEarly: false });
+
+    if (error) {
+        const errors = error.details.map((detail) => detail.message);
+        throw new ApiError(400, errors.join(', '));
+    }
+
+    next();
+};
+
+export { validateLogin, validatePasswordChange, validateSignUp, validateUpdateProfile, validateUpdateNotifications }
