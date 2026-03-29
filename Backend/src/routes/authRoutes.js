@@ -10,7 +10,7 @@ const router = express.Router();
 import { logout } from '../controllers/authControllers/logout.authControllers.js'
 import { signup } from '../controllers/authControllers/signup.authControllers.js'
 import { login } from '../controllers/authControllers/login.authControllers.js'
-import {changePassword, getCurrentUser} from '../controllers/authControllers/changePassword.js'
+import { changePassword, forgotPassword, getCurrentUser, resetPassword} from '../controllers/authControllers/changePassword.js'
 import { protectAccess } from '../middleware/authMiddleware.js'
 import { refreshToken } from '../controllers/authControllers/refreshAccessToken.Controller.js'
 import {validateSignUp,validateLogin, validatePasswordChange} from '../validation/auth.validation.js'
@@ -44,6 +44,10 @@ router.post('/logout',protectAccess,logout)
  */
 // why not protect question comes here in refresh Token
 router.post('/refresh-token',refreshToken)
+
+router.post('/forgot-password',forgotPassword)
+
+router.post('/reset-password',resetPassword)
 
 /**
  * @route   PUT /api/v1/auth/change-password

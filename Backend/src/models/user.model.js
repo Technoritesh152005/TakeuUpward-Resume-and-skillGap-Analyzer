@@ -3,6 +3,85 @@ import { ROLES } from '../config/constant.js'
 import jwt from 'jsonwebtoken'
 import bcrypt from "bcrypt"
 
+const notificationPreferenceSchema = new mongoose.Schema(
+    {
+        email: {
+            type: Boolean,
+            default: true,
+        },
+        roadMapUpdates: {
+            type: Boolean,
+            default: true,
+        },
+        weeklyProgess: {
+            type: Boolean,
+            default: true
+        }
+    },
+    { _id: false }
+)
+
+const learningPreferenceSchema = new mongoose.Schema(
+    {
+        hoursPerWeek: {
+            type: Number,
+            default: 8,
+            min: 1,
+            max: 168
+        },
+        budget: {
+            type: String,
+            enum: ["free", "low", "medium", "high"],
+            default: "free",
+        },
+        learningStyle: {
+            type: String,
+            enum: ["mixed", "auditory", "visual", "reading", "kinesthetic"],
+            default: "mixed",
+        },
+        notification: {
+            type: notificationPreferenceSchema,
+            default: () => ({})
+        },
+    },
+    { _id: false }
+)
+
+const careerPreferenceSchema = new mongoose.Schema(
+    {
+        targetRole: {
+            type: String,
+            trim: true,
+            default: '',
+        },
+        experienceLevel: {
+            type: String,
+            enum: ['student', 'fresher', 'junior', 'mid', 'senior', 'lead'],
+            default: 'student',
+        },
+        preferredJobType: {
+            type: String,
+            enum: ['full-time', 'internship', 'contract', 'freelance', 'part-time'],
+            default: 'full-time',
+        },
+        preferredLocation: {
+            type: String,
+            trim: true,
+            default: '',
+        },
+        remotePreference: {
+            type: String,
+            enum: ['remote', 'hybrid', 'onsite', 'flexible'],
+            default: 'flexible',
+        },
+        industryInterest: {
+            type: [String],
+            default: [],
+        },
+    },
+    { _id: false }
+)
+
 const userSchema = mongoose.Schema(
     
     {
@@ -55,16 +134,16 @@ const userSchema = mongoose.Schema(
             type: String,
           },
           
-          authProvider: {
+        authProvider: {
             type: String,
             enum: ['local', 'google'],
             default: 'local',
           },
           
         phone: {
-            
-            type: Number,
-            maxLength: [12, "Phone number must be 12 or less than 12 number"]
+            type: String,
+            trim: true,
+            maxLength: [15, "Phone number must be 15 or less than 15 characters"]
         },
         location: {
             type: String
@@ -74,37 +153,12 @@ const userSchema = mongoose.Schema(
             maxLength: [300, "Should be less than 300 characters"]
         },
         preference: {
-            hoursPerWeek: {
-                type: Number,
-                default: 8,
-                min: 1,
-                max: 10
-            }
-            ,
-            budget: {
-                type: String,
-                enum: ["free", "low", "medium", "high"],
-                default: "free",
-            },
-            learningStyle: {
-                type: String,
-                enum: ["mixed", "auditory", "visual", "reading", "kinesthetic"]
-            },
-            notification: {
-            email: {
-                type: Boolean,
-                default: true,
-            },
-            roadMapUpdates: {
-                type: Boolean,
-                default: true,
-            },
-            weeklyProgess: {
-                type: Boolean,
-                default: true
-            }
+            type: learningPreferenceSchema,
+            default: () => ({})
         },
-        
+        careerPreferences: {
+            type: careerPreferenceSchema,
+            default: () => ({})
         },
 
         isActive:{
@@ -117,7 +171,7 @@ const userSchema = mongoose.Schema(
     },
     {
         timestamps: true,
-        toJson: {
+        toJSON: {
             virtuals: true
         },
         toObject: {
@@ -145,6 +199,14 @@ userSchema.virtual("resumes", {
 userSchema.virtual('fullName').get(function () {
     return this.name;
 });
+
+userSchema.virtual('preferences')
+    .get(function () {
+        return this.preference;
+    })
+    .set(function (value) {
+        this.preference = value;
+    });
 
 
 // pre is a middleware before svaing to db and 'save is a hook'

@@ -12,7 +12,7 @@ import {
 }
 from '../controllers/userController/userController.js'
 import { getDashboardData } from '../controllers/dashboardController/dashboardController.js'
-import {validateUpdateProfile} from '../validation/auth.validation.js'
+import {validateUpdateNotifications, validateUpdateProfile} from '../validation/auth.validation.js'
 
 // routes in user
 
@@ -32,7 +32,7 @@ router.get('/activity',protectAccess,getUserActivity)
 router.get('/dashboard',protectAccess,getDashboardData)
 
 // 5.update notification prefrence
-router.put('/update-notifications',protectAccess,updateNotificationPreference)
+router.put('/update-notifications',protectAccess,validateUpdateNotifications,updateNotificationPreference)
 
 // 6.export user data 
 router.get('/export-data',protectAccess,exportUserData)

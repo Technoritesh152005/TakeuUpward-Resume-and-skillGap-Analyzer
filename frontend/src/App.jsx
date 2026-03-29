@@ -6,6 +6,8 @@ import { Toaster } from 'react-hot-toast';
 import LandingPage from './pages/landingPage.jsx'
 import LoginPage from './pages/loginPage.jsx'
 import SignupPage from './pages/signupPages.jsx';
+import ForgotPasswordPage from './pages/forgotPasswordPage.jsx';
+import ResetPasswordPage from './pages/resetPasswordPage.jsx';
 import OAuthCallback from './components/auth/OAuthCallback.jsx'
 import DashboardPage from './pages/dashBoardPage.jsx'
 import ResumeUpload from './pages/uploadResume.jsx'
@@ -43,6 +45,8 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/auth/callback" element={<OAuthCallback />} />
 
           {/* Protected Routes */}
