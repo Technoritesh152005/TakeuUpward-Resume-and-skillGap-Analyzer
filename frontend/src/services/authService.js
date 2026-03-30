@@ -57,6 +57,24 @@ class AuthService {
         }
     }
 
+    async getProfile() {
+        try {
+            const response = await api.get('/user/profile')
+            return response
+        } catch (error) {
+            throw error.response?.data || error
+        }
+    }
+
+    async updateProfile(profileData) {
+        try {
+            const response = await api.put('/user/update-profile', profileData)
+            return response
+        } catch (error) {
+            throw error.response?.data || error
+        }
+    }
+
    async forgotPassword (email){
 
     try{
