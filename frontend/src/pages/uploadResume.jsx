@@ -1,5 +1,5 @@
 import {useState , useRef} from 'react'
-import { Upload, FileText, CheckCircle, AlertCircle, X, Loader2 } from 'lucide-react';
+import { Upload, FileText, CheckCircle, AlertCircle, X, Loader2, Target, Code, Map, Award, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/layout/DashboardLayout.jsx'
 import resumeService from '../services/resumeService.js'
@@ -143,229 +143,266 @@ const Uploadresume = ()=>{
 
   return (
     <DashboardLayout>
-      <div className="max-w-4xl mx-auto space-y-8">
-        {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold text-neutral-900 dark:text-white mb-2">
-            Upload Resume
-          </h1>
-          <p className="text-neutral-600 dark:text-neutral-400">
-            Upload your resume to get started with AI-powered analysis
-          </p>
-        </div>
+      <div className="max-w-7xl mx-auto">
+        <div className="flex flex-col lg:flex-row gap-8">
+          
+          <div className="flex-1 space-y-8 animate-fade-in">
+            <div>
+              {/* Header */}
+              <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">
+                Upload <span className="text-gradient">Resume</span>
+              </h1>
+              <p className="text-neutral-400 font-medium">
+                Our AI will analyze your resume to identify skill gaps and provide personalized roadmaps.
+              </p>
+            </div>
 
-        {/* Upload Area */}
-        <div className="bg-white dark:bg-neutral-800 rounded-2xl p-8 border border-neutral-200 dark:border-neutral-700">
-          {!uploadedResume ? (
-            <div className="space-y-6">
-              {/* Drag & Drop Zone */}
-              <div
-                onDragEnter={handleDrag}
-                onDragLeave={handleDrag}
-                onDragOver={handleDrag}
-                onDrop={handleDrop}
-                className={`relative border-2 border-dashed rounded-2xl p-12 text-center transition-all duration-300 ${
-                  dragActive
-                    ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                    : selectedFile
-                    ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
-                    : 'border-neutral-300 dark:border-neutral-600 hover:border-primary-400 dark:hover:border-primary-500'
-                }`}
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  className="hidden"
-                  accept=".pdf,.doc,.docx"
-                  onChange={handleChange}
-                  disabled={uploading}
-                />
-
-                {!selectedFile ? (
-                  <div className="space-y-4">
-                    <div className="w-20 h-20 bg-primary-100 dark:bg-primary-900/30 rounded-2xl flex items-center justify-center mx-auto">
-                      <Upload className="w-10 h-10 text-primary-600 dark:text-primary-400" />
-                    </div>
-                    
-                    <div>
-                      <p className="text-lg font-semibold text-neutral-900 dark:text-white mb-2">
-                        Drag and drop your resume here
-                      </p>
-                      <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4">
-                        or click to browse
-                      </p>
-                    </div>
-
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
+            {/* Upload Area */}
+            <div className="card-glass p-8 relative overflow-hidden group">
+              <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary-600/10 rounded-full blur-3xl group-hover:bg-primary-600/20 transition-all duration-700" />
+              
+              {!uploadedResume ? (
+                <div className="space-y-6 relative z-10">
+                  {/* Drag & Drop Zone */}
+                  <div
+                    onDragEnter={handleDrag}
+                    onDragLeave={handleDrag}
+                    onDragOver={handleDrag}
+                    onDrop={handleDrop}
+                    className={`relative border-2 border-dashed rounded-xl3 p-12 text-center transition-all duration-500 transform ${
+                      dragActive
+                        ? 'border-primary-500 bg-primary-500/10 scale-[1.01] shadow-glow-sm'
+                        : selectedFile
+                        ? 'border-success-500 bg-success-500/5'
+                        : 'border-white/10 hover:border-primary-500/50 hover:bg-white/5'
+                    }`}
+                  >
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      className="hidden"
+                      accept=".pdf,.doc,.docx"
+                      onChange={handleChange}
                       disabled={uploading}
-                      className="px-6 py-3 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Choose File
-                    </button>
+                    />
 
-                    <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                      Supported formats: PDF, DOC, DOCX (Max 5MB)
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-2xl flex items-center justify-center mx-auto">
-                      <FileText className="w-10 h-10 text-green-600 dark:text-green-400" />
-                    </div>
-                    
-                    <div>
-                      <p className="text-lg font-semibold text-neutral-900 dark:text-white mb-1">
-                        {selectedFile.name}
-                      </p>
-                      <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                        {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                      </p>
-                    </div>
+                    {!selectedFile ? (
+                      <div className="space-y-5">
+                        <div className="w-24 h-24 bg-gradient-to-br from-primary-500/20 to-accent-500/20 rounded-2xl flex items-center justify-center mx-auto shadow-inner border border-white/5 group-hover:scale-110 transition-transform duration-500">
+                          <Upload className="w-12 h-12 text-primary-400 group-hover:text-primary-300 animate-float" />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <p className="text-xl font-bold text-white">
+                            Drag & Drop your resume
+                          </p>
+                          <p className="text-neutral-400 text-sm font-medium">
+                            Support for PDF, DOCX up to 5MB
+                          </p>
+                        </div>
 
-                    {!uploading && (
-                      <button
-                        onClick={handleClear}
-                        className="text-sm text-red-600 dark:text-red-400 hover:underline"
-                      >
-                        Remove file
-                      </button>
+                        <div className="flex items-center justify-center gap-4">
+                           <div className="h-px w-8 bg-white/10" />
+                           <span className="text-xs font-black text-neutral-600 uppercase tracking-widest">or</span>
+                           <div className="h-px w-8 bg-white/10" />
+                        </div>
+
+                        <button
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={uploading}
+                          className="px-8 py-3.5 bg-gradient-to-r from-primary-600 to-accent-600 text-white font-bold rounded-xl shadow-glow-sm hover:scale-105 transition-all"
+                        >
+                          Browse Files
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="py-6 space-y-5 animate-scale-in">
+                        <div className="w-24 h-24 bg-success-500/20 rounded-2xl flex items-center justify-center mx-auto border border-success-500/20 shadow-glow-sm">
+                          <FileText className="w-12 h-12 text-success-400" />
+                        </div>
+                        
+                        <div className="space-y-1">
+                          <p className="text-xl font-bold text-white truncate max-w-xs mx-auto">
+                            {selectedFile.name}
+                          </p>
+                          <p className="text-neutral-400 text-sm font-medium">
+                            {(selectedFile.size / 1024 / 1024).toFixed(2)} MB • Ready to analyze
+                          </p>
+                        </div>
+
+                        {!uploading && (
+                          <button
+                            onClick={handleClear}
+                            className="text-sm font-bold text-danger-400 hover:text-danger-300 transition-colors uppercase tracking-widest"
+                          >
+                            Remove file
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
-                )}
-              </div>
 
-              {/* Upload Progress */}
-              {uploading && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-neutral-600 dark:text-neutral-400">
-                      Uploading and parsing...
-                    </span>
-                    <span className="font-semibold text-primary-600 dark:text-primary-400">
-                      {uploadingProgress}%
-                    </span>
-                  </div>
-                  <div className="h-2 bg-neutral-200 dark:bg-neutral-700 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-primary-500 to-primary-600 transition-all duration-300 relative overflow-hidden"
-                      style={{ width: `${uploadingProgress}%` }}
+                  {/* Upload Progress */}
+                  {uploading && (
+                    <div className="space-y-4 py-4 animate-slide-up">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                           <Loader2 className="w-5 h-5 text-primary-400 animate-spin" />
+                           <span className="text-white font-bold tracking-tight">
+                             AI is parsing your data...
+                           </span>
+                        </div>
+                        <span className="text-primary-400 font-black tracking-tighter text-lg">
+                          {uploadingProgress}%
+                        </span>
+                      </div>
+                      <div className="h-2.5 bg-neutral-950 rounded-full overflow-hidden border border-white/5 relative">
+                        <div
+                          className="h-full bg-gradient-to-r from-primary-600 via-accent-500 to-primary-600 transition-all duration-300 relative rounded-full"
+                          style={{ width: `${uploadingProgress}%` }}
+                        >
+                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent analysis-progress-bar" />
+                        </div>
+                      </div>
+                      <p className="text-center text-xs text-neutral-500 font-medium">
+                        Estimated time remaining: <span className="text-neutral-400">~15s</span>
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Error Message */}
+                  {error && (
+                    <div className="flex items-start gap-4 p-5 bg-danger-500/10 border border-danger-500/20 rounded-2xl">
+                      <div className="p-2 bg-danger-500/20 rounded-xl">
+                        <AlertCircle className="w-5 h-5 text-danger-400 flex-shrink-0" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-bold text-white capitalize">
+                          Upload Failed
+                        </p>
+                        <p className="text-sm text-neutral-400 font-medium mt-0.5">
+                          {error}
+                        </p>
+                      </div>
+                      <button onClick={() => setError(null)} className="text-neutral-500 hover:text-white transition-colors">
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Upload Button */}
+                  {selectedFile && !uploading && (
+                    <button
+                      onClick={uploadResume}
+                      disabled={uploading}
+                      className="w-full py-4 bg-gradient-to-r from-primary-600 to-accent-600 text-white font-bold rounded-xl shadow-glow-sm hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2"
                     >
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
+                      <Plus className="w-5 h-5 mr-1" />
+                      Launch AI Analysis
+                    </button>
+                  )}
+                </div>
+              ) : (
+                // Success State
+                <div className="text-center py-12 animate-scale-in">
+                  <div className="relative inline-block mb-8">
+                    <div className="absolute inset-0 bg-success-500/20 blur-3xl rounded-full" />
+                    <div className="relative w-24 h-24 bg-gradient-to-br from-success-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-glow-sm">
+                      <CheckCircle className="w-12 h-12 text-white" />
                     </div>
                   </div>
-                </div>
-              )}
+                  
+                  <h2 className="text-3xl font-black text-white mb-3 tracking-tight">
+                    Analysis <span className="text-success-400">Complete!</span>
+                  </h2>
+                  
+                  <p className="text-neutral-400 font-medium mb-10 max-w-sm mx-auto">
+                    Your resume has been successfully parsed. We've extracted your experience, skills, and projects.
+                  </p>
 
-              {/* Error Message */}
-              {error && (
-                <div className="flex items-start gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-                  <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-red-900 dark:text-red-200">
-                      Upload Failed
-                    </p>
-                    <p className="text-sm text-red-700 dark:text-red-300 mt-1">
-                      {error}
-                    </p>
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                    <button
+                      onClick={() => navigate('/resumes')}
+                      className="w-full sm:w-auto px-8 py-3.5 bg-gradient-to-r from-primary-600 to-accent-600 text-white font-bold rounded-xl shadow-glow-sm hover:scale-105 transition-all"
+                    >
+                      View My Profile
+                    </button>
+                    <button
+                      onClick={handleClear}
+                      className="w-full sm:w-auto px-8 py-3.5 bg-white/5 border border-white/10 hover:bg-white/10 text-white font-bold rounded-xl transition-all"
+                    >
+                      Upload Another
+                    </button>
                   </div>
-                  <button onClick={() => setError(null)}>
-                    <X className="w-5 h-5 text-red-600 dark:text-red-400" />
-                  </button>
                 </div>
               )}
-
-              {/* Upload Button */}
-              {selectedFile && !uploading && (
-                <button
-                  onClick={uploadResume}
-                  disabled={uploading}
-                  className="w-full py-4 bg-gradient-to-r from-primary-600 to-primary-700 text-white font-semibold rounded-xl hover:from-primary-700 hover:to-primary-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {uploading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="w-5 h-5" />
-                      Upload & Parse Resume
-                    </>
-                  )}
-                </button>
-              )}
             </div>
-          ) : (
-            // Success State
-            <div className="text-center py-12">
-              <div className="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-                <CheckCircle className="w-12 h-12 text-green-600 dark:text-green-400" />
-              </div>
-              
-              <h2 className="text-2xl font-bold text-neutral-900 dark:text-white mb-2">
-                Resume Uploaded Successfully!
-              </h2>
-              
-              <p className="text-neutral-600 dark:text-neutral-400 mb-6">
-                Your resume has been parsed and is ready for analysis
-              </p>
 
-              <div className="flex items-center justify-center gap-4">
-                <button
-                  onClick={() => navigate('/resumes')}
-                  className="px-6 py-3 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors"
-                >
-                  View My Resumes
-                </button>
-                <button
-                  onClick={handleClear}
-                  className="px-6 py-3 bg-neutral-200 dark:bg-neutral-700 text-neutral-900 dark:text-white rounded-xl hover:bg-neutral-300 dark:hover:bg-neutral-600 transition-colors"
-                >
-                  Upload Another
-                </button>
+            {/* Info Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="p-6 rounded-2xl bg-gradient-to-br from-primary-600/20 to-primary-600/5 border border-white/5 hover:-translate-y-1 transition-all duration-300">
+                <div className="p-3 rounded-xl bg-white/5 w-fit mb-4 border border-white/5">
+                  <Target className="w-6 h-6 text-primary-400" />
+                </div>
+                <h4 className="font-bold text-white mb-2 tracking-tight">Skill Matching</h4>
+                <p className="text-xs text-neutral-500 font-medium leading-relaxed">We match your skills against hundreds of job roles.</p>
+              </div>
+              <div className="p-6 rounded-2xl bg-gradient-to-br from-accent-600/20 to-accent-600/5 border border-white/5 hover:-translate-y-1 transition-all duration-300">
+                <div className="p-3 rounded-xl bg-white/5 w-fit mb-4 border border-white/5">
+                  <Code className="w-6 h-6 text-accent-400" />
+                </div>
+                <h4 className="font-bold text-white mb-2 tracking-tight">Gap Analysis</h4>
+                <p className="text-xs text-neutral-500 font-medium leading-relaxed">Identify exactly what skills you're missing for a role.</p>
+              </div>
+              <div className="p-6 rounded-2xl bg-gradient-to-br from-energy-600/20 to-energy-600/5 border border-white/5 hover:-translate-y-1 transition-all duration-300">
+                <div className="p-3 rounded-xl bg-white/5 w-fit mb-4 border border-white/5">
+                  <Map className="w-6 h-6 text-energy-400" />
+                </div>
+                <h4 className="font-bold text-white mb-2 tracking-tight">AI Roadmap</h4>
+                <p className="text-xs text-neutral-500 font-medium leading-relaxed">Get a step-by-step learning path to bridge gaps.</p>
               </div>
             </div>
-          )}
-        </div>
-
-        {/* Info Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-xl p-6">
-            <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center mb-4">
-              <FileText className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-            </div>
-            <h3 className="font-semibold text-neutral-900 dark:text-white mb-2">
-              AI-Powered Parsing
-            </h3>
-            <p className="text-sm text-neutral-600 dark:text-neutral-400">
-              Our AI extracts all relevant information from your resume automatically
-            </p>
           </div>
 
-          <div className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 rounded-xl p-6">
-            <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center mb-4">
-              <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
+          <div className="lg:w-80 space-y-6 animate-fade-in" style={{ animationDelay: '0.2s' }}>
+            
+            <div className="card-glass p-6 border-primary-500/20 relative overflow-hidden">
+               <div className="absolute top-0 right-0 w-24 h-24 bg-primary-600/5 rounded-full -mr-12 -mt-12 blur-2xl" />
+               <h3 className="text-lg font-black text-white mb-4 flex items-center gap-2">
+                 <Award className="w-5 h-5 text-primary-400" />
+                 PRO TIPS
+               </h3>
+               <ul className="space-y-4">
+                 {[
+                   {title: "Use Keywords", desc: "Include industry-standard terms for better skill extraction."},
+                   {title: "Clean Layout", desc: "Standard fonts and clear headers help our AI parse better."},
+                   {title: "Action Verbs", desc: "Start experience entries with words like 'Developed', 'Managed'."},
+                   {title: "PDF Format", desc: "We recommend PDF for the most reliable parsing results."}
+                 ].map((tip, i) => (
+                   <li key={i} className="flex gap-3 items-start">
+                     <div className="mt-1.5 w-1.5 h-1.5 rounded-full bg-primary-500 flex-shrink-0" />
+                     <div className="space-y-0.5">
+                       <h5 className="text-xs font-black text-neutral-300 uppercase tracking-wider">{tip.title}</h5>
+                       <p className="text-[11px] text-neutral-500 font-medium leading-normal">{tip.desc}</p>
+                     </div>
+                   </li>
+                 ))}
+               </ul>
             </div>
-            <h3 className="font-semibold text-neutral-900 dark:text-white mb-2">
-              Secure & Private
-            </h3>
-            <p className="text-sm text-neutral-600 dark:text-neutral-400">
-              Your data is encrypted and only accessible by you
-            </p>
+
+            <div className="p-6 rounded-xl2 bg-neutral-900/40 border border-white/5">
+                <div className="flex items-center gap-3 mb-4">
+                   <div className="p-2 bg-success-500/10 rounded-lg">
+                      <CheckCircle className="w-5 h-5 text-success-400" />
+                   </div>
+                   <h4 className="text-sm font-black text-white tracking-widest uppercase">Safe & Secure</h4>
+                </div>
+                <p className="text-xs text-neutral-500 font-medium leading-relaxed">
+                  Your resume is processed using enterprise-grade encryption. We never share your data with third parties.
+                </p>
+            </div>
           </div>
 
-          <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-xl p-6">
-            <div className="w-12 h-12 bg-amber-100 dark:bg-amber-900/30 rounded-xl flex items-center justify-center mb-4">
-              <Upload className="w-6 h-6 text-amber-600 dark:text-amber-400" />
-            </div>
-            <h3 className="font-semibold text-neutral-900 dark:text-white mb-2">
-              Multiple Formats
-            </h3>
-            <p className="text-sm text-neutral-600 dark:text-neutral-400">
-              Supports PDF, DOC, and DOCX file formats
-            </p>
-          </div>
         </div>
       </div>
     </DashboardLayout>

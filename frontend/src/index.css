@@ -107,8 +107,9 @@
            hover:-translate-y-0.5;
   }
   .card-glass {
-    @apply bg-neutral-900/70 border border-white/8
-           rounded-xl3 backdrop-blur-xl shadow-dark-lg;
+    @apply bg-neutral-900/70 border rounded-xl3
+           backdrop-blur-xl shadow-dark-lg;
+    border-color: rgba(255, 255, 255, 0.08);
   }
 
   /* ── Inputs ── */
@@ -165,7 +166,8 @@
 /* ─── UTILITIES ─────────────────────────────────────────────────────────── */
 @layer utilities {
   .glass {
-    @apply bg-neutral-900/75 backdrop-blur-2xl border border-white/[7%];
+    @apply bg-neutral-900/75 backdrop-blur-2xl border;
+    border-color: rgba(255, 255, 255, 0.07);
   }
   .glow-primary {
     box-shadow: 0 0 32px rgba(139,92,246,0.3);
