@@ -11,6 +11,7 @@ import redisClient from '../../config/redis.js'
 import ApiError from '../../utils/apiError.js'
 import logger from '../../utils/logs.js'
 import RoadmapAnalysis from '../../services/ai.services/roadmap_planner.js'
+import multiRoleCompareService from '../../services/ai.services/multi_role_compare.js'
 
 const extractNumericValue = (value) => {
     if (typeof value === 'number' && Number.isFinite(value)) {
@@ -207,6 +208,44 @@ const normalizeProficiency = (value) => {
 
     return 'beginner';
 };
+
+const buildComparisonFromSavedAnalysis = (analysis) => ({
+    jobRole: {
+        _id: analysis?.jobRole?._id,
+        title: analysis?.jobRole?.title,
+        category: analysis?.jobRole?.category,
+        experienceLevel: analysis?.jobRole?.experienceLevel,
+        salaryRange: analysis?.jobRole?.salaryRange,
+    },
+    matchPercentage: analysis?.matchScore || 0,
+    readinessLevel: analysis?.readinessLevel || 'not-ready',
+    estimatedTimeToReady: analysis?.estimatedTimeToReady || { weeks: 0, reason: '' },
+    topSkillGaps: [
+        ...(analysis?.skillGaps?.critical || []).slice(0, 3),
+        ...(analysis?.skillGaps?.important || []).slice(0, 2),
+        ...(analysis?.skillGaps?.niceToHave || []).slice(0, 1),
+    ],
+    strengths: (analysis?.candidateStrength || []).map((item) => item?.skill).filter(Boolean).slice(0, 5),
+    summary: analysis?.aiSuggestion?.summary || '',
+    source: 'saved-analysis',
+});
+
+const buildComparisonFromAiCompare = (jobRole, comparison) => ({
+    jobRole: {
+        _id: jobRole?._id,
+        title: jobRole?.title,
+        category: jobRole?.category,
+        experienceLevel: jobRole?.experienceLevel,
+        salaryRange: jobRole?.salaryRange,
+    },
+    matchPercentage: comparison?.matchPercentage || 0,
+    readinessLevel: comparison?.readinessLevel || 'not-ready',
+    estimatedTimeToReady: comparison?.estimatedTimeToReady || { weeks: 0, reason: '' },
+    topSkillGaps: Array.isArray(comparison?.topSkillGaps) ? comparison.topSkillGaps : [],
+    strengths: Array.isArray(comparison?.strengths) ? comparison.strengths : [],
+    summary: comparison?.summary || '',
+    source: 'ai-compare',
+});
 
 // first create a analysis controller
 /*
@@ -642,51 +681,71 @@ export const compare_Multiple_Job_Role_With_Resume_And_Get_Analysis = asyncHandl
         throw new ApiError(401, 'No Job Roles found to compare')
     }
 
-    // basicaally u r doing comparing multiple job role with a single resume but n times req . trying to optimize till then service is closed
-    const comparisons = await Promise.all(
-        jobRoles.map(async (jobRole) => {
-            try {
+    // checks whether we already have the analysis for the resume and jobrole pair
+    const existingAnalyses = await analysisModel.find({
+        user: userId,
+        resume: resumeId,
+        jobRole: { $in: jobRoles.map((jobRole) => jobRole._id) },
+        status: 'completed',
+        isActive: true,
+    }).populate('jobRole', 'title category experienceLevel salaryRange')
 
-                // this only keeps response of comparision. no save in database
-                // later things to optimize this
-                // extract the resume skill and provide he extracted skill
-                //or make 1 api call and pass array of jobroles in one go
-                // or handle or use queue and push the heavy analysis in queue and work in background
-                const analysis = await skillgapanalysis.performDeepSkillGapAnalyze(
-                    resume.parsedData, jobRole
-                )
-                // return inside map() doesn't exit the function - it returns the value for that array item!
-                return {
-                    jobRole: {
-                        _id: jobRole._id,
-                        title: jobRole.title,
-                        category: jobRole.category,
-                        experienceLevel: jobRole.experienceLevel,
-                        salaryRange: jobRole.salaryRange
-                    },
-
-                    matchPercentage: analysis.overallAssessment.matchPercentage,
-                    readinessLevel: analysis.overallAssessment.readinessLevel,
-                    estimatedTimeToReady: analysis.overallAssessment.estimatedTimeToReady,
-                    topSkillGaps: [
-                        ...analysis.skillGaps.critical.slice(0, 3),
-                        ...analysis.skillGaps.important.slice(0, 3),
-                        ...analysis.skillGaps.niceToHave.slice(0, 3)
-                    ]
-
-                }
-            } catch (error) {
-                logger.error(`Failed to analyze role ${jobRole.title}: ${error.message}`);
-                throw new ApiError(401, `Failed to analyze ${jobRole.title}: ${error.message}`)
-
-            }
-        })
+    const savedAnalysisByRoleId = new Map(
+        existingAnalyses.map((analysis) => [String(analysis.jobRole?._id), analysis])
     )
+
+    const comparisons = []
+    const missingJobRoles = []
+
+    // for every jobrole id given by user check whether u have analysis for it
+    for (const jobRole of jobRoles) {
+        const existingAnalysis = savedAnalysisByRoleId.get(String(jobRole._id))
+        // if present we push to comparision means these no need to do comparison we already have the data . so pushed to comparision and which r not present only those we do comparision
+        if (existingAnalysis) {
+            comparisons.push(buildComparisonFromSavedAnalysis(existingAnalysis))
+            continue
+        }
+
+        missingJobRoles.push(jobRole)
+    }
+
+    // if we have some mssingjobroles then only we perform ai operation
+    if (missingJobRoles.length > 0) {
+        try {
+            // perform ai operation for missing job roles
+            const aiCompareResult = await multiRoleCompareService.compareResumeAgainstMultipleRoles(
+                resume.parsedData,
+                missingJobRoles
+            )
+
+            // we list each jobrole with its jobroleid
+            const comparisonByRoleId = new Map(
+                aiCompareResult.comparisons.map((item) => [String(item.jobRoleId), item])
+            )
+
+            // we check that whether for all job roles did they generate the comparision or not
+            for (const jobRole of missingJobRoles) {
+                const comparison = comparisonByRoleId.get(String(jobRole._id))
+                if (!comparison) {
+                    throw new Error(`Missing compare output for role ${jobRole.title}`)
+                }
+
+                comparisons.push(buildComparisonFromAiCompare(jobRole, comparison))
+            }
+        } catch (error) {
+            logger.error(`Failed multi-role comparison for user ${userId}: ${error.message}`)
+            throw new ApiError(401, 'Failed to compare selected job roles')
+        }
+    }
 
     // Sort by match score
     const sortedComparisons = comparisons
         .filter((c) => !c.error)
         .sort((a, b) => b.matchPercentage - a.matchPercentage);
+
+    if (!sortedComparisons.length) {
+        throw new ApiError(400, 'No comparison result could be generated')
+    }
 
         // bstFit means the highest matchscore analysis
     const bestFit = sortedComparisons[0];
@@ -706,9 +765,11 @@ export const compare_Multiple_Job_Role_With_Resume_And_Get_Analysis = asyncHandl
             summary: {
                 totalCompared: sortedComparisons.length,
                 averageMatch: Math.round(
-                    sortedComparisons.reduce((sum, c) => sum + c.matchScore, 0) /
+                    sortedComparisons.reduce((sum, c) => sum + c.matchPercentage, 0) /
                     sortedComparisons.length
                 ),
+                reusedSavedAnalyses: comparisons.filter((item) => item.source === 'saved-analysis').length,
+                generatedWithAiCompare: comparisons.filter((item) => item.source === 'ai-compare').length,
             },
         },
         'Role comparision completed successfullyy')

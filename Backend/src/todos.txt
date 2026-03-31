@@ -351,3 +351,91 @@ If choosing only a few standout features, prioritize:
 These are strong because they improve both:
 - resume impact
 - actual product depth
+
+
+========================================
+TODAY'S DECISIONS - 2026-03-31
+========================================
+
+TITLE: STRONGER SYSTEM ROADMAP
+
+Goal:
+- Make the project stronger, faster, cheaper, and more reliable
+- Avoid adding random features unless they improve system quality
+
+1. MULTI-ROLE COMPARE ARCHITECTURE
+- Keep frontend to one request only
+- Backend loads one resume once
+- Backend loads selected job roles once
+- Send compact resume summary + selected roles to LLM in one compare call
+- Do NOT send huge raw parsed resume blindly
+- Limit compare selection to 2-5 roles only
+- Return structured JSON:
+  - per-role match score
+  - readiness
+  - estimated time to ready
+  - top gaps
+  - best fit
+  - fastest path
+  - explanation summary
+
+2. AI TOKEN / DAILY USAGE LIMIT
+- Each user gets 20 AI tokens per day
+- Reset every day at 12:00 AM
+- Each AI-powered service should consume fixed quota cost
+- Keep logic service-based, not per internal model call
+- Target behavior:
+  - around 3 AI service uses per day
+- Should apply only to AI routes:
+  - create analysis
+  - compare roles
+  - create roadmap
+  - regenerate analysis
+- Should NOT apply to normal CRUD/fetch routes
+
+3. WHERE TO USE QUEUE
+- Queue should be used for heavy generation flows, not simple fetch routes
+- First queue candidate:
+  - create analysis
+- Second queue candidate:
+  - create roadmap
+- Compare roles should stay direct for now unless latency becomes too high
+- Suggested flow:
+  - create DB record with status = queued
+  - background worker processes job
+  - update status to processing/completed/failed
+  - frontend polls by id
+
+4. COST REDUCTION / OPTIMIZATION IDEAS TO BUILD
+- Reuse existing completed analysis for same resume + job role when possible
+- Cache compare results for same resume + selected job role set
+- Compress prompts aggressively before sending to LLM
+- Avoid full raw payloads in prompts
+- Make ATS more deterministic instead of full AI every time
+- Add retry with limits for AI failure
+- Add clean fallback when AI fails
+- Add metrics:
+  - AI latency
+  - failure rate
+  - cache hit rate
+  - prompt size
+  - processing time
+
+5. OCR / SCANNED RESUME FALLBACK
+- Current parser works better for text-based PDFs
+- It fails for image/scanned/photo-based resumes because there is no extractable text
+- Need OCR fallback pipeline
+- Recommended approach:
+  - try normal PDF text extraction first
+  - if extracted text is empty or too low, detect scanned/image-based resume
+  - run OCR fallback
+  - pass OCR text into existing parser pipeline
+- OCR fallback should be used only when needed, not for every resume
+
+6. IMPLEMENTATION ORDER
+- compact single-call multi-role compare
+- daily AI quota
+- OCR fallback detection for scanned resumes
+- queue for create analysis
+- queue for create roadmap
+- cache and reuse analysis results
