@@ -66,6 +66,13 @@ const analysisService = {
     return extractPayload(response);
   },
 
+  regenerateAnalysis: async (analysisId, preferences) => {
+    const response = await api.put(`/analysis/${analysisId}`, {
+      ...(preferences ? { preferences } : {}),
+    });
+    return extractPayload(response);
+  },
+
   deleteAnalysis: async (analysisId) => {
     const response = await api.delete(`/analysis/${analysisId}`);
     return extractPayload(response);

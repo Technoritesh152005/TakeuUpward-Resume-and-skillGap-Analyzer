@@ -12,6 +12,7 @@ import ApiError from '../../utils/apiError.js'
 import logger from '../../utils/logs.js'
 import RoadmapAnalysis from '../../services/ai.services/roadmap_planner.js'
 import multiRoleCompareService from '../../services/ai.services/multi_role_compare.js'
+import { refundAiUsage, reserveAiUsage } from '../../services/aiQuota.service.js'
 
 const extractNumericValue = (value) => {
     if (typeof value === 'number' && Number.isFinite(value)) {
@@ -505,10 +506,18 @@ export const createAnalysis = asyncHandler(async (req, res) => {
         await analysis.populate('jobRole', 'title category experienceLevel salaryRange');
 
         res.status(200).json(
-            new ApiResponse(201, analysis, 'Analysis created successfully')
+            new ApiResponse(201, {
+                analysis,
+                aiUsage: req.aiUsage,
+            }, 'Analysis created successfully')
         );
 
     } catch (error) {
+        if (req.aiQuotaReserved) {
+            req.aiUsage = await refundAiUsage(req.user._id);
+            req.aiQuotaReserved = false;
+        }
+
         analysis.error = error.message;
         analysis.status = 'failed';
         await analysis.save();
@@ -657,6 +666,7 @@ export const compare_Multiple_Job_Role_With_Resume_And_Get_Analysis = asyncHandl
 
     const userId = req.user._id
     const { resumeId, jobRolesId } = req.body
+    let compareQuotaReserved = false
 
     const resume = await resumeModel.findOne({
         user: userId,
@@ -712,6 +722,10 @@ export const compare_Multiple_Job_Role_With_Resume_And_Get_Analysis = asyncHandl
     // if we have some mssingjobroles then only we perform ai operation
     if (missingJobRoles.length > 0) {
         try {
+            req.aiUsage = await reserveAiUsage(req.user._id, 'role comparison')
+            compareQuotaReserved = true
+            req.aiQuotaReserved = true
+
             // perform ai operation for missing job roles
             const aiCompareResult = await multiRoleCompareService.compareResumeAgainstMultipleRoles(
                 resume.parsedData,
@@ -733,6 +747,12 @@ export const compare_Multiple_Job_Role_With_Resume_And_Get_Analysis = asyncHandl
                 comparisons.push(buildComparisonFromAiCompare(jobRole, comparison))
             }
         } catch (error) {
+            if (compareQuotaReserved) {
+                req.aiUsage = await refundAiUsage(req.user._id);
+                compareQuotaReserved = false;
+                req.aiQuotaReserved = false;
+            }
+
             logger.error(`Failed multi-role comparison for user ${userId}: ${error.message}`)
             throw new ApiError(401, 'Failed to compare selected job roles')
         }
@@ -771,6 +791,7 @@ export const compare_Multiple_Job_Role_With_Resume_And_Get_Analysis = asyncHandl
                 reusedSavedAnalyses: comparisons.filter((item) => item.source === 'saved-analysis').length,
                 generatedWithAiCompare: comparisons.filter((item) => item.source === 'ai-compare').length,
             },
+            aiUsage: req.aiUsage,
         },
         'Role comparision completed successfullyy')
     )
@@ -794,7 +815,7 @@ export const regenerateAnalysis = asyncHandler(async (req, res) => {
     logger.info(`Regenerating analysis: ${analysis._id}`);
   
     // Re-run gap analysis
-    const gapAnalysis = await claudeService.performGapAnalysis(
+    const gapAnalysis = await skillgapanalysis.performDeepSkillGapAnalyze(
       analysis.resume.parsedData,
       analysis.jobRole
     );
@@ -850,11 +871,19 @@ export const regenerateAnalysis = asyncHandler(async (req, res) => {
     analysis.readinessLevel = normalizeReadinessLevel(gapAnalysis.overallAssessment.readinessLevel);
     analysis.version += 1;
   
-    await analysis.save();
+    try {
+      await analysis.save();
 
-    // after regenerating user cache may have old cache of analysis
+      // after regenerating user cache may have old cache of analysis
+      await clearAnalysisCache(req.user._id, analysis._id);
     
-    await clearAnalysisCache(req.user._id, analysis._id);
-  
-    res.status(200).json(new ApiResponse(200, analysis, 'Analysis regenerated successfully'));
+      res.status(200).json(new ApiResponse(200, { analysis, aiUsage: req.aiUsage }, 'Analysis regenerated successfully'));
+    } catch (error) {
+      if (req.aiQuotaReserved) {
+        req.aiUsage = await refundAiUsage(req.user._id);
+        req.aiQuotaReserved = false;
+      }
+
+      throw error;
+    }
   });

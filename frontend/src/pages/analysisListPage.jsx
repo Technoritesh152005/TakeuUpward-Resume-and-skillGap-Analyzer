@@ -16,6 +16,8 @@ import {format} from 'date-fns'
 import toast from 'react-hot-toast'
 import DashboardLayout from '../components/layout/DashboardLayout.jsx'
 import analysisService from '../services/analysisService.js'
+import dashboardService from '../services/dashboardServices.js'
+
 
 // in js u must not have quotes in object keys value
 const readinessTone = {
@@ -62,47 +64,82 @@ const AnalysisListPage = ()=>{
   const [statusFilter , setStatusFilter] = useState('all')
   const [sortBy , setSortBy] = useState('newest')
   const [deletingId, setDeletingId] = useState('')
+  const [regeneratingId, setRegeneratingId] = useState('')
+  const [aiUsage, setAiUsage] = useState(null)
+  const isAiLimitReached = (aiUsage?.usesRemaining ?? 0) === 0
 
-  useEffect(()=>{
-     fetchAnalysis()
-  },[])
+  useEffect(() => {
+    fetchAnalysis()
+    fetchAiUsage()
+  }, [])
 
-  const fetchAnalysis = async()=>{
-    try{
+  const fetchAnalysis = async () => {
+    try {
       setLoading(true)
       const response = await analysisService.getMyAnalyses({
-        page:1,
-        limit :50,
-        sort:'-createdAt'
+        page: 1,
+        limit: 50,
+        sort: '-createdAt'
       })
       setAnalyses(Array.isArray(response?.docs) ? response.docs : [])
-
-    }catch(error){
-      console.error('error')
+    } catch (error) {
+      console.error(error)
       toast.error('Failed to load analysis')
-    }finally{
+    } finally {
       setLoading(false)
     }
   }
 
-  const handleDeleteAnalysis = async(analysisId) => {
+  const fetchAiUsage = async () => {
+    try {
+      const response = await dashboardService.getDashboardData()
+      setAiUsage(response?.data?.aiUsage || null)
+    } catch (error) {
+      console.error(error)
+    }
+  }
+
+  const handleDeleteAnalysis = async (analysisId) => {
     const confirmed = window.confirm('Delete this analysis? This will remove it from your active analysis history.')
 
     if (!confirmed) return
 
-    try{
+    try {
       setDeletingId(analysisId)
       await analysisService.deleteAnalysis(analysisId)
       setAnalyses((current) => current.filter((item) => item?._id !== analysisId))
       toast.success('Analysis deleted successfully')
-    }catch(error){
+    } catch (error) {
       console.error(error)
       toast.error('Failed to delete analysis')
-    }finally{
+    } finally {
       setDeletingId('')
     }
   }
-  
+
+  const handleRegenerateAnalysis = async (event, analysisId) => {
+    event.stopPropagation()
+
+    if (isAiLimitReached) {
+      toast.error('Daily AI limit reached. Resets at 12:00 AM IST')
+      return
+    }
+
+    try {
+      setRegeneratingId(analysisId)
+      const payload = await analysisService.regenerateAnalysis(analysisId)
+      const updatedAnalysis = payload?.analysis || payload?.data || payload
+      if (payload?.aiUsage) setAiUsage(payload.aiUsage)
+      setAnalyses((current) => current.map((item) => item?._id === analysisId ? { ...item, ...updatedAnalysis } : item))
+      toast.success('Analysis regenerated successfully')
+    } catch (error) {
+      console.error(error)
+      toast.error(error?.response?.data?.message || 'Failed to regenerate analysis')
+    } finally {
+      setRegeneratingId('')
+    }
+  }
+	  
   // what useMemo does is when dependencies that is all dep when changes this runs
   const filteredAnalyses = useMemo(()=>{
     // searchTerm = what user types in the search input box
@@ -319,6 +356,17 @@ return (
                 </div>
 
                 <div className="flex items-center gap-3">
+                  {analysis?.status === 'completed' ? (
+                    <button
+                      type="button"
+                      onClick={(event) => handleRegenerateAnalysis(event, analysis._id)}
+                      disabled={regeneratingId === analysis._id || isAiLimitReached}
+                      className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-xs font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-blue-900/40 dark:bg-blue-900/15 dark:text-blue-300"
+                    >
+                      {regeneratingId === analysis._id ? 'Regenerating...' : 'Regenerate'}
+                    </button>
+                  ) : null}
+
                   {analysis?.status === 'completed' ? (
                     <button
                       type="button"

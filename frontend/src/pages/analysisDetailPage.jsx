@@ -19,6 +19,7 @@ import toast from 'react-hot-toast'
 import {format} from 'date-fns'
 import DashboardLayout from '../components/layout/DashboardLayout.jsx'
 import analysisService from '../services/analysisService.js'
+import dashboardService from '../services/dashboardServices.js'
 
 const emptyOverview = {
   matchScore: 0,
@@ -46,6 +47,9 @@ const AnalysisDetailPage = ()=>{
   const [loading , setLoading] = useState(false)
   const [analysis , setAnalysis] = useState(emptyOverview)
   const [deleting , setDeleting] = useState(false)
+  const [regenerating, setRegenerating] = useState(false)
+  const [aiUsage, setAiUsage] = useState(null)
+  const isAiLimitReached = (aiUsage?.usesRemaining ?? 0) === 0
 
   // whenever there is a change in id in params call these means someone want analysis detail
   useEffect(()=>{
@@ -53,6 +57,10 @@ const AnalysisDetailPage = ()=>{
       fetchAnalysis()
     }
   },[id])
+
+  useEffect(() => {
+    fetchAiUsage()
+  }, [])
 
   const fetchAnalysis = async()=>{
 
@@ -67,6 +75,15 @@ const AnalysisDetailPage = ()=>{
       toast.error('failed to fetch your analysis detail.. Sorry for Inconveince. also sorry for spelling mistake')
     }finally{
       setLoading(false)
+	  }
+  }
+
+  const fetchAiUsage = async () => {
+    try {
+      const response = await dashboardService.getDashboardData()
+      setAiUsage(response?.data?.aiUsage || null)
+    } catch (error) {
+      console.error(error)
     }
   }
 
@@ -91,6 +108,27 @@ const AnalysisDetailPage = ()=>{
       toast.error('Failed to delete analysis')
     }finally{
       setDeleting(false)
+	  }
+  }
+
+  const handleRegenerateAnalysis = async () => {
+    if (isAiLimitReached) {
+      toast.error('Daily AI limit reached. Resets at 12:00 AM IST')
+      return
+    }
+
+    try {
+      setRegenerating(true)
+      const payload = await analysisService.regenerateAnalysis(id)
+      const clean = payload?.analysis || payload?.data || payload
+      setAnalysis({ ...emptyOverview, ...clean })
+      if (payload?.aiUsage) setAiUsage(payload.aiUsage)
+      toast.success('Analysis regenerated successfully')
+    } catch (error) {
+      console.error(error)
+      toast.error(error?.response?.data?.message || 'Failed to regenerate analysis')
+    } finally {
+      setRegenerating(false)
     }
   }
 
@@ -136,10 +174,19 @@ const AnalysisDetailPage = ()=>{
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              onClick={() => navigate(`/analysis/create?resumeId=${analysis?.resume?._id || ''}`)}
+	          <div className="flex flex-wrap items-center gap-3">
+	            <button
+	              type="button"
+	              onClick={handleRegenerateAnalysis}
+	              disabled={regenerating || isAiLimitReached}
+	              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-blue-200 bg-blue-50 px-5 py-3 text-sm font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-blue-900/40 dark:bg-blue-900/15 dark:text-blue-300"
+	            >
+	              <Target className="h-4 w-4" />
+	              {regenerating ? 'Regenerating...' : 'Regenerate Analysis'}
+	            </button>
+	            <button
+	              type="button"
+	              onClick={() => navigate(`/analysis/create?resumeId=${analysis?.resume?._id || ''}`)}
               className="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary-700"
             >
               <Target className="h-4 w-4" />
@@ -155,10 +202,13 @@ const AnalysisDetailPage = ()=>{
               <Trash2 className="h-4 w-4" />
               {deleting ? 'Deleting...' : 'Delete Analysis'}
             </button>
-          </div>
-        </div>
+	          </div>
+	        </div>
+          {isAiLimitReached ? (
+            <p className="mt-4 text-xs font-medium text-red-500 dark:text-red-400">Daily AI limit reached. Resets at 12:00 AM IST.</p>
+          ) : null}
 
-        {analysis?.status === 'completed' ? (
+	        {analysis?.status === 'completed' ? (
           <div className="mt-5 border-t border-neutral-200 pt-5 dark:border-neutral-700">
             <button
               type="button"

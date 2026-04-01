@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FileText, Target, TrendingUp, BookOpen, Crown, Zap, ShieldCheck } from 'lucide-react';
+import { FileText, Target, TrendingUp, BookOpen, Crown, Zap, ShieldCheck, Sparkles } from 'lucide-react';
 import DashboardLayout from '../components/layout/DashboardLayout.jsx'
 import WelcomeBanner from '../components/dashboard/WelcomeBanner.jsx'
 import StatsCard from '../components/dashboard/StatsCard.jsx';
@@ -68,11 +68,20 @@ const DashboardPage = () => {
 
         {/* Row 2: Rapid Access Nodes */}
         <section className="animate-in fade-in slide-in-from-top-6 duration-1000 delay-100">
-           <QuickActions />
+           <QuickActions aiUsage={dashboardData?.aiUsage} />
         </section>
 
         {/* Row 3: Core Performance Metrics */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 animate-in fade-in slide-in-from-top-8 duration-1000 delay-200">
+          <StatsCard
+            title="AI Credits Left"
+            value={`${dashboardData?.aiUsage?.usesRemaining ?? 0}/${dashboardData?.aiUsage?.dailyLimit ?? 4}`}
+            change={dashboardData?.aiUsage ? `${dashboardData.aiUsage.usedToday} used` : null}
+            changeType={(dashboardData?.aiUsage?.usesRemaining ?? 0) > 0 ? "increase" : "decrease"}
+            icon={Sparkles}
+            color="purple"
+            loading={loading}
+          />
           <StatsCard
             title="Active Intelligence"
             value={dashboardData?.stats.totalResumes || 0}

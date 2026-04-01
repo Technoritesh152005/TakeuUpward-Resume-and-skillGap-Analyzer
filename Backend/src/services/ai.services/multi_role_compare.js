@@ -1,4 +1,4 @@
-import { generateContentWithFallback } from '../../config/gemini.js'
+import { getModel } from '../../config/gemini.js'
 import logger from '../../utils/logs.js'
 
 const MAX_PROJECTS = 4;
@@ -248,7 +248,8 @@ Return JSON in exactly this shape:
 }
         `
 
-        const result = await generateContentWithFallback(prompt)
+        const model = getModel()
+        const result = await model.generateContent(prompt)
         console.log('this is the result from ai', result)
         const response = await result.response
         const rawText = response.text()

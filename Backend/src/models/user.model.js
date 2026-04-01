@@ -3,6 +3,18 @@ import { ROLES } from '../config/constant.js'
 import jwt from 'jsonwebtoken'
 import bcrypt from "bcrypt"
 
+const DEFAULT_DAILY_AI_LIMIT = 4
+const DEFAULT_AI_USAGE_TIMEZONE = 'Asia/Kolkata'
+
+const getCurrentAiUsageDay = () => {
+    return new Intl.DateTimeFormat('en-CA', {
+        timeZone: DEFAULT_AI_USAGE_TIMEZONE,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+    }).format(new Date())
+}
+
 const notificationPreferenceSchema = new mongoose.Schema(
     {
         email: {
@@ -77,6 +89,26 @@ const careerPreferenceSchema = new mongoose.Schema(
         industryInterest: {
             type: [String],
             default: [],
+        },
+    },
+    { _id: false }
+)
+
+const aiUsageSchema = new mongoose.Schema(
+    {
+        dailyLimit: {
+            type: Number,
+            default: DEFAULT_DAILY_AI_LIMIT,
+            min: 0,
+        },
+        usesRemaining: {
+            type: Number,
+            default: DEFAULT_DAILY_AI_LIMIT,
+            min: 0,
+        },
+        lastResetDate: {
+            type: String,
+            default: getCurrentAiUsageDay,
         },
     },
     { _id: false }
@@ -158,6 +190,10 @@ const userSchema = mongoose.Schema(
         },
         careerPreferences: {
             type: careerPreferenceSchema,
+            default: () => ({})
+        },
+        aiUsage: {
+            type: aiUsageSchema,
             default: () => ({})
         },
 

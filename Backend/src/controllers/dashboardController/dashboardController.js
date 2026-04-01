@@ -3,6 +3,7 @@ import ApiResponse from '../../utils/apiResponse.js';
 import { resumeModel } from '../../models/resume.model.js';
 import { analysisModel } from '../../models/analysis.model.js';
 import { roadmapModel } from '../../models/roadmap.model.js';
+import { getAiUsageSummary } from '../../services/aiQuota.service.js';
 
 /**
  * @desc    Get Dashboard Data
@@ -13,10 +14,11 @@ export const getDashboardData = asyncHandler(async (req, res) => {
   const userId = req.user._id;
 
   // Fetch all user data that too in newest
-  const [resumes, analyses, roadmap] = await Promise.all([
+  const [resumes, analyses, roadmap, aiUsage] = await Promise.all([
     resumeModel.find({ user: userId }).sort({ createdAt: -1 }),
     analysisModel.find({ user: userId }).sort({ createdAt: -1 }),
-    roadmapModel.findOne({ user: userId, isActive: true })
+    roadmapModel.findOne({ user: userId, isActive: true }),
+    getAiUsageSummary(userId),
   ]);
 
   // Stats calculation
@@ -190,6 +192,7 @@ export const getDashboardData = asyncHandler(async (req, res) => {
   res.status(200).json(
     new ApiResponse(200, {
       stats,
+      aiUsage,
       activities: activities.slice(0, 10),
       skillProgress,
       skillGapsSummary,

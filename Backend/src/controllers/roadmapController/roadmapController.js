@@ -8,6 +8,7 @@ import resourceModel from '../../models/resources.model.js'
 import progressModel from '../../models/progress.model.js'
 import roadmapModel from '../../models/roadmap.model.js'
 import redisClient from '../../config/redis.js'
+import { refundAiUsage } from '../../services/aiQuota.service.js'
 
 const RESOURCE_TYPE_FALLBACKS = {
     course: ['course', 'tutorial', 'documentation', 'article', 'video'],
@@ -426,56 +427,65 @@ export const createRoadmap = asyncHandler(async (req, res) => {
     }
     // now u got roadmap data and also provided resource to itso start to save it
 
-    const roadmap = await roadmapModel.create(
-        {
-            user: req.user._id,
-            analysis: analysisId,
-            title: analysis?.jobRole?.title || 'Your Roadmap',
-            duration: normalizedRoadmap.duration,
-            phases: normalizedRoadmap.phases,
-            quickwins: normalizedRoadmap.quickwins,
-            projects: normalizedRoadmap.projects,
-            certification: normalizedRoadmap.certification,
-            progress: {
-                totalItems: normalizedRoadmap.phases.reduce((total, phase) => {
-                    return (
-                        total +
-                        phase.weeklyBreakdown.reduce((weekTotal, week) => {
-                            return weekTotal + week.learningItems.length;
-                        }, 0)
-                    );
-                }, 0),
-                milestones: normalizedRoadmap.milestones,
-            },
-            userPreferences: preference,
+    try {
+        const roadmap = await roadmapModel.create(
+            {
+                user: req.user._id,
+                analysis: analysisId,
+                title: analysis?.jobRole?.title || 'Your Roadmap',
+                duration: normalizedRoadmap.duration,
+                phases: normalizedRoadmap.phases,
+                quickwins: normalizedRoadmap.quickwins,
+                projects: normalizedRoadmap.projects,
+                certification: normalizedRoadmap.certification,
+                progress: {
+                    totalItems: normalizedRoadmap.phases.reduce((total, phase) => {
+                        return (
+                            total +
+                            phase.weeklyBreakdown.reduce((weekTotal, week) => {
+                                return weekTotal + week.learningItems.length;
+                            }, 0)
+                        );
+                    }, 0),
+                    milestones: normalizedRoadmap.milestones,
+                },
+                userPreferences: preference,
+            }
+        )
+        if (!roadmap) {
+            throw new ApiError(400, 'Unable to create roadmap')
         }
-    )
-    if (!roadmap) {
-        throw new ApiError(400, 'Unable to create roadmap')
-    }
 
-    //create  progress also when u create roadmap create progress also
-    await progressModel.findOneAndUpdate(
-        {
-            user: req.user._id,
-            roadmap: roadmap._id
-        },
-        {
-            $setOnInsert: {
+        //create  progress also when u create roadmap create progress also
+        await progressModel.findOneAndUpdate(
+            {
                 user: req.user._id,
                 roadmap: roadmap._id
+            },
+            {
+                $setOnInsert: {
+                    user: req.user._id,
+                    roadmap: roadmap._id
+                }
+            },
+            {
+                upsert: true,
+                new: true
             }
-        },
-        {
-            upsert: true,
-            new: true
+        )
+
+        await clearRoadmapCache(analysisId, req.user._id);
+
+        res.status(200)
+            .json(new ApiResponse(201, { roadmap, aiUsage: req.aiUsage }, 'User successfully created roadmap'))
+    } catch (error) {
+        if (req.aiQuotaReserved) {
+            req.aiUsage = await refundAiUsage(req.user._id);
+            req.aiQuotaReserved = false;
         }
-    )
 
-    await clearRoadmapCache(analysisId, req.user._id);
-
-    res.status(200)
-        .json(new ApiResponse(201, roadmap, 'User successfully created roadmap'))
+        throw error
+    }
 
 })
 
