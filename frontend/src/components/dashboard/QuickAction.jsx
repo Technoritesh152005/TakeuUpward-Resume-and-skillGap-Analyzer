@@ -1,9 +1,10 @@
 import { Upload, Target, Map, Briefcase, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const QuickActions = () => {
+const QuickActions = ({ aiUsage }) => {
     // here r the list of actions shown in dashboard where it redirects to the action route
   const navigate = useNavigate();
+  const isAiLimitReached = (aiUsage?.usesRemaining ?? 0) === 0;
 
   const actions = [
     {
@@ -19,6 +20,8 @@ const QuickActions = () => {
       icon: Target,
       title: 'Strategy Gap',
       description: 'Deep-dive skill analysis',
+      meta: 'Uses 1 AI credit',
+      isAiAction: true,
       color: 'from-accent-500 to-pink-500',
       glow: 'group-hover:shadow-accent-500/30',
       border: 'group-hover:border-accent-500/50',
@@ -28,6 +31,8 @@ const QuickActions = () => {
       icon: Map,
       title: 'Roadmap Ace',
       description: 'Launch growth trajectory',
+      meta: 'Uses 1 AI credit',
+      isAiAction: true,
       color: 'from-amber-400 to-orange-500',
       glow: 'group-hover:shadow-amber-500/30',
       border: 'group-hover:border-amber-500/50',
@@ -50,7 +55,8 @@ const QuickActions = () => {
         <button
           key={index}
           onClick={() => navigate(action.path)}
-          className={`group relative overflow-hidden bg-white/4 backdrop-blur-xl border border-white/8 rounded-[32px] p-6 text-left transition-all duration-500 hover:-translate-y-2 hover:bg-white/6 ${action.glow} ${action.border} shadow-2xl`}
+          disabled={action.isAiAction && isAiLimitReached}
+          className={`group relative overflow-hidden bg-white/4 backdrop-blur-xl border border-white/8 rounded-[32px] p-6 text-left transition-all duration-500 hover:-translate-y-2 hover:bg-white/6 ${action.glow} ${action.border} shadow-2xl disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:-translate-y-0 disabled:hover:bg-white/4`}
         >
           {/* Animated accent circle */}
           <div className={`absolute -top-12 -right-12 w-24 h-24 rounded-full bg-gradient-to-br ${action.color} opacity-0 group-hover:opacity-20 transition-all duration-700 blur-2xl`} />
@@ -72,6 +78,13 @@ const QuickActions = () => {
                 </p>
                 <ChevronRight className="w-4 h-4 text-neutral-700 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-500" />
               </div>
+              {action.meta && (
+                <p className="mt-2 text-[10px] font-black uppercase tracking-widest text-white/45">
+                  {isAiLimitReached && action.isAiAction
+                    ? 'Daily AI limit reached • Resets at 12:00 AM IST'
+                    : `${action.meta}${aiUsage ? ` • ${aiUsage.usesRemaining}/${aiUsage.dailyLimit} left` : ''}`}
+                </p>
+              )}
             </div>
           </div>
 

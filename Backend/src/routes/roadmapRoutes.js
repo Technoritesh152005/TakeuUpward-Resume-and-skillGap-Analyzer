@@ -1,4 +1,5 @@
 import {protectAccess} from '../middleware/authMiddleware.js'
+import { requireAiQuota } from '../middleware/aiQuotaMiddleware.js'
 import express from 'express'
 const router = express.Router()
 
@@ -33,7 +34,7 @@ from '../validation/roadmap.validation.js'
 */
 
 // 1. create roadmap for user
-router.post('/',protectAccess,validateRoadmapCreate,createRoadmap)
+router.post('/',protectAccess,validateRoadmapCreate,requireAiQuota('roadmap generation'),createRoadmap)
 
 // 2. get all roadmap
 router.get('/',protectAccess,validateRoadmapListQuery,getMyRoadmaps)

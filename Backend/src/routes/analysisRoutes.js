@@ -12,6 +12,7 @@
 import express from 'express'
 const router = express.Router()
 import { protectAccess } from '../middleware/authMiddleware.js'
+import { requireAiQuota } from '../middleware/aiQuotaMiddleware.js'
 import {
     createAnalysis,
     compare_Multiple_Job_Role_With_Resume_And_Get_Analysis,
@@ -32,7 +33,7 @@ import {
 from '../validation/analysis.validation.js'
 
 // 1. used to generate a new analysis 
-router.post('/create-analysis',protectAccess,validateCreatingAnalysis,createAnalysis)
+router.post('/create-analysis',protectAccess,validateCreatingAnalysis,requireAiQuota('analysis generation'),createAnalysis)
 
 // 2.compare multipe job roles with one single resume
 router.post('/compare-roles',protectAccess,validateCompareRoles,compare_Multiple_Job_Role_With_Resume_And_Get_Analysis)
@@ -45,7 +46,7 @@ router.get('/:id',protectAccess,validateAnalysisId,getAnalysisById)
 
 // 5.regenrate analysis with updated refrence
 // if preference is given (optional) it will create roadmap also.else analyze is done of the resume data
-router.put('/:id',protectAccess,validateAnalysisId,validateRegenerateAnalysis,regenerateAnalysis)
+router.put('/:id',protectAccess,validateAnalysisId,validateRegenerateAnalysis,requireAiQuota('analysis regeneration'),regenerateAnalysis)
 
 // 6. delete the analysis
 router.delete('/:id',protectAccess,validateAnalysisId,deleteAnalysis)

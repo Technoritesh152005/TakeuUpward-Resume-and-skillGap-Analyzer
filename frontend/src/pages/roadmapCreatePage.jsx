@@ -19,6 +19,7 @@ import toast from 'react-hot-toast';
 import DashboardLayout from '../components/layout/DashboardLayout.jsx';
 import analysisService from '../services/analysisService.js';
 import roadmapService from '../services/roadmapService.js';
+import dashboardService from '../services/dashboardServices.js';
 
 const defaultPreferences = {
   hoursPerWeek: 8,
@@ -90,10 +91,22 @@ const RoadmapCreatePage = () => {
   const [analyses, setAnalyses] = useState([]);
   const [selectedAnalysisId, setSelectedAnalysisId] = useState(analysisIdFromQuery);
   const [preferences, setPreferences] = useState(defaultPreferences);
+  const [aiUsage, setAiUsage] = useState(null);
+  const isAiLimitReached = (aiUsage?.usesRemaining ?? 0) === 0;
 
   useEffect(() => {
     fetchCompletedAnalyses();
+    fetchAiUsage();
   }, []);
+
+  const fetchAiUsage = async () => {
+    try {
+      const response = await dashboardService.getDashboardData();
+      setAiUsage(response?.data?.aiUsage || null);
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   const fetchCompletedAnalyses = async () => {
     try {
@@ -159,6 +172,10 @@ const RoadmapCreatePage = () => {
       toast.error('Select a completed analysis first');
       return;
     }
+    if (isAiLimitReached) {
+      toast.error('Daily AI limit reached. Resets at 12:00 AM IST');
+      return;
+    }
 
     try {
       setCreating(true);
@@ -167,9 +184,10 @@ const RoadmapCreatePage = () => {
         budget: preferences.budget,
         learningStyle: preferences.learningStyle,
       });
+      if (roadmap?.aiUsage) setAiUsage(roadmap.aiUsage);
 
       toast.success('Roadmap created successfully');
-      navigate(`/roadmap/${roadmap?._id}`);
+      navigate(`/roadmap/${roadmap?.roadmap?._id || roadmap?._id}`);
     } catch (error) {
       const message =
         error?.response?.data?.message ||
@@ -453,12 +471,15 @@ const RoadmapCreatePage = () => {
 
                 <button
                   type="submit"
-                  disabled={!canSubmit}
+                  disabled={!canSubmit || isAiLimitReached}
                   className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-primary-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <Map className="h-4 w-4" />
                   {creating ? 'Generating roadmap...' : 'Generate Roadmap'}
                 </button>
+                {isAiLimitReached ? (
+                  <p className="text-xs font-medium text-red-500 dark:text-red-400">Daily AI limit reached. Resets at 12:00 AM IST.</p>
+                ) : null}
               </form>
             </Panel>
 
