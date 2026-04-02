@@ -64,6 +64,22 @@ const createAnalysisStages = [
   },
 ];
 
+// data for processing status
+const analysisStageMeta = {
+  queued: {
+    title: 'Queueing Analysis',
+    description: 'Your analysis request is waiting for the worker to pick it up.',
+  },
+  processing: {
+    title: 'Processing Analysis',
+    description: 'The worker is generating your skill-gap and ATS analysis now.',
+  },
+  finalizing: {
+    title: 'Finalizing Result',
+    description: 'Saving the analysis summary, strengths, gaps, and ATS insights.',
+  },
+};
+
 const scoreTone = (score) => {
   if (score >= 75) return 'text-emerald-500';
   if (score >= 50) return 'text-amber-500';
@@ -211,7 +227,7 @@ const AnalysisPage = () => {
       const clean = payload?.analysis || payload?.data || payload;
       setAnalysisOverview({ ...emptyOverview, ...clean });
       if (payload?.aiUsage) setAiUsage(payload.aiUsage);
-      toast.success('Analysis completed');
+      toast.success(clean?.status === 'queued' ? 'Analysis queued successfully' : 'Analysis completed');
       if (clean?._id) {
         navigate(`/analysis/${clean._id}`);
       }
@@ -441,6 +457,17 @@ const AnalysisPage = () => {
                       </p>
                     )}
                   </div>
+
+                  {analysisOverview?._id && ['queued', 'processing'].includes(analysisOverview?.status) ? (
+                    <div className="rounded-2xl border border-blue-200 bg-blue-50 px-5 py-4 text-sm text-blue-800 dark:border-blue-900/40 dark:bg-blue-900/15 dark:text-blue-200">
+                      <p className="font-semibold">
+                        {analysisStageMeta[analysisOverview?.processingStage]?.title || 'Analysis is running'}
+                      </p>
+                      <p className="mt-1 text-xs text-blue-700 dark:text-blue-300">
+                        {analysisStageMeta[analysisOverview?.processingStage]?.description || 'Open the detail page to track live progress.'}
+                      </p>
+                    </div>
+                  ) : null}
                 </form>
               ) : (
                 <form onSubmit={handleCompareRoles} className="space-y-8">

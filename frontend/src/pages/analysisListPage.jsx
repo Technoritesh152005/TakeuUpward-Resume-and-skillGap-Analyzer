@@ -49,16 +49,24 @@ const getGapTotal = (analysis)=>{
 }
 
 const getStatusTone = (status) => {
+  if (status === 'queued') return 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300';
   if (status === 'completed') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300';
   if (status === 'processing') return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300';
   if (status === 'failed') return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300';
   return 'bg-neutral-100 text-neutral-700 dark:bg-neutral-700 dark:text-neutral-200';
 };
 
+const processingStageText = {
+  queued: 'Queued for background processing.',
+  processing: 'Generating skill-gap and ATS analysis in the background.',
+  finalizing: 'Saving the final analysis output.',
+}
+
 const AnalysisListPage = ()=>{
 
   const navigate = useNavigate()
   const [loading , setLoading] = useState(false)
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false)
   const [analyses , setAnalyses] = useState([])
   const [searchTerm , setSearchTerm] = useState('')
   const [statusFilter , setStatusFilter] = useState('all')
@@ -73,20 +81,37 @@ const AnalysisListPage = ()=>{
     fetchAiUsage()
   }, [])
 
-  const fetchAnalysis = async () => {
+  useEffect(() => {
+    if (!analyses.some((item) => ['queued', 'processing'].includes(item?.status))) {
+      return undefined
+    }
+
+    const interval = window.setInterval(() => {
+      fetchAnalysis({ silent: true })
+    }, 5000)
+
+    return () => window.clearInterval(interval)
+  }, [analyses])
+
+  const fetchAnalysis = async ({ silent = false } = {}) => {
     try {
-      setLoading(true)
+      if (!silent) {
+        setLoading(true)
+      }
       const response = await analysisService.getMyAnalyses({
         page: 1,
         limit: 50,
         sort: '-createdAt'
       })
       setAnalyses(Array.isArray(response?.docs) ? response.docs : [])
+      setHasLoadedOnce(true)
     } catch (error) {
       console.error(error)
       toast.error('Failed to load analysis')
     } finally {
-      setLoading(false)
+      if (!silent) {
+        setLoading(false)
+      }
     }
   }
 
@@ -243,6 +268,7 @@ return (
                 className="bg-transparent outline-none"
               >
                 <option value="all">All status</option>
+                <option value="queued">Queued</option>
                 <option value="completed">Completed</option>
                 <option value="processing">Processing</option>
                 <option value="failed">Failed</option>
@@ -267,7 +293,7 @@ return (
       </section>
 
       <section className="space-y-4">
-        {loading ? (
+        {loading && !hasLoadedOnce ? (
           Array.from({ length: 4 }).map((_, index) => (
             <div key={index} className="h-44 animate-pulse rounded-3xl border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800" />
           ))
@@ -316,8 +342,10 @@ return (
                   <p className="mt-4 line-clamp-2 text-sm leading-6 text-neutral-600 dark:text-neutral-300">
                     {analysis.status === 'failed'
                       ? (analysis?.error || 'Analysis failed before completion.')
+                      : analysis.status === 'queued'
+                        ? (processingStageText[analysis?.processingStage] || 'Analysis is queued and will start shortly.')
                       : analysis.status === 'processing'
-                        ? 'Analysis is still running. Metrics can be incomplete until processing finishes.'
+                        ? (processingStageText[analysis?.processingStage] || 'Analysis is still running. Metrics can be incomplete until processing finishes.')
                         : analysis?.aiSuggestion?.summary || 'Open this analysis to review detailed strengths, gaps, ATS signals, and recommendations.'}
                   </p>
                 </div>

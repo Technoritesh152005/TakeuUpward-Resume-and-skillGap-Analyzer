@@ -41,7 +41,7 @@ const getAnalysisSchema = Joi.object({
   sort: Joi.string()
     .valid('createdAt', '-createdAt', 'matchScore', '-matchScore')
     .default('-createdAt'),
-  status: Joi.string().valid('pending', 'completed', 'processing', 'failed').optional(),
+  status: Joi.string().valid('queued', 'pending', 'completed', 'processing', 'failed').optional(),
   resumeId: objectId().optional().messages({
     'any.invalid': 'Invalid resume id format',
   }),

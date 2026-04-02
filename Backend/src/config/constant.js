@@ -10,10 +10,23 @@ export const FILE_TYPES = {
 };
 
 export const ANALYSIS_STATUS = {
+  QUEUED: 'queued',
   PENDING: 'pending',
   PROCESSING: 'processing',
   COMPLETED: 'completed',
   FAILED: 'failed',
+};
+
+export const ANALYSIS_PROCESSING_STAGE = {
+  QUEUED: 'queued',
+  PROCESSING: 'processing',
+  FINALIZING: 'finalizing',
+  COMPLETED: 'completed',
+  FAILED: 'failed',
+};
+
+export const QUEUE_NAMES = {
+  ANALYSIS_GENERATION: 'analysis-generation',
 };
 
 export const JOB_CATEGORIES = {
@@ -73,4 +86,6 @@ export default {
   RESOURCE_TYPES,
   CACHE_TTL,
   PAGINATION,
+  ANALYSIS_PROCESSING_STAGE,
+  QUEUE_NAMES,
 };

@@ -34,6 +34,21 @@ const emptyOverview = {
   aiSuggestion: { summary: '', recommendations: [] },
 }
 
+const statusTone = {
+  queued: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300',
+  processing: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+  completed: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
+  failed: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+}
+
+const processingStageCopy = {
+  queued: 'Waiting in queue for background processing.',
+  processing: 'Generating skill-gap and ATS analysis in the background.',
+  finalizing: 'Saving the final analysis summary and metrics.',
+  completed: 'Analysis completed successfully.',
+  failed: 'Analysis failed before completion.',
+}
+
 const scoreTone = (score)=>{
   if(score >=75) return 'text-emerald-600 dark:text-emerald-400';
    if(score >= 50) return 'text-amber-600 dark:text-amber-400';
@@ -44,7 +59,7 @@ const AnalysisDetailPage = ()=>{
 
   const navigate = useNavigate()
   const {id} = useParams()
-  const [loading , setLoading] = useState(false)
+  const [loading , setLoading] = useState(true)
   const [analysis , setAnalysis] = useState(emptyOverview)
   const [deleting , setDeleting] = useState(false)
   const [regenerating, setRegenerating] = useState(false)
@@ -62,20 +77,73 @@ const AnalysisDetailPage = ()=>{
     fetchAiUsage()
   }, [])
 
-  const fetchAnalysis = async()=>{
+  // whenever there is change in id or analysis staus 
+  // automatically checking analsus status every 3 sec
+  // if analysis not finished keep retrying
+  useEffect(() => {
+    if (!id) return undefined
+    if (!['queued', 'processing', 'finalizing'].includes(analysis?.status)) return undefined
+
+    const interval = window.setInterval(() => {
+      fetchAnalysisStatus()
+    }, 2000)
+
+    return () => window.clearInterval(interval)
+  }, [id, analysis?.status])
+
+  const fetchAnalysis = async({ silent = false } = {})=>{
 
     try{
-      setLoading(true)
+      if (!silent) {
+        setLoading(true)
+      }
       const payload = await analysisService.getAnalysisById(id)
       const cleandata = payload?.data || payload
-      // if cleaneddata key exist in emptyoverview the cleaned data value will override it
-      setAnalysis({...emptyOverview , ...cleandata})
+      if (silent && ['queued', 'processing', 'finalizing'].includes(cleandata?.status)) {
+        setAnalysis((current) => ({
+          ...current,
+          status: cleandata?.status || current?.status,
+          processingStage: cleandata?.processingStage || current?.processingStage,
+          error: cleandata?.error || current?.error,
+          completedAt: cleandata?.completedAt || current?.completedAt,
+          processingTime: cleandata?.processingTime || current?.processingTime,
+        }))
+      } else {
+        // if cleaneddata key exist in emptyoverview the cleaned data value will override it
+        setAnalysis({...emptyOverview , ...cleandata})
+      }
     }catch(error){
       console.error(error)
       toast.error('failed to fetch your analysis detail.. Sorry for Inconveince. also sorry for spelling mistake')
     }finally{
-      setLoading(false)
+      if (!silent) {
+        setLoading(false)
+      }
 	  }
+  }
+
+  const fetchAnalysisStatus = async () => {
+    try {
+      const payload = await analysisService.getAnalysisStatus(id)
+      const statusData = payload?.data || payload
+
+      setAnalysis((current) => ({
+        ...current,
+        status: statusData?.status || current?.status,
+        processingStage: statusData?.processingStage || current?.processingStage,
+        error: statusData?.error || current?.error,
+        queuedAt: statusData?.queuedAt || current?.queuedAt,
+        processingStartedAt: statusData?.processingStartedAt || current?.processingStartedAt,
+        completedAt: statusData?.completedAt || current?.completedAt,
+        processingTime: statusData?.processingTime || current?.processingTime,
+      }))
+
+      if (statusData?.status === 'completed' || statusData?.status === 'failed') {
+        fetchAnalysis({ silent: true })
+      }
+    } catch (error) {
+      console.error(error)
+    }
   }
 
   const fetchAiUsage = async () => {
@@ -155,6 +223,9 @@ const AnalysisDetailPage = ()=>{
             </h1>
 
             <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-neutral-600 dark:text-neutral-300">
+              <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold capitalize ${statusTone[analysis?.status] || 'bg-neutral-100 text-neutral-700 dark:bg-neutral-700 dark:text-neutral-200'}`}>
+                {analysis?.status || 'unknown'}
+              </span>
               <span className="inline-flex items-center gap-2">
                 <Briefcase className="h-4 w-4 text-neutral-400" />
                 {analysis?.jobRole?.category || 'General role'}
@@ -172,13 +243,23 @@ const AnalysisDetailPage = ()=>{
             <p className="mt-5 max-w-3xl text-sm leading-7 text-neutral-600 dark:text-neutral-300">
               {analysis?.aiSuggestion?.summary || 'This detailed view combines fit score, role-readiness, ATS quality, strengths, skill gaps, and next-step recommendations for the selected role.'}
             </p>
+            {['queued', 'processing', 'finalizing'].includes(analysis?.status) ? (
+              <div className="mt-5 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-4 text-sm text-blue-800 dark:border-blue-900/40 dark:bg-blue-900/15 dark:text-blue-200">
+                <p className="font-semibold capitalize">
+                  {String(analysis?.processingStage || analysis?.status || 'processing').replaceAll('_', ' ')}
+                </p>
+                <p className="mt-1 text-xs text-blue-700 dark:text-blue-300">
+                  {processingStageCopy[analysis?.processingStage] || 'Analysis is still running. This page refreshes automatically.'}
+                </p>
+              </div>
+            ) : null}
           </div>
 
 	          <div className="flex flex-wrap items-center gap-3">
 	            <button
 	              type="button"
 	              onClick={handleRegenerateAnalysis}
-	              disabled={regenerating || isAiLimitReached}
+	              disabled={regenerating || isAiLimitReached || analysis?.status !== 'completed'}
 	              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-blue-200 bg-blue-50 px-5 py-3 text-sm font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-blue-900/40 dark:bg-blue-900/15 dark:text-blue-300"
 	            >
 	              <Target className="h-4 w-4" />
@@ -228,13 +309,15 @@ const AnalysisDetailPage = ()=>{
           <div className="h-96 animate-pulse rounded-3xl border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800 xl:col-span-2" />
           <div className="h-96 animate-pulse rounded-3xl border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800" />
         </div>
+      ) : ['queued', 'processing', 'finalizing'].includes(analysis?.status) ? (
+        <AnalysisProcessingState analysis={analysis} />
       ) : (
         <>
           <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <StatCard label="Match Score" value={`${analysis.matchScore || 0}%`} icon={Target} tone={scoreTone(analysis.matchScore || 0)} />
-            <StatCard label="Readiness" value={String(analysis.readinessLevel || 'not-ready').replace('-', ' ')} icon={Rocket} />
-            <StatCard label="Time to Ready" value={`${analysis?.estimatedTimeToReady?.weeks || 0} weeks`} icon={Clock3} />
-            <StatCard label="ATS Score" value={`${analysis?.atsScore?.overall || 0}%`} icon={ScanSearch} />
+            <StatCard label="Match Score" value={analysis?.status === 'completed' ? `${analysis.matchScore || 0}%` : 'Pending'} icon={Target} tone={analysis?.status === 'completed' ? scoreTone(analysis.matchScore || 0) : 'text-neutral-500 dark:text-neutral-400'} />
+            <StatCard label="Readiness" value={analysis?.status === 'completed' ? String(analysis.readinessLevel || 'not-ready').replace('-', ' ') : 'Pending'} icon={Rocket} />
+            <StatCard label="Time to Ready" value={analysis?.status === 'completed' ? `${analysis?.estimatedTimeToReady?.weeks || 0} weeks` : 'Pending'} icon={Clock3} />
+            <StatCard label="ATS Score" value={analysis?.status === 'completed' ? `${analysis?.atsScore?.overall || 0}%` : 'Pending'} icon={ScanSearch} />
           </section>
 
           <section className="grid grid-cols-1 gap-6 xl:grid-cols-3">
@@ -312,6 +395,155 @@ const Panel = ({ title, icon: Icon, children }) => (
     {children}
   </div>
 );
+
+const AnalysisProcessingState = ({ analysis }) => {
+  const stages = [
+    { key: 'queued', label: 'Queued' },
+    { key: 'processing', label: 'Processing' },
+    { key: 'finalizing', label: 'Finalizing' },
+    { key: 'completed', label: 'Completed' },
+  ]
+
+  const currentStage = analysis?.processingStage || analysis?.status || 'queued'
+  const matchedStageIndex = stages.findIndex((stage) => stage.key === currentStage)
+  const currentIndex = matchedStageIndex >= 0 ? matchedStageIndex : 0
+  const [elapsedSeconds, setElapsedSeconds] = useState(0)
+
+  useEffect(() => {
+    const baseTime = analysis?.processingStartedAt || analysis?.queuedAt || analysis?.createdAt
+    if (!baseTime) {
+      setElapsedSeconds(0)
+      return undefined
+    }
+
+    const updateElapsed = () => {
+      const diffMs = Date.now() - new Date(baseTime).getTime()
+      setElapsedSeconds(Math.max(0, Math.floor(diffMs / 1000)))
+    }
+
+    updateElapsed()
+
+    if (!['queued', 'processing', 'finalizing'].includes(analysis?.status)) {
+      return undefined
+    }
+
+    const interval = window.setInterval(updateElapsed, 1000)
+    return () => window.clearInterval(interval)
+  }, [analysis?.processingStartedAt, analysis?.queuedAt, analysis?.createdAt, analysis?.status])
+
+  const progressWidth = currentStage === 'completed'
+    ? 100
+    : currentStage === 'finalizing'
+      ? 86
+      : currentStage === 'processing'
+        ? 58
+        : 24
+
+  const elapsedLabel = elapsedSeconds < 60
+    ? `${elapsedSeconds}s elapsed`
+    : `${Math.floor(elapsedSeconds / 60)}m ${String(elapsedSeconds % 60).padStart(2, '0')}s elapsed`
+
+  return (
+    <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1.4fr_0.8fr]">
+      <div className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-soft dark:border-neutral-700 dark:bg-neutral-800 md:p-8">
+        <div className="flex items-start gap-4">
+          <div className="rounded-3xl bg-blue-50 p-4 dark:bg-blue-900/20">
+            <ScanSearch className="h-7 w-7 text-blue-600 dark:text-blue-300" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-600 dark:text-blue-300">Background Processing</p>
+            <h2 className="mt-2 text-2xl font-bold tracking-tight text-neutral-900 dark:text-white">Generating your analysis</h2>
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-neutral-600 dark:text-neutral-300">
+              {processingStageCopy[currentStage] || 'Your analysis is running in the background and this page updates automatically.'}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-8 rounded-3xl border border-blue-100 bg-gradient-to-r from-blue-50 via-white to-violet-50 p-5 dark:border-blue-900/30 dark:from-blue-950/30 dark:via-neutral-900 dark:to-violet-950/20">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-neutral-900 dark:text-white">Worker activity</p>
+              <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                Live backend job state. This is an activity indicator, not an exact AI percentage.
+              </p>
+            </div>
+            <div className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1.5 text-xs font-semibold text-blue-700 shadow-sm dark:bg-neutral-800 dark:text-blue-300">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75" />
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-blue-500" />
+              </span>
+              {elapsedLabel}
+            </div>
+          </div>
+
+          <div className="mt-5 h-3 overflow-hidden rounded-full bg-neutral-200/80 dark:bg-neutral-700/80">
+            <div
+              className="relative h-full rounded-full bg-gradient-to-r from-blue-600 via-cyan-500 to-violet-500 transition-[width] duration-700 ease-out"
+              style={{ width: `${progressWidth}%` }}
+            >
+              <div className="absolute inset-0 animate-pulse bg-white/20" />
+            </div>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-neutral-500 dark:text-neutral-400">
+            <span>Current stage: {String(currentStage).replaceAll('_', ' ')}</span>
+            <span>Typical completion time: 20 to 40 seconds</span>
+          </div>
+        </div>
+
+        <div className="mt-8 space-y-4">
+          {stages.map((stage, index) => {
+            const isDone = index < currentIndex || currentStage === 'completed'
+            const isActive = stage.key === currentStage
+
+            return (
+              <div key={stage.key} className={`rounded-2xl border px-4 py-4 transition ${isActive ? 'border-blue-300 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20' : 'border-neutral-200 bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-900/60'}`}>
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold ${isDone ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' : isActive ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' : 'bg-neutral-200 text-neutral-600 dark:bg-neutral-700 dark:text-neutral-300'}`}>
+                      {isDone ? <CheckCircle2 className="h-4 w-4" /> : index + 1}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-neutral-900 dark:text-white">{stage.label}</p>
+                      <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                        {isDone ? 'Finished' : isActive ? 'In progress' : 'Waiting'}
+                      </p>
+                    </div>
+                  </div>
+                  {isActive ? (
+                    <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                      Current
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      <div className="space-y-6">
+        <Panel title="Current Status" icon={Rocket}>
+          <div className="space-y-4 text-sm text-neutral-600 dark:text-neutral-300">
+            <InfoRow label="Status" value={String(analysis?.status || 'queued')} />
+            <InfoRow label="Stage" value={String(currentStage).replaceAll('_', ' ')} />
+            <InfoRow label="Elapsed" value={elapsedLabel} />
+            <InfoRow label="Resume" value={analysis?.resume?.originalFileName || analysis?.resume?.fileName || 'Resume'} />
+            <InfoRow label="Role" value={analysis?.jobRole?.title || 'Selected role'} />
+          </div>
+        </Panel>
+
+        <Panel title="What Happens Next" icon={Clock3}>
+          <div className="space-y-3 text-sm leading-6 text-neutral-600 dark:text-neutral-300">
+            <p>The worker is processing this analysis in the background.</p>
+            <p>This page checks for status updates automatically without interrupting the view.</p>
+            <p>Once completed, the detailed match score, ATS view, strengths, and skill gaps will appear here automatically.</p>
+          </div>
+        </Panel>
+      </div>
+    </section>
+  )
+}
 
 const StatCard = ({ label, value, icon: Icon, tone = 'text-neutral-900 dark:text-white' }) => (
   <div className="rounded-3xl border border-neutral-200 bg-white p-5 shadow-soft dark:border-neutral-700 dark:bg-neutral-800">
