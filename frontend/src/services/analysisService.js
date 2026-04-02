@@ -66,6 +66,11 @@ const analysisService = {
     return extractPayload(response);
   },
 
+  getAnalysisStatus: async (analysisId) => {
+    const response = await api.get(`/analysis/${analysisId}/status`);
+    return extractPayload(response);
+  },
+
   regenerateAnalysis: async (analysisId, preferences) => {
     const response = await api.put(`/analysis/${analysisId}`, {
       ...(preferences ? { preferences } : {}),

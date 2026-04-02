@@ -6,158 +6,14 @@ import resumeModel from "../../models/resume.model.js"
 import jobRoleModel from "../../models/jobrole.model.js"
 import skillgapanalysis from "../../services/ai.services/skill_gap_analysis.js"
 import ApiResponse from '../../utils/apiResponse.js'
-import generateAtsScore from "../../services/ai.services/ats_score_generator.js"
 import redisClient from '../../config/redis.js'
 import ApiError from '../../utils/apiError.js'
 import logger from '../../utils/logs.js'
 import RoadmapAnalysis from '../../services/ai.services/roadmap_planner.js'
 import multiRoleCompareService from '../../services/ai.services/multi_role_compare.js'
 import { refundAiUsage, reserveAiUsage } from '../../services/aiQuota.service.js'
-
-const extractNumericValue = (value) => {
-    if (typeof value === 'number' && Number.isFinite(value)) {
-        return value;
-    }
-
-    if (typeof value === 'string') {
-        const matches = value.match(/\d+(\.\d+)?/g);
-        if (!matches || matches.length === 0) {
-            return 0;
-        }
-
-        const numbers = matches.map(Number).filter(Number.isFinite);
-        if (numbers.length === 0) {
-            return 0;
-        }
-
-        return Math.max(...numbers);
-    }
-
-    return 0;
-};
-
-const parseMonthYearToDate = (value) => {
-    if (!value) return null;
-
-    const raw = String(value).trim();
-    if (!raw) return null;
-
-    if (/present|current|now/i.test(raw)) {
-        return new Date();
-    }
-
-    const normalized = raw
-        .replace(/\./g, ' ')
-        .replace(/,/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-
-    const numericMonthYearMatch = raw.match(/^\s*(\d{1,2})\s*[-/]\s*(\d{4})\s*$/);
-    if (numericMonthYearMatch) {
-        const month = Number(numericMonthYearMatch[1]);
-        const year = Number(numericMonthYearMatch[2]);
-
-        if (month >= 1 && month <= 12 && Number.isFinite(year)) {
-            return new Date(year, month - 1, 1);
-        }
-    }
-
-    const numericYearMonthMatch = raw.match(/^\s*(\d{4})\s*[-/]\s*(\d{1,2})\s*$/);
-    if (numericYearMonthMatch) {
-        const year = Number(numericYearMonthMatch[1]);
-        const month = Number(numericYearMonthMatch[2]);
-
-        if (month >= 1 && month <= 12 && Number.isFinite(year)) {
-            return new Date(year, month - 1, 1);
-        }
-    }
-
-    const direct = new Date(normalized);
-    if (!Number.isNaN(direct.getTime())) {
-        return new Date(direct.getFullYear(), direct.getMonth(), 1);
-    }
-
-    const monthMap = {
-        jan: 0, january: 0,
-        feb: 1, february: 1,
-        mar: 2, march: 2,
-        apr: 3, april: 3,
-        may: 4,
-        jun: 5, june: 5,
-        jul: 6, july: 6,
-        aug: 7, august: 7,
-        sep: 8, sept: 8, september: 8,
-        oct: 9, october: 9,
-        nov: 10, november: 10,
-        dec: 11, december: 11,
-    };
-
-    const monthYearMatch = normalized.match(/([A-Za-z]+)\s+(\d{4})/);
-    if (monthYearMatch) {
-        const month = monthMap[monthYearMatch[1].toLowerCase()];
-        const year = Number(monthYearMatch[2]);
-        if (month !== undefined && Number.isFinite(year)) {
-            return new Date(year, month, 1);
-        }
-    }
-
-    const yearOnlyMatch = normalized.match(/\b(19|20)\d{2}\b/);
-    if (yearOnlyMatch) {
-        return new Date(Number(yearOnlyMatch[0]), 0, 1);
-    }
-
-    return null;
-};
-
-// basically counts the months of experience for candidate
-const calculateExperienceYearsFromResume = (parsedData) => {
-    // check if there exist experience in parsed data of resume
-    const experience = Array.isArray(parsedData?.experience) ? parsedData.experience : [];
-    if (!experience.length) return 0;
-
-    // map through experience obj
-    const intervals = experience
-        .map((item) => {
-            const start = parseMonthYearToDate(item?.startDate);
-            const end = item?.current ? new Date() : parseMonthYearToDate(item?.endDate);
-
-            if (!start || !end || end < start) {
-                return null;
-            }
-
-            return {
-                start: new Date(start.getFullYear(), start.getMonth(), 1),
-                end: new Date(end.getFullYear(), end.getMonth(), 1),
-            };
-        })
-        .filter(Boolean)
-        .sort((a, b) => a.start - b.start);
-
-    if (!intervals.length) return 0;
-
-    const merged = [];
-
-    for (const interval of intervals) {
-        const last = merged[merged.length - 1];
-
-        if (!last || interval.start > last.end) {
-            merged.push({ ...interval });
-            continue;
-        }
-
-        if (interval.end > last.end) {
-            last.end = interval.end;
-        }
-    }
-
-    const totalMonths = merged.reduce((sum, interval) => {
-        const months = ((interval.end.getFullYear() - interval.start.getFullYear()) * 12) +
-            (interval.end.getMonth() - interval.start.getMonth()) + 1;
-        return sum + Math.max(0, months);
-    }, 0);
-
-    return Math.round((totalMonths / 12) * 10) / 10;
-};
+import { enqueueAnalysisGeneration } from '../../queues/analysis.queue.js'
+import { ANALYSIS_PROCESSING_STAGE, ANALYSIS_STATUS } from '../../config/constant.js'
 
 const clearAnalysisCache = async (userId, analysisId = null) => {
     const normalizedUserId = String(userId);
@@ -257,6 +113,7 @@ check whether this resume and job role id exist and to crea
 // ADD THIS CODE TO YOUR EXISTING analysis.controller.js
 // Replace the entire createAnalysis function with this:
 
+// during creating analysis we just create their analysis id and pass it to enque
 export const createAnalysis = asyncHandler(async (req, res) => {
     const { resumeId, jobRoleId } = req.body;
 
@@ -282,249 +139,55 @@ export const createAnalysis = asyncHandler(async (req, res) => {
         throw new ApiError(400, 'Job Role not found');
     }
 
-    // Create analysis document
-    const analysis = await analysisModel.create({
+    // create analysis for job creation
+    const queuedAnalysis = await analysisModel.create({
         resume: resumeId,
         user: req.user._id,
         jobRole: jobRoleId,
         matchScore: 0,
-        status: 'processing',
+        status: ANALYSIS_STATUS.QUEUED,
+        processingStage: ANALYSIS_PROCESSING_STAGE.QUEUED,
+        queuedAt: new Date(),
     });
 
-    // Clear old cache
     await clearAnalysisCache(req.user._id);
 
     try {
-        const [skillGapAnalysisData, atsScore] = await Promise.all([
-            skillgapanalysis.performDeepSkillGapAnalyze(
-                resume.parsedData,
-                jobRole
-            ),
-            generateAtsScore.getAtsScore(
-                resume.parsedData,
-                jobRole
-            ),
-        ]);
-
-        // 
-        analysis.matchScore = skillGapAnalysisData.overallAssessment.matchPercentage;
-
-        // Calculate match breakdown
-        // it checks how much ur critical skill gaps matched
-        const criticalMatched = jobRole.requiredSkills.critical.length - 
-            (skillGapAnalysisData.skillGaps.critical?.length || 0);
-        const criticalTotal = jobRole.requiredSkills.critical.length;
-
-        const importantMatched = jobRole.requiredSkills.important.length - 
-            (skillGapAnalysisData.skillGaps.important?.length || 0);
-        const importantTotal = jobRole.requiredSkills.important.length;
-
-        const niceToHaveMatched = jobRole.requiredSkills.niceToHave.length - 
-            (skillGapAnalysisData.skillGaps.niceToHave?.length || 0);
-        const niceToHaveTotal = jobRole.requiredSkills.niceToHave.length;
-
-        // summary of ur skills matched
-        analysis.matchBreakDown = {
-            criticalSkills: {
-                matched: criticalMatched,
-                total: criticalTotal,
-                percentage: criticalTotal > 0 ? Math.round((criticalMatched / criticalTotal) * 100) : 0
-            },
-            importantSkills: {
-                matched: importantMatched,
-                total: importantTotal,
-                percentage: importantTotal > 0 ? Math.round((importantMatched / importantTotal) * 100) : 0
-            },
-            niceToHaveSkills: {
-                matched: niceToHaveMatched,
-                total: niceToHaveTotal,
-                percentage: niceToHaveTotal > 0 ? Math.round((niceToHaveMatched / niceToHaveTotal) * 100) : 0
-            }
-        };
-
-        // Normalize AI output to match schema expectations.
-        const normalizedSkillGaps = {
-            // loop through every element of skill based category and 
-            critical: (skillGapAnalysisData.skillGaps?.critical || []).map((item) => ({
-                ...item,
-                // normalize the diffculty skill cause sometimes ai returns some words which dont fit our validation
-                difficulty: normalizeDifficulty(item?.difficulty),
-            })),
-            important: (skillGapAnalysisData.skillGaps?.important || []).map((item) => ({
-                ...item,
-                difficulty: normalizeDifficulty(item?.difficulty),
-            })),
-            niceToHave: (skillGapAnalysisData.skillGaps?.niceToHave || []).map((item) => ({
-                ...item,
-                difficulty: normalizeDifficulty(item?.difficulty),
-            })),
-        };
-
-        const normalizedStrengths = (skillGapAnalysisData.strengths || []).map((item) => ({
-            ...item,
-            // normalize these alsp
-            proficiency: normalizeProficiency(item?.proficiency),
-        }));
-
-        //  setting Skill gaps
-        analysis.skillGaps = normalizedSkillGaps;
-
-        //  NEW: Populate extractedSkills
-        // extractedskills contains both skill which r present and also which r not means they r required
-        const extractedSkills = new Set();
-
-        // Add from skill gaps (skills they're MISSING)
-        // pushing every skills which r not present or they r skill gaps
-        normalizedSkillGaps.critical?.forEach(item => {
-            if (item.skill) extractedSkills.add(item.skill);
-        });
-        normalizedSkillGaps.important?.forEach(item => {
-            if (item.skill) extractedSkills.add(item.skill);
-        });
-        normalizedSkillGaps.niceToHave?.forEach(item => {
-            if (item.skill) extractedSkills.add(item.skill);
+        // as analysis id is created this isa a job now so need to be put in queue
+        await enqueueAnalysisGeneration({
+            analysisId: queuedAnalysis._id,
+            resumeId,
+            jobRoleId,
+            userId: req.user._id,
         });
 
-        // Add from strengths (skills they HAVE)
-        // u r adding the skills u have
-        normalizedStrengths.forEach(item => {
-            if (item.skill) extractedSkills.add(item.skill);
-        });
+        await queuedAnalysis.populate('resume', 'fileName originalFileName createdAt');
+        await queuedAnalysis.populate('jobRole', 'title category experienceLevel salaryRange');
 
-        // adding all extracted skills in model fields
-        analysis.extractedSkills = Array.from(extractedSkills);
+        // return just the queue data and token taken
+        return res.status(202).json(
 
-        //  NEW: Create skillBreakdown
-        // Detailed progress of each skill → current level vs required level vs gap
-        const skillBreakdown = [];
-
-        // Proficiency level mapping
-        const levelMap = {
-            'beginner': 30,
-            'intermediate': 60,
-            'advanced': 85,
-            'expert': 95
-        };
-
-        // Add skills from strengths (skills they HAVE)
-        normalizedStrengths.forEach(strength => {
-            // means it take score of ur analysis and map with levelMap
-            const currentLevel = levelMap[strength.proficiency] || 50;
-            const targetLevel = 95;
-            // we will later change the target level based on the importance of skill
-
-            skillBreakdown.push({
-                skillName: strength.skill,
-                currentLevel: currentLevel,
-                targetLevel: targetLevel,
-                gap: Math.max(0, targetLevel - currentLevel)
-            });
-        });
-
-        // Add critical skill gaps the skill which they dont have
-        normalizedSkillGaps.critical?.forEach(gap => {
-            // Don't add if already exists from strengths
-            const exists = skillBreakdown.some(s => s.skillName === gap.skill);
-            if (!exists) {
-                skillBreakdown.push({
-                    skillName: gap.skill,
-                    currentLevel: 0,
-                    targetLevel: gap.importance * 10, // 1-10 → 10-100
-                    gap: gap.importance * 10
-                });
-            }
-        });
-
-        // Add important skill gaps
-        normalizedSkillGaps.important?.forEach(gap => {
-            const exists = skillBreakdown.some(s => s.skillName === gap.skill);
-            if (!exists) {
-                skillBreakdown.push({
-                    skillName: gap.skill,
-                    currentLevel: 0,
-                    targetLevel: gap.importance * 10,
-                    gap: gap.importance * 10
-                });
-            }
-        });
-
-        analysis.skillBreakdown = skillBreakdown;
-
-        // Other fields
-        analysis.candidateStrength = normalizedStrengths;
-        analysis.transferrableSkills = skillGapAnalysisData.transferableSkills;
-
-        // Experience analysis
-        const parsedExperienceYears = calculateExperienceYearsFromResume(resume.parsedData);
-        const aiCandidateYears = extractNumericValue(skillGapAnalysisData.experienceGap?.candidateYears);
-        const candidateYears = parsedExperienceYears || aiCandidateYears;
-        const requiredYears = extractNumericValue(skillGapAnalysisData.experienceGap?.typicalRequirement);
-
-        analysis.experienceAnalysis = {
-            candidateYears: candidateYears,
-            requiredYears: requiredYears,
-            gap: Math.max(0, requiredYears - candidateYears),
-            assessment: skillGapAnalysisData.experienceGap?.assessment || ''
-        };
-
-        // normalize readinees level does that converts readinees level to predefined enums
-        analysis.readinessLevel = normalizeReadinessLevel(
-            skillGapAnalysisData.overallAssessment.readinessLevel
-        );
-        analysis.estimatedTimeToReady = skillGapAnalysisData.overallAssessment.estimatedTimeToReady;
-
-        // ATS Score
-        analysis.atsScore = {
-            overall: atsScore.overallScore,
-            formatting: atsScore.breakdown.formatting,
-            keywords: {
-                score: atsScore.breakdown.keywords.score,
-                matched: atsScore.breakdown.keywords.matched,
-                missing: atsScore.breakdown.keywords.missing
-            },
-            structure: atsScore.breakdown.structure,
-            content: atsScore.breakdown.content
-        };
-
-        // AI Suggestions
-        analysis.aiSuggestion = {
-            summary: skillGapAnalysisData.overallAssessment.summary,
-            recommendations: skillGapAnalysisData.recommendations
-        };
-
-        // Mark as completed
-        analysis.status = 'completed';
-        analysis.processingTime = Date.now() - analysis.createdAt;
-
-        await analysis.save();
-        await clearAnalysisCache(req.user._id, analysis._id);
-
-        logger.info(`Analysis generated successfully for user: ${req.user._id}`);
-
-        // Populate references
-        await analysis.populate('resume', 'fileName originalFileName createdAt');
-        await analysis.populate('jobRole', 'title category experienceLevel salaryRange');
-
-        res.status(200).json(
-            new ApiResponse(201, {
-                analysis,
+            new ApiResponse(202, {
+                analysis: queuedAnalysis,
                 aiUsage: req.aiUsage,
-            }, 'Analysis created successfully')
+            }, 'Analysis queued successfully')
         );
-
     } catch (error) {
+        // if error occured just refund the limit of the user.Then also do some working
+        // then also 
         if (req.aiQuotaReserved) {
             req.aiUsage = await refundAiUsage(req.user._id);
             req.aiQuotaReserved = false;
         }
 
-        analysis.error = error.message;
-        analysis.status = 'failed';
-        await analysis.save();
-        await clearAnalysisCache(req.user._id, analysis._id);
-        
-        logger.error(`Error while generating analysis: ${error.message}`);
-        throw new ApiError(401, 'Failed to generate analysis');
+        queuedAnalysis.error = error.message;
+        queuedAnalysis.status = ANALYSIS_STATUS.FAILED;
+        queuedAnalysis.processingStage = ANALYSIS_PROCESSING_STAGE.FAILED;
+        await queuedAnalysis.save();
+        await clearAnalysisCache(req.user._id, queuedAnalysis._id);
+
+        logger.error(`Error while queueing analysis: ${error.message}`);
+        throw new ApiError(401, 'Failed to queue analysis');
     }
 });
 
@@ -633,6 +296,23 @@ export const getAnalysisById = asyncHandler(async (req, res) => {
     // parsed data and also jobRole target
     res.status(200)
         .json(new ApiResponse(201, analysis, `Successfully fetched analysis for user: ${req.user.email}`))
+})
+
+export const getAnalysisStatus = asyncHandler(async (req, res) => {
+    const analysis = await analysisModel.findOne({
+        user: req.user._id,
+        _id: req.params.id,
+        isActive: true
+    }).select('_id status processingStage error queuedAt processingStartedAt completedAt processingTime')
+
+    if (!analysis) {
+        throw new ApiError(401, 'No analysis found of user')
+    }
+
+    res.set('Cache-Control', 'no-store')
+    res.status(200).json(
+        new ApiResponse(200, analysis, 'Analysis status fetched successfully')
+    )
 })
 
 // controller to delete nalaysis

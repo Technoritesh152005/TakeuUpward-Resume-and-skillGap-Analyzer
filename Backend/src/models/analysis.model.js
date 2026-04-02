@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import mongoosePaginate from 'mongoose-paginate-v2';
-import { ANALYSIS_STATUS } from '../config/constant.js';
+import { ANALYSIS_PROCESSING_STAGE, ANALYSIS_STATUS } from '../config/constant.js';
 
 const analysisSchema = mongoose.Schema(
     {
@@ -196,15 +196,25 @@ const analysisSchema = mongoose.Schema(
             },
         },
 
-        // Processing status
-        status: {
-            type: String,
-            enum: Object.values(ANALYSIS_STATUS),
-            default: ANALYSIS_STATUS.PENDING,
-            index: true,
+    //    analysis status for quueue
+        status:{
+            type:String,
+            enum:Object.values(ANALYSIS_STATUS),
+        default:ANALYSIS_STATUS.QUEUED,
+        index:true,
         },
-        processingTime: Number,
-        error: String,
+        // processing stage during analysis creation
+        processingStage:{
+            type:String,
+            enum:Object.values(ANALYSIS_PROCESSING_STAGE),
+            default: ANALYSIS_PROCESSING_STAGE.QUEUED,
+            index:true
+        },
+        queuedAt:Date,
+        processingStartedAt:Date,
+        completedAt:Date,
+        processingTime:Number,
+        error:String,
         
         // Metadata
         version: {

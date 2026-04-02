@@ -18,6 +18,7 @@ import {
     compare_Multiple_Job_Role_With_Resume_And_Get_Analysis,
     getMyAnalysis,
     getAnalysisById,
+    getAnalysisStatus,
     regenerateAnalysis,
     deleteAnalysis
 
@@ -40,6 +41,9 @@ router.post('/compare-roles',protectAccess,validateCompareRoles,compare_Multiple
 
 // 3.get analysis of the user
 router.get('/all-analysis',protectAccess,validateGetAnalysis,getMyAnalysis)
+
+// 4.get single analsysi f the resume or user
+router.get('/:id/status',protectAccess,validateAnalysisId,getAnalysisStatus)
 
 // 4.get single analsysi f the resume or user
 router.get('/:id',protectAccess,validateAnalysisId,getAnalysisById)

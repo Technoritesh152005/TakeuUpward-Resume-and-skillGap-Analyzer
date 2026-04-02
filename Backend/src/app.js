@@ -41,6 +41,7 @@ import logger from './utils/logs.js';
 
 // Create Express app
 const app = express();
+app.set('etag', false);
 
 
 // Trust proxy (for rate limiting, IP detection)
