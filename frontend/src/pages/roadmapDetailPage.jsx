@@ -36,12 +36,30 @@ const emptyRoadmap = {
   },
   userPreferences: {},
   createdAt: '',
+  status: 'completed',
+  processingStage: 'completed',
 };
 
 const priorityTone = {
   high: 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300',
   medium: 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300',
   low: 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300',
+};
+
+const roadmapStatusTone = {
+  queued: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300',
+  processing: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+  finalizing: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+  completed: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
+  failed: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+};
+
+const roadmapStageCopy = {
+  queued: 'Waiting in queue for roadmap generation.',
+  processing: 'Generating your phase-by-phase roadmap in the background.',
+  finalizing: 'Saving roadmap phases, resources, and progress structure.',
+  completed: 'Roadmap completed successfully.',
+  failed: 'Roadmap generation failed before completion.',
 };
 
 const getPhaseCompletedCount = (phase) =>
@@ -87,9 +105,23 @@ const RoadmapDetailPage = () => {
     }
   }, [id]);
 
-  const fetchRoadmap = async () => {
+  // Poll only while the roadmap job is still active.
+  useEffect(() => {
+    if (!id) return undefined;
+    if (!['queued', 'processing', 'finalizing'].includes(roadmap?.status)) return undefined;
+
+    const interval = window.setInterval(() => {
+      fetchRoadmapStatus();
+    }, 2000);
+
+    return () => window.clearInterval(interval);
+  }, [id, roadmap?.status]);
+
+  const fetchRoadmap = async ({ silent = false } = {}) => {
     try {
-      setLoading(true);
+      if (!silent) {
+        setLoading(true);
+      }
       const response = await roadmapService.getRoadmapById(id);
       const clean = response?.data || response;
       setRoadmap({ ...emptyRoadmap, ...clean });
@@ -97,7 +129,34 @@ const RoadmapDetailPage = () => {
       console.error(error);
       toast.error('Failed to fetch your roadmap');
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
+    }
+  };
+
+  // Status polling keeps the processing screen stable and fetches full detail only at the end.
+  const fetchRoadmapStatus = async () => {
+    try {
+      const response = await roadmapService.getRoadmapStatus(id);
+      const clean = response?.data || response;
+
+      setRoadmap((current) => ({
+        ...current,
+        status: clean?.status || current?.status,
+        processingStage: clean?.processingStage || current?.processingStage,
+        error: clean?.error || current?.error,
+        queuedAt: clean?.queuedAt || current?.queuedAt,
+        processingStartedAt: clean?.processingStartedAt || current?.processingStartedAt,
+        completedAt: clean?.completedAt || current?.completedAt,
+        processingTime: clean?.processingTime || current?.processingTime,
+      }));
+
+      if (clean?.status === 'completed' || clean?.status === 'failed') {
+        fetchRoadmap({ silent: true });
+      }
+    } catch (error) {
+      console.error(error);
     }
   };
 
@@ -166,10 +225,15 @@ const RoadmapDetailPage = () => {
                 {loading ? 'Loading roadmap...' : roadmap?.title || 'Learning roadmap'}
               </h1>
               <p className="mt-4 max-w-2xl text-sm leading-7 text-white/80 md:text-base">
-                A phase-by-phase path to move from current gaps to a stronger role fit. Follow the sequence, complete each learning item, and use the progress markers to stay on track.
+                {['queued', 'processing', 'finalizing'].includes(roadmap?.status)
+                  ? (roadmapStageCopy[roadmap?.processingStage || roadmap?.status] || 'Roadmap generation is running in the background.')
+                  : 'A phase-by-phase path to move from current gaps to a stronger role fit. Follow the sequence, complete each learning item, and use the progress markers to stay on track.'}
               </p>
 
               <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm text-white/75">
+                <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold capitalize ${roadmapStatusTone[roadmap?.status] || 'bg-white/10 text-white'}`}>
+                  {roadmap?.status || 'unknown'}
+                </span>
                 <span className="inline-flex items-center gap-2">
                   <Target className="h-4 w-4 text-white/60" />
                   {roadmap?.analysis?.jobRole?.title || 'Role unavailable'}
@@ -199,6 +263,8 @@ const RoadmapDetailPage = () => {
             <div className="h-[42rem] animate-pulse rounded-[2rem] border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800" />
             <div className="h-[42rem] animate-pulse rounded-[2rem] border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800" />
           </div>
+        ) : ['queued', 'processing', 'finalizing'].includes(roadmap?.status) ? (
+          <RoadmapProcessingState roadmap={roadmap} />
         ) : (
           <section className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.45fr)_340px]">
             <div className="space-y-6">
@@ -598,6 +664,144 @@ const Panel = ({ title, icon: Icon, children }) => (
     {children}
   </div>
 );
+
+const RoadmapProcessingState = ({ roadmap }) => {
+  const stages = [
+    { key: 'queued', label: 'Queued' },
+    { key: 'processing', label: 'Processing' },
+    { key: 'finalizing', label: 'Finalizing' },
+    { key: 'completed', label: 'Completed' },
+  ];
+
+  const currentStage = roadmap?.processingStage || roadmap?.status || 'queued';
+  const matchedStageIndex = stages.findIndex((stage) => stage.key === currentStage);
+  const currentIndex = matchedStageIndex >= 0 ? matchedStageIndex : 0;
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  useEffect(() => {
+    const baseTime = roadmap?.processingStartedAt || roadmap?.queuedAt || roadmap?.createdAt;
+    if (!baseTime) {
+      setElapsedSeconds(0);
+      return undefined;
+    }
+
+    const updateElapsed = () => {
+      const diffMs = Date.now() - new Date(baseTime).getTime();
+      setElapsedSeconds(Math.max(0, Math.floor(diffMs / 1000)));
+    };
+
+    updateElapsed();
+
+    if (!['queued', 'processing', 'finalizing'].includes(roadmap?.status)) {
+      return undefined;
+    }
+
+    const interval = window.setInterval(updateElapsed, 1000);
+    return () => window.clearInterval(interval);
+  }, [roadmap?.processingStartedAt, roadmap?.queuedAt, roadmap?.createdAt, roadmap?.status]);
+
+  const progressWidth = currentStage === 'completed'
+    ? 100
+    : currentStage === 'finalizing'
+      ? 86
+      : currentStage === 'processing'
+        ? 56
+        : 22;
+
+  const elapsedLabel = elapsedSeconds < 60
+    ? `${elapsedSeconds}s elapsed`
+    : `${Math.floor(elapsedSeconds / 60)}m ${String(elapsedSeconds % 60).padStart(2, '0')}s elapsed`;
+
+  return (
+    <section className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.2fr)_340px]">
+      <Panel title="Roadmap Generation" icon={Map}>
+        <div className="rounded-3xl border border-blue-100 bg-gradient-to-r from-blue-50 via-white to-teal-50 p-5 dark:border-blue-900/30 dark:from-blue-950/30 dark:via-neutral-900 dark:to-teal-950/20">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-neutral-900 dark:text-white">Worker activity</p>
+              <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                Live backend job state for roadmap generation.
+              </p>
+            </div>
+            <div className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1.5 text-xs font-semibold text-blue-700 shadow-sm dark:bg-neutral-800 dark:text-blue-300">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75" />
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-blue-500" />
+              </span>
+              {elapsedLabel}
+            </div>
+          </div>
+
+          <div className="mt-5 h-3 overflow-hidden rounded-full bg-neutral-200/80 dark:bg-neutral-700/80">
+            <div
+              className="relative h-full rounded-full bg-gradient-to-r from-blue-600 via-cyan-500 to-emerald-500 transition-[width] duration-700 ease-out"
+              style={{ width: `${progressWidth}%` }}
+            >
+              <div className="absolute inset-0 animate-pulse bg-white/20" />
+            </div>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-neutral-500 dark:text-neutral-400">
+            <span>Current stage: {String(currentStage).replaceAll('_', ' ')}</span>
+            <span>Typical completion time: 20 to 45 seconds</span>
+          </div>
+        </div>
+
+        <div className="mt-6 space-y-3">
+          {stages.map((stage, index) => {
+            const isDone = index < currentIndex || currentStage === 'completed';
+            const isActive = stage.key === currentStage;
+
+            return (
+              <div
+                key={stage.key}
+                className={`rounded-2xl border px-4 py-4 transition ${isActive ? 'border-blue-300 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20' : 'border-neutral-200 bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-900/60'}`}
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold ${isDone ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' : isActive ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' : 'bg-neutral-200 text-neutral-600 dark:bg-neutral-700 dark:text-neutral-300'}`}>
+                      {isDone ? <CheckCircle2 className="h-4 w-4" /> : index + 1}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-neutral-900 dark:text-white">{stage.label}</p>
+                      <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                        {isDone ? 'Finished' : isActive ? 'In progress' : 'Waiting'}
+                      </p>
+                    </div>
+                  </div>
+                  {isActive ? (
+                    <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                      Current
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </Panel>
+
+      <div className="space-y-5 xl:sticky xl:top-24 xl:self-start">
+        <Panel title="Current Status" icon={Rocket}>
+          <div className="space-y-3 text-sm text-neutral-600 dark:text-neutral-300">
+            <InfoRow label="Status" value={String(roadmap?.status || 'queued')} />
+            <InfoRow label="Stage" value={String(currentStage).replaceAll('_', ' ')} />
+            <InfoRow label="Elapsed" value={elapsedLabel} />
+            <InfoRow label="Role" value={roadmap?.analysis?.jobRole?.title || 'Selected role'} />
+          </div>
+        </Panel>
+
+        <Panel title="What Happens Next" icon={Clock3}>
+          <div className="space-y-3 text-sm leading-6 text-neutral-600 dark:text-neutral-300">
+            <p>The worker is building the roadmap structure and matching learning resources.</p>
+            <p>This page checks for status updates automatically without interrupting the view.</p>
+            <p>Once completed, phases, weekly tasks, quick wins, projects, and certifications will appear here automatically.</p>
+          </div>
+        </Panel>
+      </div>
+    </section>
+  );
+};
 
 const HeroStat = ({ label, value }) => (
   <div className="rounded-2xl bg-white/10 px-4 py-4 backdrop-blur-sm">

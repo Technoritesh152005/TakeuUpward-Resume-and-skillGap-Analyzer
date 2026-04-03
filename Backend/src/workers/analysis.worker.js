@@ -2,7 +2,7 @@ import { Worker } from 'bullmq'
 import { bullMqConnection } from '../config/bullmq.js'
 import { QUEUE_NAMES } from '../config/constant.js'
 import logger from '../utils/logs.js'
-import { processAnalysisGenerationJob } from '../services/analysisGeneration.service.js'
+import { processAnalysisGenerationJob } from '../services/workerController/analysisGeneration.service.js'
 
 // creating worker 
 // This creates a worker (background processor)

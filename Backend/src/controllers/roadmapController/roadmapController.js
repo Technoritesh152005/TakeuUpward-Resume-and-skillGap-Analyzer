@@ -2,13 +2,14 @@ import asyncHandler from '../../utils/asyncHandler.js'
 import ApiResponse from '../../utils/apiResponse.js'
 import { ApiError } from '../../utils/apiError.js'
 import analysisModel from '../../models/analysis.model.js'
-import performRoadmapInstance from '../../services/ai.services/roadmap_planner.js'
 import logger from '../../utils/logs.js'
 import resourceModel from '../../models/resources.model.js'
 import progressModel from '../../models/progress.model.js'
 import roadmapModel from '../../models/roadmap.model.js'
 import redisClient from '../../config/redis.js'
 import { refundAiUsage } from '../../services/aiQuota.service.js'
+import { enqueueRoadmapGeneration } from '../../queues/roadmap.queue.js'
+import { ROADMAP_PROCESSING_STAGE, ROADMAP_STATUS } from '../../config/constant.js'
 
 const RESOURCE_TYPE_FALLBACKS = {
     course: ['course', 'tutorial', 'documentation', 'article', 'video'],
@@ -379,110 +380,54 @@ export const createRoadmap = asyncHandler(async (req, res) => {
         throw new ApiError(400, 'Existing roadmap found of this analaysis')
     }
 
-    logger.info(200, 'Starting roadmap generation for the analysis')
-    // now create a roadmap by using claude service.
-    // u need to provide preference and analysis data
-
-    const analysisData = {
-        skillGaps: analysis.skillGaps,
-        strengths: analysis.candidateStrength,
-        transferskills: analysis.transferrableSkills
-    }
     const preference = {
         hoursPerWeek: preferences?.hoursPerWeek || req.user?.preferences?.hoursPerWeek || 10,
         budget: preferences?.budget || req.user?.preferences?.budget || 'free',
         learningStyle: preferences?.learningStyle || req.user?.preferences?.learningStyle || 'mixed',
     }
-    const roadmapData = await performRoadmapInstance.performRoadmap(analysisData, preference)
+    logger.info(200, 'Starting roadmap generation for the analysis')
 
-    if (!roadmapData) {
-        throw new ApiError(400, 'Failed to generate roadmap for the analysis')
-    }
+    const queuedRoadmap = await roadmapModel.create({
+        user: req.user._id,
+        analysis: analysisId,
+        title: analysis?.jobRole?.title || 'Your Roadmap',
+        userPreferences: preference,
+        duration: { weeks: 0 },
+        phases: [],
+        quickwins: [],
+        projects: [],
+        certification: [],
+        progress: {
+            totalItems: 0,
+            milestones: [],
+        },
+        status: ROADMAP_STATUS.QUEUED,
+        processingStage: ROADMAP_PROCESSING_STAGE.QUEUED,
+        queuedAt: new Date(),
+    })
 
-    const normalizedRoadmap = normalizeRoadmapPayload(roadmapData)
-
-    // now as u got roamdpa data it will give u plan but u need to find the best learning resource for it
-    // it will have multiple phases and multiple week and have multiple learning items.
-    // each learning item u need to provide resource from your resources model
-
-    for (const phase of normalizedRoadmap.phases) {
-        for (const week of phase.weeklyBreakdown) {
-            for (const item of week.learningItems) {
-                const learningResource = await findBestResourceForItem(item, preference)
-
-                if (learningResource) {
-                    item.resource = learningResource._id;
-                    if (learningResource.url && (!item.url || isGeneratedResourceLink(item.url))) {
-                        item.url = learningResource.url;
-                    }
-                    item.title = learningResource.title || item.title;
-                }
-                // if we dont have resource just make a query
-                else if (!item.url) {
-                    // Keep every item actionable even when the resource catalog has no exact match yet.
-                    item.url = buildResourceSearchLink(item)
-                }
-            }
-        }
-    }
-    // now u got roadmap data and also provided resource to itso start to save it
+    await clearRoadmapCache(analysisId, req.user._id);
 
     try {
-        const roadmap = await roadmapModel.create(
-            {
-                user: req.user._id,
-                analysis: analysisId,
-                title: analysis?.jobRole?.title || 'Your Roadmap',
-                duration: normalizedRoadmap.duration,
-                phases: normalizedRoadmap.phases,
-                quickwins: normalizedRoadmap.quickwins,
-                projects: normalizedRoadmap.projects,
-                certification: normalizedRoadmap.certification,
-                progress: {
-                    totalItems: normalizedRoadmap.phases.reduce((total, phase) => {
-                        return (
-                            total +
-                            phase.weeklyBreakdown.reduce((weekTotal, week) => {
-                                return weekTotal + week.learningItems.length;
-                            }, 0)
-                        );
-                    }, 0),
-                    milestones: normalizedRoadmap.milestones,
-                },
-                userPreferences: preference,
-            }
-        )
-        if (!roadmap) {
-            throw new ApiError(400, 'Unable to create roadmap')
-        }
+        await enqueueRoadmapGeneration({
+            roadmapId: queuedRoadmap._id,
+            analysisId,
+            userId: req.user._id,
+        })
 
-        //create  progress also when u create roadmap create progress also
-        await progressModel.findOneAndUpdate(
-            {
-                user: req.user._id,
-                roadmap: roadmap._id
-            },
-            {
-                $setOnInsert: {
-                    user: req.user._id,
-                    roadmap: roadmap._id
-                }
-            },
-            {
-                upsert: true,
-                new: true
-            }
-        )
-
-        await clearRoadmapCache(analysisId, req.user._id);
-
-        res.status(200)
-            .json(new ApiResponse(201, { roadmap, aiUsage: req.aiUsage }, 'User successfully created roadmap'))
+        return res.status(202)
+            .json(new ApiResponse(202, { roadmap: queuedRoadmap, aiUsage: req.aiUsage }, 'Roadmap queued successfully'))
     } catch (error) {
         if (req.aiQuotaReserved) {
             req.aiUsage = await refundAiUsage(req.user._id);
             req.aiQuotaReserved = false;
         }
+
+        queuedRoadmap.error = error.message
+        queuedRoadmap.status = ROADMAP_STATUS.FAILED
+        queuedRoadmap.processingStage = ROADMAP_PROCESSING_STAGE.FAILED
+        await queuedRoadmap.save()
+        await clearRoadmapCache(analysisId, req.user._id);
 
         throw error
     }
@@ -541,6 +486,23 @@ export const getRoadmapById = asyncHandler(async (req, res) => {
     }
 
     res.json(new ApiResponse(200, populatedRoadmap, 'Roadmap fetched successfully'));
+})
+
+export const getRoadmapStatus = asyncHandler(async (req, res) => {
+    const roadmap = await roadmapModel.findOne({
+        _id: req.params.id,
+        user: req.user._id
+        // we only transfer selected data not whole payload
+    }).select('_id analysis title status processingStage error queuedAt processingStartedAt completedAt processingTime userPreferences')
+
+    if (!roadmap) {
+        throw new ApiError(404, 'Roadmap not found');
+    }
+
+    res.set('Cache-Control', 'no-store')
+    res.status(200).json(
+        new ApiResponse(200, roadmap, 'Roadmap status fetched successfully')
+    )
 })
 
 export const markItemComplete = asyncHandler(async (req, res) => {
@@ -674,7 +636,7 @@ export const getMyRoadmaps = asyncHandler(async (req, res) => {
             path: 'analysis',
             populate: { path: 'jobRole', select: 'title category' },
         })
-        .select('duration progress createdAt')
+        .select('title duration progress createdAt status processingStage userPreferences')
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(parseInt(limit));

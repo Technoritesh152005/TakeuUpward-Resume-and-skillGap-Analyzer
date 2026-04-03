@@ -25,8 +25,24 @@ export const ANALYSIS_PROCESSING_STAGE = {
   FAILED: 'failed',
 };
 
+export const ROADMAP_STATUS = {
+  QUEUED: 'queued',
+  PROCESSING: 'processing',
+  COMPLETED: 'completed',
+  FAILED: 'failed',
+};
+
+export const ROADMAP_PROCESSING_STAGE = {
+  QUEUED: 'queued',
+  PROCESSING: 'processing',
+  FINALIZING: 'finalizing',
+  COMPLETED: 'completed',
+  FAILED: 'failed',
+};
+
 export const QUEUE_NAMES = {
   ANALYSIS_GENERATION: 'analysis-generation',
+  ROADMAP_GENERATION: 'roadmap-generation',
 };
 
 export const JOB_CATEGORIES = {
@@ -87,5 +103,7 @@ export default {
   CACHE_TTL,
   PAGINATION,
   ANALYSIS_PROCESSING_STAGE,
+  ROADMAP_STATUS,
+  ROADMAP_PROCESSING_STAGE,
   QUEUE_NAMES,
 };

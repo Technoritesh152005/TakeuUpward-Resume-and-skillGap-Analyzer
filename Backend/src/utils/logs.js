@@ -1,6 +1,16 @@
 import winston from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
 import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const logDirectory = path.resolve(__dirname, '../../logs');
+
+if (!fs.existsSync(logDirectory)) {
+    fs.mkdirSync(logDirectory, { recursive: true });
+}
 
 // first create a format of how u want to store
 const logFormat = winston.format.combine(
@@ -37,7 +47,7 @@ const transports =
     // it daily creates a new file and store logs in this file
     // inside logs folder this file will go
     new DailyRotateFile({
-        filename:path.join('logs','application-%DATE%.log'),
+        filename:path.join(logDirectory,'application-%DATE%.log'),
         datePattern:'YYYY-MM-DD',
         maxSize:'20m',
         maxFiles:'14d',
@@ -47,7 +57,7 @@ const transports =
     // only error logs goes to this file
     new DailyRotateFile({
         level:'error',
-        filename:path.join('logs','error-%DATE%'),
+        filename:path.join(logDirectory,'error-%DATE%'),
         maxSize:'20m',
         maxFiles:'14d',
         format:logFormat,
@@ -63,14 +73,14 @@ const logger = winston.createLogger({
     // if app crashes due to uncaught error save here
     exceptionHandlers:[
         new winston.transports.File({
-            filename:path.join('logs','exception.log')
+            filename:path.join(logDirectory,'exception.log')
         })
     ],
 
     // these handles promises
     rejectionHandlers: [
     new winston.transports.File({ 
-      filename: path.join('logs', 'rejections.log') 
+      filename: path.join(logDirectory, 'rejections.log') 
     }),
   ],
 })

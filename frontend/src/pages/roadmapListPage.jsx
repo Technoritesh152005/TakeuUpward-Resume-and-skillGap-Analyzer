@@ -16,6 +16,7 @@ import {format} from 'date-fns'
 import DashboardLayout from "../components/layout/DashboardLayout";
 
 const getProgressValue = (roadmap)=> roadmap?.progress?.overallPercentage || 0
+const hasActiveRoadmapJob = (roadmap)=> ['queued', 'processing', 'finalizing'].includes(roadmap?.status)
 
 const getDurationValue = (roadmap)=>{
   const weeks = roadmap?.duration?.weeks || 0;
@@ -32,10 +33,23 @@ const roadmapListPage = ()=>{
     fetchAllRoadmap()
   },[])
 
-  const fetchAllRoadmap = async()=>{
+  // Poll silently only while at least one roadmap job is still active.
+  useEffect(() => {
+    if (!roadmap.some(hasActiveRoadmapJob)) return undefined
+
+    const interval = window.setInterval(() => {
+      fetchAllRoadmap({ silent: true })
+    }, 4000)
+
+    return () => window.clearInterval(interval)
+  }, [roadmap])
+
+  const fetchAllRoadmap = async({ silent = false } = {})=>{
 
     try{
-      setLoading(true)
+      if (!silent) {
+        setLoading(true)
+      }
       const response = await roadmapService.getMyRoadmaps(
         {
           page:1,
@@ -49,7 +63,9 @@ const roadmapListPage = ()=>{
       console.error(error)
       toast.error('failed to load roadmap')
     }finally{
-      setLoading(false)
+      if (!silent) {
+        setLoading(false)
+      }
     }
   }
 
@@ -125,6 +141,11 @@ const roadmapListPage = ()=>{
                       <span className="rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700 dark:bg-primary-900/20 dark:text-primary-300">
                         {getDurationValue(roadmap)}
                       </span>
+                      {roadmap?.status && roadmap?.status !== 'completed' ? (
+                        <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold capitalize text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
+                          {roadmap.status}
+                        </span>
+                      ) : null}
                       <span className="text-xs text-neutral-500 dark:text-neutral-400">
                         {roadmap?.createdAt ? format(new Date(roadmap.createdAt), 'dd MMM yyyy') : 'No date'}
                       </span>
@@ -144,7 +165,9 @@ const roadmapListPage = ()=>{
                     </div>
 
                     <p className="mt-4 line-clamp-2 text-sm leading-6 text-neutral-600 dark:text-neutral-300">
-                      {roadmap?.userPreferences?.hoursPerWeek
+                      {hasActiveRoadmapJob(roadmap)
+                        ? `This roadmap is ${roadmap.status}. Open it to follow live background progress.`
+                        : roadmap?.userPreferences?.hoursPerWeek
                         ? `Built for ${roadmap.userPreferences.hoursPerWeek} hours/week with a ${roadmap.userPreferences.budget || 'custom'} budget and ${roadmap.userPreferences.learningStyle || 'mixed'} learning style.`
                         : 'Open this roadmap to review phases, weekly learning items, portfolio projects, and certifications.'}
                     </p>

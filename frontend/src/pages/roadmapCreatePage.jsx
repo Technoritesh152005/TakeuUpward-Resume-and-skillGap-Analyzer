@@ -165,6 +165,13 @@ const RoadmapCreatePage = () => {
 
   const canSubmit = Boolean(selectedAnalysisId) && !creating && completedAnalyses.length > 0;
 
+  const roadmapStatusCopy = {
+    queued: 'Roadmap queued successfully',
+    processing: 'Roadmap generation started',
+    finalizing: 'Roadmap is being finalized',
+    completed: 'Roadmap created successfully',
+  };
+
   const handleCreateRoadmap = async (event) => {
     event.preventDefault();
 
@@ -179,15 +186,17 @@ const RoadmapCreatePage = () => {
 
     try {
       setCreating(true);
-      const roadmap = await roadmapService.createRoadmap(selectedAnalysisId, {
+      const response = await roadmapService.createRoadmap(selectedAnalysisId, {
         hoursPerWeek: Number(preferences.hoursPerWeek),
         budget: preferences.budget,
         learningStyle: preferences.learningStyle,
       });
-      if (roadmap?.aiUsage) setAiUsage(roadmap.aiUsage);
+      const roadmap = response?.roadmap || response;
+      if (response?.aiUsage) setAiUsage(response.aiUsage);
 
-      toast.success('Roadmap created successfully');
-      navigate(`/roadmap/${roadmap?.roadmap?._id || roadmap?._id}`);
+      // Queue-aware create flow: navigate immediately and let detail page track progress.
+      toast.success(roadmapStatusCopy[roadmap?.status] || 'Roadmap created successfully');
+      navigate(`/roadmap/${roadmap?._id}`);
     } catch (error) {
       const message =
         error?.response?.data?.message ||

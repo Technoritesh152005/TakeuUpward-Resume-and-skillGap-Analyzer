@@ -13,6 +13,7 @@ import {connectDb} from './db/db.connect.js'
 import logger from './utils/logs.js';
 import mongoose from 'mongoose';
 import { startAnalysisWorker } from './workers/analysis.worker.js';
+import { startRoadmapWorker } from './workers/roadmap.worker.js';
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (err) => {
@@ -26,6 +27,7 @@ process.on('uncaughtException', (err) => {
 // Connect to database
 connectDb();
 const analysisWorker = startAnalysisWorker()
+const roadmapWorker = startRoadmapWorker()
 
 // Start server
 const PORT = process.env.PORT || 5000;
@@ -56,6 +58,9 @@ const gracefulShutdown = (signal) => {
 
     analysisWorker.close().catch((error) => {
       logger.error(`Failed to close analysis worker cleanly: ${error.message}`);
+    });
+    roadmapWorker.close().catch((error) => {
+      logger.error(`Failed to close roadmap worker cleanly: ${error.message}`);
     });
     
     // Close database connection
