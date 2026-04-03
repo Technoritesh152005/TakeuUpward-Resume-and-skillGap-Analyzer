@@ -9,6 +9,7 @@ import {
     getRoadmapByAnalysis,
     updateReference,
     getRoadmapById,
+    getRoadmapStatus,
     getProgressOfUser,
     markItemComplete
 }
@@ -43,6 +44,7 @@ router.get('/',protectAccess,validateRoadmapListQuery,getMyRoadmaps)
 router.get('/analysis/:analysisId',protectAccess,validateRoadmapAnalysisId,getRoadmapByAnalysis)
 
 // 4.get roadmap by id
+router.get('/:id/status',protectAccess,validateRoadmapId,getRoadmapStatus)
 router.get('/:id',protectAccess,validateRoadmapId,getRoadmapById)
 
 // 5. get users progress on roadmap

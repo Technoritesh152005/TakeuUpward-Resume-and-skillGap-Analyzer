@@ -1,12 +1,12 @@
-import analysisModel from '../models/analysis.model.js'
-import resumeModel from '../models/resume.model.js'
-import jobRoleModel from '../models/jobrole.model.js'
-import skillgapanalysis from './ai.services/skill_gap_analysis.js'
-import generateAtsScore from './ai.services/ats_score_generator.js'
-import redisClient from '../config/redis.js'
-import logger from '../utils/logs.js'
-import { refundAiUsage } from './aiQuota.service.js'
-import { ANALYSIS_PROCESSING_STAGE, ANALYSIS_STATUS } from '../config/constant.js'
+import analysisModel from '../../models/analysis.model.js'
+import resumeModel from '../../models/resume.model.js'
+import jobRoleModel from '../../models/jobrole.model.js'
+import skillgapanalysis from '../ai.services/skill_gap_analysis.js'
+import generateAtsScore from '../ai.services/ats_score_generator.js'
+import redisClient from '../../config/redis.js'
+import logger from '../../utils/logs.js'
+import { refundAiUsage } from '../aiQuota.service.js'
+import { ANALYSIS_PROCESSING_STAGE, ANALYSIS_STATUS } from '../../config/constant.js'
 
 const extractNumericValue = (value) => {
     if (typeof value === 'number' && Number.isFinite(value)) {

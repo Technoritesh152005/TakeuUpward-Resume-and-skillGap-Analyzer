@@ -1,3 +1,17 @@
+LATEST OPTIMIZATION NOTES - 2026-04-03
+
+Best optimizations, in order:
+- Reduce prompt size. Don't send the full pretty-printed resume JSON if you only need skills, experience, projects, education, and summary.
+- Reduce output size. Current Gemini config allows 8000 output tokens in Backend/src/config/gemini.js. For these JSON tasks, 2000-4000 is usually enough.
+- Make roadmap resource matching batched, not sequential. Right now each learning item can trigger a separate Mongo query. That's the biggest roadmap bottleneck.
+- Consider making ATS deterministic or merging ATS + skill-gap into one AI call. Two AI calls are better for separation, but they cost latency.
+- Cache completed analysis/roadmap outputs by resumeId + jobRoleId + preferences if the same request is repeated.
+
+Fastest safe wins:
+1. trim prompts
+2. lower maxOutputTokens
+3. batch roadmap resource enrichment
+
 first we need to do
 create analyss page
 create detailed analysis overview page
@@ -439,3 +453,4 @@ Goal:
 - queue for create analysis
 - queue for create roadmap
 - cache and reuse analysis results
+

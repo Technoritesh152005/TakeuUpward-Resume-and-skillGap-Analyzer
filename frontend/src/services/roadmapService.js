@@ -56,11 +56,16 @@ const roadmapService = {
     return extractPayload(response);
   },
 
+  getRoadmapStatus: async (id) => {
+    const response = await api.get(`/roadmap/${id}/status`);
+    return extractPayload(response);
+  },
+
   getRoadmapByAnalysis: async (analysisId) => {
     const response = await api.get(`/roadmap/analysis/${analysisId}`);
     return extractPayload(response);
   },
-
+  
   getRoadmapProgress: async (roadmapId) => {
     const response = await api.get(`/roadmap/${roadmapId}/progress`);
     return extractPayload(response);

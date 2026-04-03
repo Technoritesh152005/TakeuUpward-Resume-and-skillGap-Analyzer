@@ -1,4 +1,5 @@
 import mongoose from 'mongoose'
+import { ROADMAP_PROCESSING_STAGE, ROADMAP_STATUS } from '../config/constant.js'
 
 const roadmapSchema = mongoose.Schema({
 
@@ -157,6 +158,24 @@ const roadmapSchema = mongoose.Schema({
         budget: String,
         learningStyle: String,
     },
+
+    // shows status of the roamdpa like queue prcoessing , completed , failed
+    status: {
+        type: String,
+        enum: Object.values(ROADMAP_STATUS),
+        default: ROADMAP_STATUS.COMPLETED,
+        index: true,
+    },
+    processingStage: {
+        type: String,
+        enum: Object.values(ROADMAP_PROCESSING_STAGE),
+        default: ROADMAP_PROCESSING_STAGE.COMPLETED,
+    },
+    queuedAt: Date,
+    processingStartedAt: Date,
+    completedAt: Date,
+    processingTime: Number,
+    error: String,
 
     isActive: {
         type: Boolean,
