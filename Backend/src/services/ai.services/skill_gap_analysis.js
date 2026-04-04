@@ -2,22 +2,104 @@ import { getModel } from '../../config/gemini.js';
 import logger from '../../utils/logs.js';
 
 class SkillGapAnalysis {
+    toString(value) {
+        return String(value || '').trim();
+    }
+
+    toStringArray(value, limit = 10) {
+        if (!Array.isArray(value)) return [];
+
+        return value
+            .map((item) => {
+                if (typeof item === 'string') return this.toString(item);
+                return this.toString(item?.title || item?.skill || item?.name);
+            })
+            .filter(Boolean)
+            .slice(0, limit);
+    }
+
+    buildCompactResumeSummary(resumeData = {}) {
+        const skills = resumeData?.skills || {};
+        const experience = Array.isArray(resumeData?.experience) ? resumeData.experience : [];
+        const projects = Array.isArray(resumeData?.project || resumeData?.projects)
+            ? (resumeData.project || resumeData.projects)
+            : [];
+        const education = Array.isArray(resumeData?.education || resumeData?.eduaction)
+            ? (resumeData.education || resumeData.eduaction)
+            : [];
+        const certifications = Array.isArray(resumeData?.certifications)
+            ? resumeData.certifications
+            : resumeData?.certification
+                ? [resumeData.certification]
+                : [];
+
+        return {
+            summary: this.toString(resumeData?.summary),
+            skills: {
+                technical: this.toStringArray(skills?.technical, 12),
+                frameworks: this.toStringArray(skills?.frameworks, 12),
+                tools: this.toStringArray(skills?.tools, 12),
+                languages: this.toStringArray(skills?.languages || skills?.language, 10),
+                databases: this.toStringArray(skills?.database || skills?.databases, 10),
+                others: this.toStringArray(skills?.others, 8),
+            },
+            experience: experience.slice(0, 4).map((item) => ({
+                title: this.toString(item?.title),
+                company: this.toString(item?.company),
+                startDate: this.toString(item?.startDate),
+                endDate: item?.current ? 'Present' : this.toString(item?.endDate),
+                highlights: this.toStringArray(
+                    item?.responsibilities || item?.highlights || item?.achievements,
+                    3
+                ),
+                technologies: this.toStringArray(item?.technologies || item?.skillsUsed, 6),
+            })),
+            projects: projects.slice(0, 4).map((item) => ({
+                title: this.toString(item?.title),
+                technologies: this.toStringArray(item?.technologies, 6),
+                highlights: this.toStringArray(
+                    item?.highlights || item?.description || item?.bulletPoints,
+                    2
+                ),
+            })),
+            education: education.slice(0, 2).map((item) => ({
+                degree: this.toString(item?.degree || item?.title),
+                institution: this.toString(item?.institution || item?.school || item?.college),
+                year: this.toString(item?.year || item?.graduationYear || item?.endDate),
+            })),
+            certifications: certifications.slice(0, 4).map((item) => ({
+                title: this.toString(item?.title || item?.name),
+                issuer: this.toString(item?.issuer || item?.provider),
+            })),
+        };
+    }
+
+    buildCompactRoleSummary(jobRole = {}) {
+        return {
+            title: this.toString(jobRole?.title),
+            category: this.toString(jobRole?.category),
+            experienceLevel: this.toString(jobRole?.experienceLevel),
+            requiredSkills: {
+                critical: this.toStringArray(jobRole?.requiredSkills?.critical, 10),
+                important: this.toStringArray(jobRole?.requiredSkills?.important, 10),
+                niceToHave: this.toStringArray(jobRole?.requiredSkills?.niceToHave, 10),
+            },
+        };
+    }
+
     async performDeepSkillGapAnalyze(resumeData, jobRole) {
         try {
+            const compactResume = this.buildCompactResumeSummary(resumeData);
+            const compactRole = this.buildCompactRoleSummary(jobRole);
+
             const prompt = `
 You are an expert career coach analyzing a candidate's fit for a job role.
 
 CANDIDATE PROFILE:
-${JSON.stringify(resumeData, null, 2)}
+${JSON.stringify(compactResume, null, 2)}
 
-TARGET JOB ROLE: ${jobRole.title}
-CATEGORY: ${jobRole.category}
-EXPERIENCE LEVEL: ${jobRole.experienceLevel}
-
-REQUIRED SKILLS:
-Critical: ${JSON.stringify(jobRole.requiredSkills.critical)}
-Important: ${JSON.stringify(jobRole.requiredSkills.important)}
-Nice-to-Have: ${JSON.stringify(jobRole.requiredSkills.niceToHave)}
+TARGET JOB ROLE:
+${JSON.stringify(compactRole, null, 2)}
 
 Perform comprehensive gap analysis and return ONLY valid JSON:
 

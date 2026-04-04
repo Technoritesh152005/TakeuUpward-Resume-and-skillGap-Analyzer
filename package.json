@@ -9,6 +9,7 @@
     "concurrently": "^8.2.2"
   },
   "dependencies": {
+    "@aws-sdk/client-textract": "^3.1024.0",
     "bullmq": "^5.72.1",
     "ioredis": "^5.10.1"
   }

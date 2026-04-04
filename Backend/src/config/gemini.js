@@ -7,7 +7,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const GEMINI_CONFIG = {
   model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
   temperature: 0.7,
-  maxOutputTokens: 8000,
+  maxOutputTokens: 3000,
 };
 
 // Get model instance

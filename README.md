@@ -343,4 +343,4 @@ For support, email riteshkhilari4@example.com or open an issue in the repository
 
 ---
 
-Made with ❤️ by Ritesh Khilari
+Made by Ritesh Khilari
