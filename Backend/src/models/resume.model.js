@@ -114,12 +114,36 @@ const resumeSchema = mongoose.Schema(
             ],
             
         },
+        // resume processing status
         processingStatus:{
             type:String,
             enum:['pending','completed','processing','failed'],
             default:'pending',
             },
             processError:String,
+            // all the text of the ocr based text extraction are stored here
+            ocrText: {
+                type: String,
+                select: false,
+            },
+            // states whether ocr have been used or not
+            ocrUsed: {
+                type: Boolean,
+                default: false,
+            },
+            // if ocr used show its status
+            ocrStatus: {
+                type: String,
+                enum: ['not_needed', 'processing', 'completed', 'failed'],
+                default: 'not_needed',
+            },
+            // textextraction source means whether the text extraction is done by native or ocr
+            textExtractionSource: {
+                type: String,
+                enum: ['native', 'ocr'],
+                default: 'native',
+            },
+            // raw text means the text extracted from the resume by native or ocr
             rawText:{
                 type: String,
                 select: false,

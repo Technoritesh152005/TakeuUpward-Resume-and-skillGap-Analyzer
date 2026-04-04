@@ -2,6 +2,10 @@ import { getModel } from '../../config/gemini.js';
 import logger from '../../utils/logs.js';
 
 class AtsScoreGenerator {
+    toString(value) {
+        return String(value || '').trim();
+    }
+
     toScore(value, fallback = 0) {
         if (typeof value === 'number' && Number.isFinite(value)) {
             return Math.max(0, Math.min(100, Math.round(value)));
@@ -19,11 +23,18 @@ class AtsScoreGenerator {
 
     toStringArray(value, fallback = []) {
         if (Array.isArray(value)) {
+            // if its an array map through it and return the string value of the item
             return value
-                .map((item) => String(item || '').trim())
+                .map((item) => {
+                    // if its a string return it as a string
+                    if (typeof item === 'string') return this.toString(item);
+                    // if its an object return the title, skill, or name property
+                    return this.toString(item?.title || item?.skill || item?.name);
+                })
                 .filter(Boolean);
         }
 
+        // if its not array but a string return it as an array
         if (typeof value === 'string' && value.trim()) {
             return [value.trim()];
         }
@@ -111,7 +122,7 @@ class AtsScoreGenerator {
         const structure = this.normalizeSection(
             breakdownSource.structure ?? source.structure,
             fallbackBreakdown.structure
-        );
+        )
 
         const content = this.normalizeSection(
             breakdownSource.content ?? source.content,
@@ -121,7 +132,7 @@ class AtsScoreGenerator {
         const derivedOverall = Math.round(
             (formatting.score + keywords.score + structure.score + content.score) / 4
         );
-
+        
         return {
             overallScore: this.toScore(
                 source.overallScore ??
@@ -194,6 +205,80 @@ class AtsScoreGenerator {
         return null;
     }
 
+    // build a compact resume summary object with the following properties:
+    // summary: the summary of the resume
+    // skills: an object with the following properties:
+    //   technical: an array of technical skills
+    //   frameworks: an array of frameworks
+    //   tools: an array of tools
+    //   languages: an array of languages
+    //   databases: an array of databases
+    // experience: an array of experience objects with the following properties:
+    //   title: the title of the experience
+    //   company: the company of the experience
+    //   startDate: the start date of the experience
+    //   endDate: the end date of the experience
+    //   highlights: an array of highlights
+    //   technologies: an array of technologies
+    // projects: an array of project objects with the following properties:
+    //   title: the title of the project
+    buildCompactResumeSummary(resumeData = {}) {
+        const skills = resumeData?.skills || {};
+        const experience = Array.isArray(resumeData?.experience) ? resumeData.experience : [];
+        const projects = Array.isArray(resumeData?.project || resumeData?.projects)
+            ? (resumeData.project || resumeData.projects)
+            : [];
+        const education = Array.isArray(resumeData?.education || resumeData?.eduaction)
+            ? (resumeData.education || resumeData.eduaction)
+            : [];
+
+        return {
+            summary: this.toString(resumeData?.summary),
+            skills: {
+                technical: this.toStringArray(skills?.technical).slice(0, 12),
+                frameworks: this.toStringArray(skills?.frameworks).slice(0, 12),
+                tools: this.toStringArray(skills?.tools).slice(0, 12),
+                languages: this.toStringArray(skills?.languages || skills?.language).slice(0, 10),
+                databases: this.toStringArray(skills?.database || skills?.databases).slice(0, 10),
+            },
+            experience: experience.slice(0, 4).map((item) => ({
+                title: this.toString(item?.title),
+                company: this.toString(item?.company),
+                startDate: this.toString(item?.startDate),
+                endDate: item?.current ? 'Present' : this.toString(item?.endDate),
+                highlights: this.toStringArray(
+                    item?.responsibilities || item?.highlights || item?.achievements
+                ).slice(0, 3),
+            })),
+            projects: projects.slice(0, 4).map((item) => ({
+                title: this.toString(item?.title),
+                technologies: this.toStringArray(item?.technologies).slice(0, 6),
+                highlights: this.toStringArray(
+                    item?.highlights || item?.description || item?.bulletPoints
+                ).slice(0, 2),
+            })),
+            education: education.slice(0, 2).map((item) => ({
+                degree: this.toString(item?.degree || item?.title),
+                institution: this.toString(item?.institution || item?.school || item?.college),
+            })),
+        };
+    }
+
+
+    buildCompactRoleSummary(jobRole = {}) {
+        return {
+            title: this.toString(jobRole?.title),
+            category: this.toString(jobRole?.category),
+            experienceLevel: this.toString(jobRole?.experienceLevel),
+            requiredSkills: {
+                critical: this.toStringArray(jobRole?.requiredSkills?.critical).slice(0, 10),
+                important: this.toStringArray(jobRole?.requiredSkills?.important).slice(0, 10),
+                niceToHave: this.toStringArray(jobRole?.requiredSkills?.niceToHave).slice(0, 10),
+            },
+        };
+    }
+
+    // extract the candidate skills from the resume data
     extractCandidateSkills(resumeData) {
         const groups = [
             resumeData?.skills?.technical,
@@ -272,16 +357,17 @@ class AtsScoreGenerator {
 
     async getAtsScore(resumeData, jobRole) {
         try {
-            const resumeText = JSON.stringify(resumeData, null, 2);
+            const compactResume = this.buildCompactResumeSummary(resumeData);
+            const compactRole = this.buildCompactRoleSummary(jobRole);
 
             const prompt = `
 Analyze this resume for ATS (Applicant Tracking System) compatibility.
 
 RESUME:
-${resumeText}
+${JSON.stringify(compactResume, null, 2)}
 
-TARGET JOB: ${jobRole.title}
-REQUIRED SKILLS: ${JSON.stringify(jobRole.requiredSkills)}
+TARGET JOB:
+${JSON.stringify(compactRole, null, 2)}
 
 Return ONLY valid JSON:
 
