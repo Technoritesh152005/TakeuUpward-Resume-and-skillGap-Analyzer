@@ -12,7 +12,7 @@ class TextExtractor {
                 case 'application/pdf':
 
                     const pdfresult = await extractPdfText(file)
-                    console.log(pdfresult.text)
+                    
                     return {
                        text : pdfresult.text,
                        count :this.countWords(pdfresult.text),

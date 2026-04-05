@@ -2,12 +2,15 @@ import fs from 'fs/promises';
 import os from 'os';
 import path from 'path';
 import { spawn } from 'child_process';
+import { fileURLToPath } from 'url';
 import logger from '../../utils/logs.js';
 
 // length of the text to maintain to use this fallback
 const MINIMUM_NATIVE_TEXT_THRESHOLD_LENGTH = 300;
-// path to ur python ocr script
-const OCR_SCRIPT_PATH = path.resolve(process.cwd(), 'Backend/src/scripts/ocr_resume.py');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+// keep script lookup stable regardless of whether the backend starts from repo root or Backend/
+const OCR_SCRIPT_PATH = path.resolve(__dirname, '../../scripts/ocr_resume.py');
 
 // cleans text
 const normalizeText = (value = '') => String(value).replace(/\s+/g, ' ').trim();
@@ -15,18 +18,36 @@ const normalizeText = (value = '') => String(value).replace(/\s+/g, ' ').trim();
 class OcrService {
 
     constructor() {
-        Controls:
-
-// OCR ON/OFF using env
-// Which Python to use
+        // OCR ON/OFF using env and allow overriding the Python executable path.
         this.isEnabled = String(process.env.OCR_FALLBACK_ENABLED).toLowerCase() === 'true';
         this.pythonPath = process.env.PYTHON_PATH || 'python';
     }
 
-    // if the text is under that limit it return true and if true we start ocr
+    // OCR should also run when native extraction returns noisy garbage, not only short text.
     shouldUseOcrFallback(text) {
         const normalizedText = normalizeText(text);
-        return normalizedText.length > 0 && normalizedText.length < MINIMUM_NATIVE_TEXT_THRESHOLD_LENGTH;
+
+        if (!normalizedText) {
+            return true;
+        }
+
+        if (normalizedText.length < MINIMUM_NATIVE_TEXT_THRESHOLD_LENGTH) {
+            return true;
+        }
+
+        const readableWordCount = (normalizedText.match(/[A-Za-z]{2,}/g) || []).length;
+        const alphaCharacters = (normalizedText.match(/[A-Za-z]/g) || []).length;
+        const alphaRatio = alphaCharacters / normalizedText.length;
+
+        if (readableWordCount < 40) {
+            return true;
+        }
+
+        if (alphaRatio < 0.45) {
+            return true;
+        }
+
+        return false;
     }
 
     async extractTextWithTesseract(fileBuffer) {

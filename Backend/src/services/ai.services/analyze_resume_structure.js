@@ -175,7 +175,7 @@ ${invalidJson}
     try {
       return this.tryParseJson(extracted);
     } catch (firstError) {
-      logger.error(`Primary JSON parse failed: ${firstError.message}`);
+      logger.warn(`Primary JSON parse failed, attempting Gemini repair: ${firstError.message}`);
 
       const repaired = await this.repairJsonWithGemini(extracted);
       return this.tryParseJson(repaired);

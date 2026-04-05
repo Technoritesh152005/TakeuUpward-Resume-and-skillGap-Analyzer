@@ -33,14 +33,22 @@ const clearResumeDetailCache = async (resumeId, userId) => {
 
 export const uploadResume = asyncHandler(async (req, res, next) => {
 
-    console.log(req.file)
     if (!req.file) {
         throw new ApiError(400, 'Please upload your resume')
     }
     const { buffer, mimetype, originalname, size } = req.file
 
     logger.info('Processing uploading of file')
-    const { parsedData, wordCount, rawText, pageCount } = await resumeParserInstance.parseResume(buffer, mimetype)
+    const {
+        parsedData,
+        wordCount,
+        rawText,
+        pageCount,
+        ocrText,
+        ocrUsed,
+        ocrStatus,
+        textExtractionSource,
+    } = await resumeParserInstance.parseResume(buffer, mimetype)
     if (!parsedData) {
         throw new ApiError(401, 'Faced difficulty to parse data from resume')
     }
@@ -57,6 +65,10 @@ export const uploadResume = asyncHandler(async (req, res, next) => {
         storagetType: 'local',
         processingStatus: 'completed',
         rawText,
+        ocrText,
+        ocrUsed,
+        ocrStatus,
+        textExtractionSource,
         wordCount,
         pageCount,
         parsedData: {
