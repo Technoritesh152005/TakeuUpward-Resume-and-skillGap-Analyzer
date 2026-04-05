@@ -454,3 +454,29 @@ Goal:
 - queue for create roadmap
 - cache and reuse analysis results
 
+
+========================================
+REMAINING TODOS - 2026-04-05
+========================================
+
+1. ATS ACTIONABILITY
+- return recommendedKeywords
+- return weakPhrases
+- return rewriteSuggestions
+- show ATS keyword and rewrite guidance on analysis detail page
+
+2. JOB SUGGESTIONS FROM ANALYSIS
+- suggest jobs for selected target role based on skill match
+- suggest adjacent roles based on transferable skills
+- add apply-now / apply-soon / stretch labels
+
+3. RETRY AND FAILURE POLISH
+- improve failed-state UI for queued analysis and roadmap jobs
+- add controlled retry for failed jobs
+- verify quota refund behavior on failed background jobs
+
+4. METRICS / OBSERVABILITY
+- track queue wait time
+- track processing time
+- track AI failure rate
+- track OCR usage and OCR failure rate

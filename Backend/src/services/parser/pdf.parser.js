@@ -5,7 +5,6 @@ const extractPdfText = async function (pdf){
     try{
 
        const pdfdata = await pdfparser(pdf)
-       console.log(pdfdata)
 
        return {
         text:pdfdata.text,

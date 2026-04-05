@@ -1,6 +1,7 @@
 import logger from '../../utils/logs.js';
 import textextractor from './text_extractor.parser.js';
 import resumeStructureInstance from '../ai.services/analyze_resume_structure.js';
+import ocrServiceInstance from '../ocrService/ocr.service.js';
 
 const parseFlexibleResumeDate = (value) => {
     if (!value) return null;
@@ -115,24 +116,49 @@ class resumeParser {
         try {
 
             // taking text from resume providing their meme type
-            logger.info(`Fetching text from resume : ${buffer}`)
+            // this first check whether the native approach is used to extract text properly
+            logger.info('Fetching text from resume using native approach')
             // we get all text from parser
             const textdata = await textextractor.textExtractorFromDifferentTypes(buffer, mimetype)
             if (!textdata) {
-                logger.error(`Failed to fetch text from resume`)  
-                throw new Error("Failed to extract text from resume")  
+                logger.error(`Failed to fetch text from resume`)
+                throw new Error("Failed to extract text from resume")
+            }
+
+            // we atleast got text but we need to check also right that does it have a minimum threshold
+            let finalText = textdata.text;
+            let ocrText = ''
+            let ocrUsed = false
+            let ocrStatus = 'not_needed'
+            let textExtractionSource = 'native'
+
+            // this tells whther u should use the ocr approach and do u have pdf format only and if no need then u use ur extracted text from native approach
+            if (mimetype === 'application/pdf' && ocrServiceInstance.shouldUseOcrFallback(finalText)) {
+                const ocrresult = await ocrServiceInstance.extractTextWithTesseract(buffer)
+
+                ocrText = ocrresult.text || ''
+                ocrStatus = ocrresult.status
+                ocrUsed = ocrresult.used
+
+                // as we r passing final text to caude we need to check whether ocrtext exist and is ocrUsed then we put finaltext to it and textexctractionsource = ocr
+
+                if (ocrresult.used && ocrresult.text) {
+                    logger.info('OCR fallback used for this resume upload')
+                    finalText = ocrresult.text
+                    textExtractionSource = 'ocr'
+                }
             }
 
             // we pass this text to ai claude service where he will give it in structured format
             logger.info(`Fetching structure data from claude ai ....`);
             const aiStructuredData = await resumeStructureInstance.analyzeResumeStructure(
-              textdata.text
+                finalText
             );
 
             // additional checks for extracting email , urls and phonenumber cause ai can make mistakes while extracting this
-            const emails = textextractor.extractEmailText(textdata.text)
-            const phone = textextractor.extractPhone(textdata.text)
-            const urls = textextractor.extractUrls(textdata.text)
+            const emails = textextractor.extractEmailText(finalText)
+            const phone = textextractor.extractPhone(finalText)
+            const urls = textextractor.extractUrls(finalText)
 
             const parsedData = normalizeResumeDateFields({
                 personal: {
@@ -162,8 +188,8 @@ class resumeParser {
                 language: aiStructuredData.languages || [],
             })
 
-            const wordCount = textextractor.countWords(textdata.text)
-            const rawText = textextractor.cleanText(textdata.text)
+            const wordCount = textextractor.countWords(finalText)
+            const rawText = textextractor.cleanText(finalText)
             const pageCount = textdata.pages || null
 
             return {
@@ -171,6 +197,10 @@ class resumeParser {
                 wordCount,
                 rawText,
                 pageCount,
+                ocrText,
+                ocrUsed,
+                ocrStatus,
+                textExtractionSource,
                 extractedContacts: {
                     emails,
                     phone,
