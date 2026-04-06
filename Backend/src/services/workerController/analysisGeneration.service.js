@@ -7,6 +7,18 @@ import redisClient from '../../config/redis.js'
 import logger from '../../utils/logs.js'
 import { refundAiUsage } from '../aiQuota.service.js'
 import { ANALYSIS_PROCESSING_STAGE, ANALYSIS_STATUS } from '../../config/constant.js'
+import readinessEngineService from '../readinessEngine.service.js'
+
+const ANALYSIS_JOB_TIMEOUT_MS = 120000;
+
+const withTimeout = (promise, timeoutMs, message) => (
+    Promise.race([
+        promise,
+        new Promise((_, reject) => {
+            setTimeout(() => reject(new Error(message)), timeoutMs);
+        }),
+    ])
+);
 
 const extractNumericValue = (value) => {
     if (typeof value === 'number' && Number.isFinite(value)) {
@@ -376,10 +388,14 @@ export const processAnalysisGenerationJob = async ({ analysisId, userId, resumeI
             jobRole
         )
 
-        const [skillGapAnalysisData, atsScore] = await Promise.all([
-            skillGapPromise,
-            atsPromise,
-        ])
+        const [skillGapAnalysisData, atsScore] = await withTimeout(
+            Promise.all([
+                skillGapPromise,
+                atsPromise,
+            ]),
+            ANALYSIS_JOB_TIMEOUT_MS,
+            'Analysis generation timed out. Please retry.'
+        )
 
         analysis.processingStage = ANALYSIS_PROCESSING_STAGE.FINALIZING
         await analysis.save()
@@ -423,16 +439,30 @@ export const processAnalysisGenerationJob = async ({ analysisId, userId, resumeI
             keywords: {
                 score: atsScore.breakdown.keywords.score,
                 matched: atsScore.breakdown.keywords.matched,
-                missing: atsScore.breakdown.keywords.missing
+                missing: atsScore.breakdown.keywords.missing,
+                recommended: atsScore.breakdown.keywords.recommended
             },
             structure: atsScore.breakdown.structure,
-            content: atsScore.breakdown.content
+            content: {
+                ...atsScore.breakdown.content,
+                weakPhrases: atsScore.breakdown.content.weakPhrases,
+                rewriteSuggestions: atsScore.breakdown.content.rewriteSuggestions,
+            }
         }
 
         analysis.aiSuggestion = {
             summary: skillGapAnalysisData.overallAssessment.summary,
             recommendations: skillGapAnalysisData.recommendations
         }
+
+        analysis.applicationReadiness = readinessEngineService.buildReadiness({
+            matchScore: analysis.matchScore,
+            atsScore: analysis.atsScore?.overall,
+            criticalGapCount: analysis.skillGaps?.critical?.length || 0,
+            importantGapCount: analysis.skillGaps?.important?.length || 0,
+            experienceGap: analysis.experienceAnalysis?.gap || 0,
+            readinessLevel: analysis.readinessLevel,
+        })
 
         analysis.status = ANALYSIS_STATUS.COMPLETED
         analysis.processingStage = ANALYSIS_PROCESSING_STAGE.COMPLETED

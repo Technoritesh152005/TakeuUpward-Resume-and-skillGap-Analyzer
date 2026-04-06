@@ -28,10 +28,11 @@ const emptyOverview = {
   matchBreakDown: null,
   skillGaps: { critical: [], important: [], niceToHave: [] },
   candidateStrength: [],
+  transferrableSkills: [],
   skillBreakdown: [],
   experienceAnalysis: {},
   atsScore: null,
-  aiSuggestion: { summary: '', recommendations: [] },
+  aiSuggestion: { summary: '', recommendations: [], careerAdvice: '', competitiveAnalysis: null },
 }
 
 const statusTone = {
@@ -347,6 +348,24 @@ const AnalysisDetailPage = ()=>{
                   <RecommendationList items={analysis?.aiSuggestion?.recommendations || []} />
                 </Panel>
               </div>
+
+              {(Array.isArray(analysis?.transferrableSkills)
+                ? analysis.transferrableSkills.length > 0
+                : Boolean(analysis?.transferrableSkills?.skill)) ? (
+                <Panel title="Transferable Skills" icon={TrendingUp}>
+                  <TransferableSkillsList items={analysis?.transferrableSkills} />
+                </Panel>
+              ) : null}
+
+              {(analysis?.aiSuggestion?.careerAdvice || analysis?.aiSuggestion?.competitiveAnalysis?.comparisonNotes) ? (
+                <Panel title="Career Insight" icon={Briefcase}>
+                  <CareerInsightCard insight={analysis?.aiSuggestion} />
+                </Panel>
+              ) : null}
+
+              <Panel title="Application Readiness" icon={Rocket}>
+                <ApplicationReadinessCard readiness={analysis?.applicationReadiness} />
+              </Panel>
             </div>
 
             <div className="space-y-6">
@@ -357,6 +376,33 @@ const AnalysisDetailPage = ()=>{
                   <MiniMeter label="Keywords" value={analysis?.atsScore?.keywords?.score || 0} />
                   <MiniMeter label="Structure" value={analysis?.atsScore?.structure?.score || 0} />
                   <MiniMeter label="Content" value={analysis?.atsScore?.content?.score || 0} />
+                </div>
+              </Panel>
+
+              <Panel title="ATS Action Guide" icon={Lightbulb}>
+                <div className="space-y-5">
+                  <AtsTagSection
+                    title="Matched Keywords"
+                    items={analysis?.atsScore?.keywords?.matched || []}
+                    emptyText="No matched keywords available yet."
+                    tone="emerald"
+                  />
+                  <AtsTagSection
+                    title="Recommended Keywords"
+                    items={analysis?.atsScore?.keywords?.recommended || analysis?.atsScore?.keywords?.missing || []}
+                    emptyText="No recommended keywords available yet."
+                    tone="blue"
+                  />
+                  <AtsListSection
+                    title="Weak Phrases"
+                    items={analysis?.atsScore?.content?.weakPhrases || []}
+                    emptyText="No weak phrases flagged in this analysis."
+                  />
+                  <AtsListSection
+                    title="Rewrite Suggestions"
+                    items={analysis?.atsScore?.content?.rewriteSuggestions || []}
+                    emptyText="No rewrite suggestions available yet."
+                  />
                 </div>
               </Panel>
 
@@ -660,6 +706,136 @@ const RecommendationList = ({ items }) => (
   )
 );
 
+const TransferableSkillsList = ({ items }) => {
+  const normalizedItems = Array.isArray(items)
+    ? items
+    : items?.skill
+      ? [items]
+      : []
+
+  return normalizedItems.length ? (
+    <div className="space-y-3">
+      {normalizedItems.map((item, index) => (
+        <div key={`${item?.skill || 'transferable'}-${index}`} className="rounded-2xl border border-neutral-200 p-4 dark:border-neutral-700">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm font-semibold text-neutral-900 dark:text-white">{item?.skill || 'Transferable skill'}</p>
+            {Array.isArray(item?.relatesTo) && item.relatesTo.length ? (
+              <div className="flex flex-wrap gap-2">
+                {item.relatesTo.slice(0, 4).map((relatedSkill, relatedIndex) => (
+                  <span
+                    key={`${relatedSkill}-${relatedIndex}`}
+                    className="rounded-full bg-primary-50 px-2.5 py-1 text-[11px] font-medium text-primary-700 dark:bg-primary-900/20 dark:text-primary-300"
+                  >
+                    {relatedSkill}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+          </div>
+          <p className="mt-2 text-sm leading-6 text-neutral-600 dark:text-neutral-300">
+            {item?.explanation || 'This existing skill supports movement into related role requirements.'}
+          </p>
+        </div>
+      ))}
+    </div>
+  ) : (
+    <p className="text-sm text-neutral-500 dark:text-neutral-400">No transferable skills identified in this analysis.</p>
+  )
+}
+
+const CareerInsightCard = ({ insight }) => (
+  <div className="space-y-4 text-sm leading-6 text-neutral-700 dark:text-neutral-300">
+    {insight?.careerAdvice ? (
+      <div className="rounded-2xl bg-neutral-50 p-4 dark:bg-neutral-900/60">
+        <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Career Advice</p>
+        <p className="mt-2">{insight.careerAdvice}</p>
+      </div>
+    ) : null}
+
+    {insight?.competitiveAnalysis?.comparisonNotes || insight?.competitiveAnalysis?.percentileRank ? (
+      <div className="rounded-2xl border border-neutral-200 p-4 dark:border-neutral-700">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Competitive Insight</p>
+          {typeof insight?.competitiveAnalysis?.percentileRank === 'number' ? (
+            <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
+              Top {Math.max(0, 100 - insight.competitiveAnalysis.percentileRank)}%
+            </span>
+          ) : null}
+        </div>
+        <p className="mt-2">
+          {insight?.competitiveAnalysis?.comparisonNotes || 'No competitive notes available yet.'}
+        </p>
+      </div>
+    ) : null}
+  </div>
+)
+
+const ApplicationReadinessCard = ({ readiness }) => {
+  if (!readiness?.label) {
+    return (
+      <p className="text-sm text-neutral-500 dark:text-neutral-400">
+        Readiness guidance will appear after a fresh completed analysis is available.
+      </p>
+    )
+  }
+
+  const labelMap = {
+    apply_now: 'Apply Now',
+    apply_after_resume_fixes: 'Apply After Resume Fixes',
+    apply_after_skill_upgrade: 'Apply After Skill Upgrade',
+    stretch_role: 'Stretch Role',
+  }
+
+  const toneMap = {
+    apply_now: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300',
+    apply_after_resume_fixes: 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300',
+    apply_after_skill_upgrade: 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300',
+    stretch_role: 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300',
+  }
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <span className={`rounded-full px-3 py-1.5 text-xs font-semibold ${toneMap[readiness.label] || 'bg-neutral-100 text-neutral-700 dark:bg-neutral-700 dark:text-neutral-200'}`}>
+          {labelMap[readiness.label] || readiness.label}
+        </span>
+        <span className="text-sm font-semibold text-neutral-900 dark:text-white">
+          Readiness Score: {readiness?.readinessScore || 0}/100
+        </span>
+      </div>
+
+      <div className="space-y-3 text-sm text-neutral-600 dark:text-neutral-300">
+        <InfoRow label="Main blocker" value={readiness?.mainBlocker || 'Not available'} />
+      </div>
+
+      <div>
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Why This Label</h3>
+        {readiness?.topReasons?.length ? (
+          <div className="mt-3 space-y-3">
+            {readiness.topReasons.map((reason, index) => (
+              <div
+                key={`${reason}-${index}`}
+                className="rounded-2xl border border-neutral-200 p-4 text-sm leading-6 text-neutral-700 dark:border-neutral-700 dark:text-neutral-300"
+              >
+                {reason}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-3 text-sm text-neutral-500 dark:text-neutral-400">No readiness reasons available yet.</p>
+        )}
+      </div>
+
+      <div className="rounded-2xl bg-neutral-50 p-4 dark:bg-neutral-900/60">
+        <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">Next Best Action</p>
+        <p className="mt-2 text-sm leading-6 text-neutral-700 dark:text-neutral-300">
+          {readiness?.nextAction || 'No action guidance available yet.'}
+        </p>
+      </div>
+    </div>
+  )
+}
+
 const SkillBreakdownList = ({ items }) => (
   items.length ? (
     <div className="space-y-4">
@@ -691,6 +867,52 @@ const MiniMeter = ({ label, value }) => (
     </div>
   </div>
 );
+
+const AtsTagSection = ({ title, items, emptyText, tone = 'blue' }) => {
+  const toneClass = tone === 'emerald'
+    ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300'
+    : 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300'
+
+  return (
+    <div>
+      <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">{title}</h3>
+      {items.length ? (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {items.map((item, index) => (
+            <span
+              key={`${title}-${item}-${index}`}
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold ${toneClass}`}
+            >
+              {item}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-3 text-sm text-neutral-500 dark:text-neutral-400">{emptyText}</p>
+      )}
+    </div>
+  )
+}
+
+const AtsListSection = ({ title, items, emptyText }) => (
+  <div>
+    <h3 className="text-sm font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">{title}</h3>
+    {items.length ? (
+      <div className="mt-3 space-y-3">
+        {items.map((item, index) => (
+          <div
+            key={`${title}-${index}`}
+            className="rounded-2xl border border-neutral-200 p-4 text-sm leading-6 text-neutral-700 dark:border-neutral-700 dark:text-neutral-300"
+          >
+            {item}
+          </div>
+        ))}
+      </div>
+    ) : (
+      <p className="mt-3 text-sm text-neutral-500 dark:text-neutral-400">{emptyText}</p>
+    )}
+  </div>
+)
 
 const InfoRow = ({ label, value }) => (
   <div className="flex items-center justify-between rounded-2xl bg-neutral-50 px-4 py-3 dark:bg-neutral-900/60">
