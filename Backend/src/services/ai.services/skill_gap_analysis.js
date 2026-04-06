@@ -1,7 +1,15 @@
 import { getModel } from '../../config/gemini.js';
 import logger from '../../utils/logs.js';
+import { extractCandidateSkillSet, matchRoleSkill } from './fallbackSkillMatcher.js';
 
 class SkillGapAnalysis {
+    buildDebugPreview(value, limit = 600) {
+        return String(value || '')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .slice(0, limit);
+    }
+
     toString(value) {
         return String(value || '').trim();
     }
@@ -87,6 +95,305 @@ class SkillGapAnalysis {
         };
     }
 
+    extractJsonBlock(content) {
+        const source = String(content ?? '');
+        const startIndex = source.search(/[\[{]/);
+        if (startIndex === -1) {
+            return source.trim();
+        }
+
+        const opening = source[startIndex];
+        const closing = opening === '{' ? '}' : ']';
+        let depth = 0;
+        let inString = false;
+        let escaped = false;
+
+        for (let index = startIndex; index < source.length; index += 1) {
+            const char = source[index];
+
+            if (inString) {
+                if (escaped) {
+                    escaped = false;
+                    continue;
+                }
+
+                if (char === '\\') {
+                    escaped = true;
+                    continue;
+                }
+
+                if (char === '"') {
+                    inString = false;
+                }
+                continue;
+            }
+
+            if (char === '"') {
+                inString = true;
+                continue;
+            }
+
+            if (char === opening) {
+                depth += 1;
+            } else if (char === closing) {
+                depth -= 1;
+                if (depth === 0) {
+                    return source.slice(startIndex, index + 1).trim();
+                }
+            }
+        }
+
+        return source.slice(startIndex).trim();
+    }
+
+    escapeControlCharactersInStrings(content) {
+        let escapedContent = '';
+        let inString = false;
+        let escaped = false;
+
+        for (const char of String(content ?? '')) {
+            if (inString) {
+                if (escaped) {
+                    escapedContent += char;
+                    escaped = false;
+                    continue;
+                }
+
+                if (char === '\\') {
+                    escapedContent += char;
+                    escaped = true;
+                    continue;
+                }
+
+                if (char === '"') {
+                    escapedContent += char;
+                    inString = false;
+                    continue;
+                }
+
+                if (char === '\n') {
+                    escapedContent += '\\n';
+                    continue;
+                }
+
+                if (char === '\r') {
+                    escapedContent += '\\r';
+                    continue;
+                }
+
+                if (char === '\t') {
+                    escapedContent += '\\t';
+                    continue;
+                }
+
+                escapedContent += char;
+                continue;
+            }
+
+            if (char === '"') {
+                inString = true;
+            }
+
+            escapedContent += char;
+        }
+
+        return escapedContent;
+    }
+
+    normalizeJsonString(content) {
+        return String(content ?? '')
+            .replace(/^\uFEFF/, '')
+            .replace(/```json\n?/gi, '')
+            .replace(/```\n?/g, '')
+            .replace(/[Ã¢â‚¬Å“Ã¢â‚¬Â]/g, '"')
+            .replace(/[Ã¢â‚¬ËœÃ¢â‚¬â„¢]/g, "'")
+            .replace(/[\u201C\u201D]/g, '"')
+            .replace(/[\u2018\u2019]/g, "'")
+            .replace(/,\s*([}\]])/g, '$1')
+            .trim();
+    }
+
+    tryParseJson(content) {
+        const normalized = this.normalizeJsonString(content);
+        const extracted = this.extractJsonBlock(normalized);
+        const candidates = [
+            extracted,
+            this.escapeControlCharactersInStrings(extracted),
+        ];
+
+        let lastError = null;
+
+        for (const candidate of candidates) {
+            try {
+                return JSON.parse(candidate);
+            } catch (error) {
+                lastError = error;
+            }
+        }
+
+        throw lastError;
+    }
+
+    normalizeGapArray(value, fallback = []) {
+        const source = Array.isArray(value) ? value : [];
+        const fallbackItems = Array.isArray(fallback) ? fallback : [];
+
+        if (!source.length) {
+            return fallbackItems;
+        }
+
+        return source.map((item, index) => {
+            const safeFallback = fallbackItems[index] || {};
+            return {
+                skill: this.toString(item?.skill || item?.title || safeFallback.skill),
+                importance: Number(item?.importance ?? safeFallback.importance ?? 5),
+                reason: this.toString(item?.reason || item?.description || safeFallback.reason),
+                learningTime: this.toString(item?.learningTime || safeFallback.learningTime || '2-6 weeks'),
+                difficulty: this.toString(item?.difficulty || safeFallback.difficulty || 'intermediate'),
+                prerequisites: Array.isArray(item?.prerequisites)
+                    ? item.prerequisites.filter(Boolean)
+                    : (safeFallback.prerequisites || []),
+            };
+        }).filter((item) => item.skill);
+    }
+
+    normalizeStrengths(value, fallback = []) {
+        const source = Array.isArray(value) ? value : [];
+        const fallbackItems = Array.isArray(fallback) ? fallback : [];
+
+        if (!source.length) {
+            return fallbackItems;
+        }
+
+        return source.map((item, index) => {
+            const safeFallback = fallbackItems[index] || {};
+            return {
+                skill: this.toString(item?.skill || item?.title || safeFallback.skill),
+                proficiency: this.toString(item?.proficiency || safeFallback.proficiency || 'intermediate'),
+                relevance: this.toString(item?.relevance || safeFallback.relevance),
+                uniqueAdvantage: this.toString(item?.uniqueAdvantage || safeFallback.uniqueAdvantage),
+                importance: Number(item?.importance ?? safeFallback.importance ?? 5),
+            };
+        }).filter((item) => item.skill);
+    }
+
+    normalizeTransferableSkills(value, fallback = []) {
+        const source = Array.isArray(value) ? value : [];
+        const fallbackItems = Array.isArray(fallback) ? fallback : [];
+
+        if (!source.length) {
+            return fallbackItems;
+        }
+
+        return source.map((item, index) => {
+            const safeFallback = fallbackItems[index] || {};
+            return {
+                skill: this.toString(item?.skill || safeFallback.skill),
+                relatesTo: Array.isArray(item?.relatesTo)
+                    ? item.relatesTo.filter(Boolean)
+                    : (safeFallback.relatesTo || []),
+                explanation: this.toString(item?.explanation || safeFallback.explanation),
+            };
+        }).filter((item) => item.skill);
+    }
+
+    normalizeSkillGapPayload(rawData, fallbackData) {
+        const source = rawData && typeof rawData === 'object' ? rawData : {};
+        const fallback = fallbackData && typeof fallbackData === 'object'
+            ? fallbackData
+            : this.buildFallbackAnalysis({}, {});
+        const sourceAssessment = source.overallAssessment && typeof source.overallAssessment === 'object'
+            ? source.overallAssessment
+            : {};
+        const fallbackAssessment = fallback.overallAssessment || {};
+        const sourceExperienceGap = source.experienceGap && typeof source.experienceGap === 'object'
+            ? source.experienceGap
+            : {};
+        const fallbackExperienceGap = fallback.experienceGap || {};
+        const sourceSkillGaps = source.skillGaps && typeof source.skillGaps === 'object'
+            ? source.skillGaps
+            : {};
+        const fallbackSkillGaps = fallback.skillGaps || {};
+
+        return {
+            overallAssessment: {
+                matchPercentage: Number(
+                    sourceAssessment.matchPercentage ??
+                    fallbackAssessment.matchPercentage ??
+                    0
+                ),
+                readinessLevel: this.toString(
+                    sourceAssessment.readinessLevel ||
+                    fallbackAssessment.readinessLevel ||
+                    'not-ready'
+                ),
+                estimatedTimeToReady: {
+                    weeks: Number(
+                        sourceAssessment?.estimatedTimeToReady?.weeks ??
+                        fallbackAssessment?.estimatedTimeToReady?.weeks ??
+                        0
+                    ),
+                    reason: this.toString(
+                        sourceAssessment?.estimatedTimeToReady?.reason ||
+                        fallbackAssessment?.estimatedTimeToReady?.reason
+                    ),
+                },
+                summary: this.toString(sourceAssessment.summary || fallbackAssessment.summary),
+            },
+            skillGaps: {
+                critical: this.normalizeGapArray(sourceSkillGaps.critical, fallbackSkillGaps.critical),
+                important: this.normalizeGapArray(sourceSkillGaps.important, fallbackSkillGaps.important),
+                niceToHave: this.normalizeGapArray(sourceSkillGaps.niceToHave, fallbackSkillGaps.niceToHave),
+            },
+            strengths: this.normalizeStrengths(source.strengths, fallback.strengths),
+            transferableSkills: this.normalizeTransferableSkills(
+                source.transferableSkills,
+                fallback.transferableSkills
+            ),
+            experienceGap: {
+                candidateYears: Number(
+                    sourceExperienceGap.candidateYears ??
+                    fallbackExperienceGap.candidateYears ??
+                    0
+                ),
+                typicalRequirement: Number(
+                    sourceExperienceGap.typicalRequirement ??
+                    fallbackExperienceGap.typicalRequirement ??
+                    0
+                ),
+                assessment: this.toString(
+                    sourceExperienceGap.assessment ||
+                    fallbackExperienceGap.assessment
+                ),
+            },
+            recommendations: Array.isArray(source.recommendations) && source.recommendations.length
+                ? source.recommendations.filter(Boolean)
+                : (fallback.recommendations || []),
+        };
+    }
+
+    async repairJsonWithGemini(invalidJson) {
+        const repairPrompt = `
+You are a JSON repair tool.
+Return ONLY valid JSON with double-quoted keys and strings.
+Do not add commentary. Do not wrap in markdown.
+
+INVALID JSON:
+${invalidJson}
+`;
+
+        const model = getModel();
+        const result = await model.generateContent({
+            contents: [{ role: 'user', parts: [{ text: repairPrompt }] }],
+            generationConfig: {
+                responseMimeType: 'application/json',
+                temperature: 0,
+            },
+        });
+        const response = await result.response;
+        return this.normalizeJsonString(response.text());
+    }
+
     async performDeepSkillGapAnalyze(resumeData, jobRole) {
         try {
             const compactResume = this.buildCompactResumeSummary(resumeData);
@@ -158,21 +465,21 @@ Perform comprehensive gap analysis and return ONLY valid JSON:
 Return ONLY the JSON object, no markdown formatting.
 `;
 
-            // Get Gemini model
             const model = getModel();
-
-            // Generate content
-            const result = await model.generateContent(prompt);
+            const result = await model.generateContent({
+                contents: [{ role: 'user', parts: [{ text: prompt }] }],
+                generationConfig: {
+                    responseMimeType: 'application/json',
+                    temperature: 0,
+                    maxOutputTokens: 2500,
+                },
+            });
             const response = await result.response;
             const rawText = response.text();
 
-            // Clean the response
-            const cleanedContent = rawText
-                .replace(/```json\n?/g, '')
-                .replace(/```\n?/g, '')
-                .trim();
-
-            const structuredData = this.parseJsonResponse(cleanedContent, resumeData, jobRole);
+            const fallbackData = this.buildFallbackAnalysis(resumeData, jobRole);
+            const parsedData = await this.parseJsonResponse(rawText, resumeData, jobRole);
+            const structuredData = this.normalizeSkillGapPayload(parsedData, fallbackData);
 
             if (!structuredData || !structuredData.overallAssessment) {
                 throw new Error('Invalid response from AI');
@@ -180,80 +487,43 @@ Return ONLY the JSON object, no markdown formatting.
 
             logger.info('Skill gap analysis completed with Gemini');
             return structuredData;
-
         } catch (error) {
             logger.error(`Skill gap analysis failed: ${error.message}`);
             throw new Error(`Failed to perform skill gap analysis: ${error.message}`);
         }
     }
 
-    // same all in one block where remove markdown and take content bwn {}
-    parseJsonResponse(rawContent, resumeData, jobRole) {
-        // array of objects. it tries many way to make op correct
-        const attempts = [
-            rawContent,
-            this.extractJsonObject(rawContent),
-            this.normalizeJson(rawContent),
-            this.normalizeJson(this.extractJsonObject(rawContent)),
-        ].filter(Boolean);
+    async parseJsonResponse(rawContent, resumeData, jobRole) {
+        const normalized = this.normalizeJsonString(rawContent);
+        const extracted = this.extractJsonBlock(normalized);
 
-        let lastError = null;
+        try {
+            return this.tryParseJson(extracted);
+        } catch (firstError) {
+            logger.warn(`Primary skill gap JSON parse failed, attempting Gemini repair: ${firstError.message}`);
+            logger.warn(`Skill gap AI raw preview: ${this.buildDebugPreview(rawContent)}`);
+            logger.warn(`Skill gap AI extracted preview: ${this.buildDebugPreview(extracted)}`);
 
-        // try parsing each object
-        for (const attempt of attempts) {
             try {
-                // Parsing = converting string → usable object
-                return JSON.parse(attempt);
-            } catch (error) {
-                lastError = error;
+                const repaired = await this.repairJsonWithGemini(extracted);
+                logger.warn(`Skill gap AI repaired preview: ${this.buildDebugPreview(repaired)}`);
+                return this.tryParseJson(repaired);
+            } catch (repairError) {
+                logger.warn(`Falling back to deterministic skill gap analysis due to unrecoverable AI JSON: ${repairError.message}`);
+                return this.buildFallbackAnalysis(resumeData, jobRole);
             }
         }
-
-        logger.warn(`Falling back to deterministic skill gap analysis due to invalid AI JSON: ${lastError?.message || 'unknown parse error'}`);
-        return this.buildFallbackAnalysis(resumeData, jobRole);
     }
 
-    // takes content bwn {}
-    extractJsonObject(content) {
-        const start = content.indexOf('{');
-        const end = content.lastIndexOf('}');
-
-        if (start === -1 || end === -1 || end <= start) {
-            return content;
-        }
-
-        return content.slice(start, end + 1);
-    }
-// clean content
-    normalizeJson(content) {
-        if (!content) return content;
-
-        return content
-            .replace(/,\s*([}\]])/g, '$1')
-            .replace(/([\{\[,]\s*)([A-Za-z_][A-Za-z0-9_]*)(\s*:)/g, '$1"$2"$3')
-            .replace(/:\s*'([^']*)'/g, ': "$1"')
-            .replace(/"\s*\n\s*"/g, '", "')
-            .replace(/"\s*\n\s*\{/g, '", {')
-            .replace(/\}\s*\n\s*\{/g, '}, {')
-            .replace(/\]\s*\n\s*\{/g, '], {')
-            .replace(/"\s+\{/g, '", {')
-            .replace(/\}\s+\{/g, '}, {')
-            .replace(/\r/g, '');
-    }
-
-    // used when ai fails during giving op
-    // if ai fails ur system also fails . so we add a fallback which atleast provide some analysis data acc to manual analysis
     buildFallbackAnalysis(resumeData, jobRole) {
-        // gets all skills of resume like technial , tools
-        const candidateSkills = this.extractCandidateSkills(resumeData);
+        const candidateSkills = extractCandidateSkillSet(resumeData);
         const strengths = [];
-        // skills which r missing
         const skillGaps = {
             critical: [],
             important: [],
             niceToHave: [],
         };
-        
+
         const buckets = [
             ['critical', jobRole?.requiredSkills?.critical || [], 10],
             ['important', jobRole?.requiredSkills?.important || [], 7],
@@ -265,7 +535,7 @@ Return ONLY the JSON object, no markdown formatting.
                 const skillName = item?.title || item?.skill || '';
                 if (!skillName) continue;
 
-                const hasSkill = candidateSkills.has(skillName.toLowerCase());
+                const hasSkill = matchRoleSkill(candidateSkills, skillName);
 
                 if (hasSkill) {
                     strengths.push({
@@ -322,30 +592,6 @@ Return ONLY the JSON object, no markdown formatting.
                 'Build projects that demonstrate required skills',
             ],
         };
-    }
-
-    // extract resume skill
-    extractCandidateSkills(resumeData) {
-        const skillSet = new Set();
-        const rawGroups = [
-            resumeData?.skills?.technical,
-            resumeData?.skills?.tools,
-            resumeData?.skills?.frameworks,
-            resumeData?.skills?.language,
-            resumeData?.skills?.languages,
-            resumeData?.skills?.database,
-            resumeData?.skills?.others,
-        ];
-
-        for (const group of rawGroups) {
-            if (!Array.isArray(group)) continue;
-            for (const item of group) {
-                const value = String(item || '').trim().toLowerCase();
-                if (value) skillSet.add(value);
-            }
-        }
-
-        return skillSet;
     }
 }
 

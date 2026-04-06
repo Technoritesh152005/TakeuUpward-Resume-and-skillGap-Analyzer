@@ -1,7 +1,16 @@
 import { getModel } from '../../config/gemini.js';
 import logger from '../../utils/logs.js';
+import { extractCandidateSkillSet, matchRoleSkill, expandSkillVariants } from './fallbackSkillMatcher.js';
 
 class AtsScoreGenerator {
+    // buildOverview - basically shows debug error
+    buildDebugPreview(value, limit = 600) {
+        return String(value || '')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .slice(0, limit);
+    }
+
     toString(value) {
         return String(value || '').trim();
     }
@@ -23,18 +32,14 @@ class AtsScoreGenerator {
 
     toStringArray(value, fallback = []) {
         if (Array.isArray(value)) {
-            // if its an array map through it and return the string value of the item
             return value
                 .map((item) => {
-                    // if its a string return it as a string
                     if (typeof item === 'string') return this.toString(item);
-                    // if its an object return the title, skill, or name property
                     return this.toString(item?.title || item?.skill || item?.name);
                 })
                 .filter(Boolean);
         }
 
-        // if its not array but a string return it as an array
         if (typeof value === 'string' && value.trim()) {
             return [value.trim()];
         }
@@ -100,13 +105,44 @@ class AtsScoreGenerator {
                 source.actions,
                 this.toStringArray(fallback.suggestions)
             ),
+            recommended: this.toStringArray(
+                source.recommended ??
+                source.recommendedKeywords ??
+                source.priorityKeywords,
+                this.toStringArray(fallback.recommended)
+            ),
+        };
+    }
+
+    normalizeContentSection(section, fallback = {}) {
+        const normalized = this.normalizeSection(section, fallback);
+        const source = section && typeof section === 'object' ? section : {};
+
+        return {
+            ...normalized,
+            weakPhrases: this.toStringArray(
+                source.weakPhrases ??
+                source.weak_phrases ??
+                source.vaguePhrases,
+                this.toStringArray(fallback.weakPhrases)
+            ),
+            rewriteSuggestions: this.toStringArray(
+                source.rewriteSuggestions ??
+                source.rewrite_suggestions ??
+                source.rewrites,
+                this.toStringArray(fallback.rewriteSuggestions)
+            ),
         };
     }
 
     normalizeAtsPayload(rawData, fallbackData) {
         const source = rawData && typeof rawData === 'object' ? rawData : {};
-        const fallback = fallbackData && typeof fallbackData === 'object' ? fallbackData : this.buildFallbackAtsScore({}, {});
-        const breakdownSource = source.breakdown && typeof source.breakdown === 'object' ? source.breakdown : {};
+        const fallback = fallbackData && typeof fallbackData === 'object'
+            ? fallbackData
+            : this.buildFallbackAtsScore({}, {});
+        const breakdownSource = source.breakdown && typeof source.breakdown === 'object'
+            ? source.breakdown
+            : {};
         const fallbackBreakdown = fallback.breakdown || {};
 
         const formatting = this.normalizeSection(
@@ -122,9 +158,9 @@ class AtsScoreGenerator {
         const structure = this.normalizeSection(
             breakdownSource.structure ?? source.structure,
             fallbackBreakdown.structure
-        )
+        );
 
-        const content = this.normalizeSection(
+        const content = this.normalizeContentSection(
             breakdownSource.content ?? source.content,
             fallbackBreakdown.content
         );
@@ -132,7 +168,7 @@ class AtsScoreGenerator {
         const derivedOverall = Math.round(
             (formatting.score + keywords.score + structure.score + content.score) / 4
         );
-        
+
         return {
             overallScore: this.toScore(
                 source.overallScore ??
@@ -162,66 +198,189 @@ class AtsScoreGenerator {
         };
     }
 
-    extractJsonObject(content) {
-        const start = content.indexOf('{');
-        const end = content.lastIndexOf('}');
-
-        if (start === -1 || end === -1 || end <= start) {
-            return content;
+    extractJsonBlock(content) {
+        const source = String(content ?? '');
+        const startIndex = source.search(/[\[{]/);
+        if (startIndex === -1) {
+            return source.trim();
         }
 
-        return content.slice(start, end + 1);
+        const opening = source[startIndex];
+        const closing = opening === '{' ? '}' : ']';
+        let depth = 0;
+        let inString = false;
+        let escaped = false;
+
+        for (let index = startIndex; index < source.length; index += 1) {
+            const char = source[index];
+
+            if (inString) {
+                if (escaped) {
+                    escaped = false;
+                    continue;
+                }
+
+                if (char === '\\') {
+                    escaped = true;
+                    continue;
+                }
+
+                if (char === '"') {
+                    inString = false;
+                }
+                continue;
+            }
+
+            if (char === '"') {
+                inString = true;
+                continue;
+            }
+
+            if (char === opening) {
+                depth += 1;
+            } else if (char === closing) {
+                depth -= 1;
+                if (depth === 0) {
+                    return source.slice(startIndex, index + 1).trim();
+                }
+            }
+        }
+
+        return source.slice(startIndex).trim();
     }
 
-    normalizeJson(content) {
-        if (!content) return content;
+    escapeControlCharactersInStrings(content) {
+        let escapedContent = '';
+        let inString = false;
+        let escaped = false;
 
-        return content
+        for (const char of String(content ?? '')) {
+            if (inString) {
+                if (escaped) {
+                    escapedContent += char;
+                    escaped = false;
+                    continue;
+                }
+
+                if (char === '\\') {
+                    escapedContent += char;
+                    escaped = true;
+                    continue;
+                }
+
+                if (char === '"') {
+                    escapedContent += char;
+                    inString = false;
+                    continue;
+                }
+
+                if (char === '\n') {
+                    escapedContent += '\\n';
+                    continue;
+                }
+
+                if (char === '\r') {
+                    escapedContent += '\\r';
+                    continue;
+                }
+
+                if (char === '\t') {
+                    escapedContent += '\\t';
+                    continue;
+                }
+
+                escapedContent += char;
+                continue;
+            }
+
+            if (char === '"') {
+                inString = true;
+            }
+
+            escapedContent += char;
+        }
+
+        return escapedContent;
+    }
+
+    normalizeJsonString(content) {
+        return String(content ?? '')
+            .replace(/^\uFEFF/, '')
+            .replace(/```json\n?/gi, '')
+            .replace(/```\n?/g, '')
+            .replace(/[Ã¢â‚¬Å“Ã¢â‚¬Â]/g, '"')
+            .replace(/[Ã¢â‚¬ËœÃ¢â‚¬â„¢]/g, "'")
+            .replace(/[\u201C\u201D]/g, '"')
+            .replace(/[\u2018\u2019]/g, "'")
             .replace(/,\s*([}\]])/g, '$1')
-            .replace(/([\{\[,]\s*)([A-Za-z_][A-Za-z0-9_]*)(\s*:)/g, '$1"$2"$3')
-            .replace(/:\s*'([^']*)'/g, ': "$1"')
-            .replace(/\r/g, '');
+            .trim();
     }
 
-    parseAtsResponse(rawContent) {
-        const attempts = [
-            rawContent,
-            this.extractJsonObject(rawContent),
-            this.normalizeJson(rawContent),
-            this.normalizeJson(this.extractJsonObject(rawContent)),
-        ].filter(Boolean);
+    tryParseJson(content) {
+        const normalized = this.normalizeJsonString(content);
+        const extracted = this.extractJsonBlock(normalized);
+        const candidates = [
+            extracted,
+            this.escapeControlCharactersInStrings(extracted),
+        ];
 
         let lastError = null;
 
-        for (const attempt of attempts) {
+        for (const candidate of candidates) {
             try {
-                return JSON.parse(attempt);
+                return JSON.parse(candidate);
             } catch (error) {
                 lastError = error;
             }
         }
 
-        logger.warn(`Falling back to deterministic ATS analysis due to invalid AI JSON: ${lastError?.message || 'unknown parse error'}`);
-        return null;
+        throw lastError;
     }
 
-    // build a compact resume summary object with the following properties:
-    // summary: the summary of the resume
-    // skills: an object with the following properties:
-    //   technical: an array of technical skills
-    //   frameworks: an array of frameworks
-    //   tools: an array of tools
-    //   languages: an array of languages
-    //   databases: an array of databases
-    // experience: an array of experience objects with the following properties:
-    //   title: the title of the experience
-    //   company: the company of the experience
-    //   startDate: the start date of the experience
-    //   endDate: the end date of the experience
-    //   highlights: an array of highlights
-    //   technologies: an array of technologies
-    // projects: an array of project objects with the following properties:
-    //   title: the title of the project
+    async repairJsonWithGemini(invalidJson) {
+        const repairPrompt = `
+You are a JSON repair tool.
+Return ONLY valid JSON with double-quoted keys and strings.
+Do not add commentary. Do not wrap in markdown.
+
+INVALID JSON:
+${invalidJson}
+`;
+
+        const model = getModel();
+        const result = await model.generateContent({
+            contents: [{ role: 'user', parts: [{ text: repairPrompt }] }],
+            generationConfig: {
+                responseMimeType: 'application/json',
+                temperature: 0,
+            },
+        });
+        const response = await result.response;
+        return this.normalizeJsonString(response.text());
+    }
+
+    async parseAtsResponse(rawContent) {
+        const normalized = this.normalizeJsonString(rawContent);
+        const extracted = this.extractJsonBlock(normalized);
+
+        try {
+            return this.tryParseJson(extracted);
+        } catch (firstError) {
+            logger.warn(`Primary ATS JSON parse failed, attempting Gemini repair: ${firstError.message}`);
+            logger.warn(`ATS AI raw preview: ${this.buildDebugPreview(rawContent)}`);
+            logger.warn(`ATS AI extracted preview: ${this.buildDebugPreview(extracted)}`);
+
+            try {
+                const repaired = await this.repairJsonWithGemini(extracted);
+                logger.warn(`ATS AI repaired preview: ${this.buildDebugPreview(repaired)}`);
+                return this.tryParseJson(repaired);
+            } catch (repairError) {
+                logger.warn(`Falling back to deterministic ATS analysis due to unrecoverable AI JSON: ${repairError.message}`);
+                return null;
+            }
+        }
+    }
+
     buildCompactResumeSummary(resumeData = {}) {
         const skills = resumeData?.skills || {};
         const experience = Array.isArray(resumeData?.experience) ? resumeData.experience : [];
@@ -264,7 +423,6 @@ class AtsScoreGenerator {
         };
     }
 
-
     buildCompactRoleSummary(jobRole = {}) {
         return {
             title: this.toString(jobRole?.title),
@@ -278,35 +436,8 @@ class AtsScoreGenerator {
         };
     }
 
-    // extract the candidate skills from the resume data
-    extractCandidateSkills(resumeData) {
-        const groups = [
-            resumeData?.skills?.technical,
-            resumeData?.skills?.tools,
-            resumeData?.skills?.frameworks,
-            resumeData?.skills?.language,
-            resumeData?.skills?.languages,
-            resumeData?.skills?.database,
-            resumeData?.skills?.others,
-        ];
-
-        const skills = new Set();
-
-        for (const group of groups) {
-            if (!Array.isArray(group)) continue;
-            for (const item of group) {
-                const value = typeof item === 'string' ? item : item?.name || item?.skill || item?.title;
-                if (value) {
-                    skills.add(String(value).trim().toLowerCase());
-                }
-            }
-        }
-
-        return skills;
-    }
-
     buildFallbackAtsScore(resumeData, jobRole) {
-        const candidateSkills = this.extractCandidateSkills(resumeData);
+        const candidateSkills = extractCandidateSkillSet(resumeData);
         const requiredSkills = [
             ...(jobRole?.requiredSkills?.critical || []),
             ...(jobRole?.requiredSkills?.important || []),
@@ -317,11 +448,14 @@ class AtsScoreGenerator {
             .map((item) => item?.title || item?.skill)
             .filter(Boolean);
 
-        const matched = requiredSkillNames.filter((skill) => candidateSkills.has(String(skill).trim().toLowerCase()));
-        const missing = requiredSkillNames.filter((skill) => !candidateSkills.has(String(skill).trim().toLowerCase()));
+        const matched = requiredSkillNames.filter((skill) => matchRoleSkill(candidateSkills, skill));
+        const missing = requiredSkillNames.filter((skill) => !matchRoleSkill(candidateSkills, skill));
         const keywordScore = requiredSkillNames.length > 0
             ? Math.round((matched.length / requiredSkillNames.length) * 100)
             : 0;
+        const recommended = Array.from(new Set(
+            missing.flatMap((skill) => expandSkillVariants(skill)).slice(0, 10)
+        )).slice(0, 6);
 
         const overallScore = Math.max(0, Math.min(100, Math.round((keywordScore * 0.55) + 35)));
 
@@ -338,6 +472,7 @@ class AtsScoreGenerator {
                     matched,
                     missing,
                     suggestions: missing.slice(0, 3).map((skill) => `Add ${skill} where it truthfully applies in your resume`),
+                    recommended,
                 },
                 structure: {
                     score: 72,
@@ -348,10 +483,14 @@ class AtsScoreGenerator {
                     score: Math.max(40, Math.min(100, keywordScore)),
                     strengths: matched.length ? [`Matched ${matched.length} role keywords from required skills`] : [],
                     improvements: missing.slice(0, 3).map((skill) => `Add evidence for ${skill} if you have worked with it`),
+                    weakPhrases: [],
+                    rewriteSuggestions: missing.slice(0, 3).map((skill) => `Add a quantified bullet that demonstrates ${skill} through real work or projects`),
                 },
             },
             topPriorities: missing.slice(0, 3).map((skill) => `Address missing keyword: ${skill}`),
-            estimatedImprovement: missing.length ? 'Score can improve after adding missing role keywords and clearer ATS formatting' : 'Resume already aligns reasonably with the selected role keywords',
+            estimatedImprovement: missing.length
+                ? 'Score can improve after adding missing role keywords and clearer ATS formatting'
+                : 'Resume already aligns reasonably with the selected role keywords',
         };
     }
 
@@ -389,6 +528,7 @@ Return ONLY valid JSON:
       "score": 70,
       "matched": ["React", "JavaScript", "Node.js"],
       "missing": ["Docker", "Kubernetes", "AWS"],
+      "recommendedKeywords": ["Docker", "Kubernetes", "AWS", "CI/CD"],
       "suggestions": [
         "Add Docker in skills section",
         "Mention cloud platforms in experience"
@@ -409,6 +549,14 @@ Return ONLY valid JSON:
         "Clear work experience descriptions",
         "Quantified achievements"
       ],
+      "weakPhrases": [
+        "Responsible for team collaboration",
+        "Worked on dashboards"
+      ],
+      "rewriteSuggestions": [
+        "Replaced 'Worked on dashboards' with 'Built Tableau dashboards used by sales leadership to track weekly pipeline performance'",
+        "Replace vague ownership statements with impact-focused bullet points and metrics"
+      ],
       "improvements": [
         "Add more technical keywords",
         "Include certifications section"
@@ -427,17 +575,19 @@ Return ONLY the JSON object, no markdown formatting.
 `;
 
             const model = getModel();
-            const result = await model.generateContent(prompt);
+            const result = await model.generateContent({
+                contents: [{ role: 'user', parts: [{ text: prompt }] }],
+                generationConfig: {
+                    responseMimeType: 'application/json',
+                    temperature: 0,
+                    maxOutputTokens: 2200,
+                },
+            });
             const response = await result.response;
             const rawText = response.text();
 
-            const cleanedContent = rawText
-                .replace(/```json\n?/g, '')
-                .replace(/```\n?/g, '')
-                .trim();
-
             const fallbackData = this.buildFallbackAtsScore(resumeData, jobRole);
-            const parsedData = this.parseAtsResponse(cleanedContent);
+            const parsedData = await this.parseAtsResponse(rawText);
             const properData = this.normalizeAtsPayload(parsedData, fallbackData);
 
             if (!properData || properData.overallScore === undefined || properData.overallScore === null) {
@@ -446,7 +596,6 @@ Return ONLY the JSON object, no markdown formatting.
 
             logger.info('ATS score generated successfully with Gemini');
             return properData;
-
         } catch (error) {
             logger.error(`ATS score generation failed: ${error.message}`);
             throw new Error(`Failed to generate ATS score: ${error.message}`);

@@ -174,6 +174,7 @@ const analysisSchema = mongoose.Schema(
                 score: Number,
                 matched: [String],
                 missing: [String],
+                recommended: [String],
             },
             structure: {
                 score: Number,
@@ -181,7 +182,9 @@ const analysisSchema = mongoose.Schema(
             },
             content: {
                 score: Number,
-                issues: [String]
+                issues: [String],
+                weakPhrases: [String],
+                rewriteSuggestions: [String],
             }
         },
 
@@ -195,6 +198,17 @@ const analysisSchema = mongoose.Schema(
                 comparisonNotes: String,
             },
         },
+
+       applicationReadiness:{
+        label:{
+            type:String,
+            enum:['apply_now','apply_after_resume_fixes','apply_after_skill_upgrade','stretch_role']
+        },
+        readinessScore:Number,
+        mainBlocker:String,
+        topReasons:[String],
+        nextAction:String,
+       },
 
     //    analysis status for quueue
         status:{

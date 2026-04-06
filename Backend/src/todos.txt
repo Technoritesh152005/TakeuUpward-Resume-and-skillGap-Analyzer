@@ -480,3 +480,8 @@ REMAINING TODOS - 2026-04-05
 - track processing time
 - track AI failure rate
 - track OCR usage and OCR failure rate
+
+
+//06-04-20206
+resume details in detailed analysis is looking conjusted and there must be some timer so that after that timer analysis must not be executed. cause something failed it dont gets show
+also not ready or processing analysis is not being deleyed
