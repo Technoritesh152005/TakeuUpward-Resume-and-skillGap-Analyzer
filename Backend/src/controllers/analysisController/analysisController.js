@@ -14,6 +14,7 @@ import multiRoleCompareService from '../../services/ai.services/multi_role_compa
 import { refundAiUsage, reserveAiUsage } from '../../services/aiQuota.service.js'
 import { enqueueAnalysisGeneration } from '../../queues/analysis.queue.js'
 import { ANALYSIS_PROCESSING_STAGE, ANALYSIS_STATUS } from '../../config/constant.js'
+import jobRecommendationService from '../../services/adzunaJobRecomendation/jobRecommendation.service.js'
 
 const clearAnalysisCache = async (userId, analysisId = null) => {
     const normalizedUserId = String(userId);
@@ -312,6 +313,27 @@ export const getAnalysisStatus = asyncHandler(async (req, res) => {
     res.set('Cache-Control', 'no-store')
     res.status(200).json(
         new ApiResponse(200, analysis, 'Analysis status fetched successfully')
+    )
+})
+
+export const getRecommendedJobsForAnalysis = asyncHandler(async (req, res) => {
+    const analysis = await analysisModel.findOne({
+        user: req.user._id,
+        _id: req.params.id,
+        isActive: true,
+        status: ANALYSIS_STATUS.COMPLETED,
+    })
+        .populate('resume', 'parsedData fileName originalFileName')
+        .populate('jobRole', 'title category experienceLevel salaryRange')
+
+    if (!analysis) {
+        throw new ApiError(404, 'Completed analysis not found for job recommendations')
+    }
+
+    const recommendations = await jobRecommendationService.getRecommendationsForAnalysis(analysis)
+
+    res.status(200).json(
+        new ApiResponse(200, recommendations, 'Recommended jobs fetched successfully')
     )
 })
 

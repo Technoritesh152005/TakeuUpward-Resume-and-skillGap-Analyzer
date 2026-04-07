@@ -210,6 +210,30 @@ const analysisSchema = mongoose.Schema(
         nextAction:String,
        },
 
+       closestWinnableRole: {
+        roleId: {
+            type: mongoose.Types.ObjectId,
+            ref: 'jobRoleModel',
+        },
+        title: String,
+        category: String,
+        experienceLevel: String,
+        fitScore: Number,
+        winnableScore: Number,
+        matched: {
+            critical: Number,
+            important: Number,
+            niceToHave: Number,
+        },
+        gaps: {
+            critical: Number,
+            important: Number,
+            niceToHave: Number,
+        },
+        reasons: [String],
+        nextAction: String,
+       },
+
     //    analysis status for quueue
         status:{
             type:String,

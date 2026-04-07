@@ -19,6 +19,7 @@ import {
     getMyAnalysis,
     getAnalysisById,
     getAnalysisStatus,
+    getRecommendedJobsForAnalysis,
     regenerateAnalysis,
     deleteAnalysis
 
@@ -44,6 +45,9 @@ router.get('/all-analysis',protectAccess,validateGetAnalysis,getMyAnalysis)
 
 // 4.get single analsysi f the resume or user
 router.get('/:id/status',protectAccess,validateAnalysisId,getAnalysisStatus)
+
+// 4b.get recommended live jobs for a completed analysis
+router.get('/:id/recommended-jobs',protectAccess,validateAnalysisId,getRecommendedJobsForAnalysis)
 
 // 4.get single analsysi f the resume or user
 router.get('/:id',protectAccess,validateAnalysisId,getAnalysisById)
