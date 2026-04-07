@@ -9,8 +9,8 @@ const QuickActions = ({ aiUsage }) => {
   const actions = [
     {
       icon: Upload,
-      title: 'Upload Profile',
-      description: 'Initialize career analysis',
+      title: 'Upload Resume',
+      description: 'Add a new resume to your workspace',
       color: 'from-primary-500 to-indigo-500',
       glow: 'group-hover:shadow-primary-500/30',
       border: 'group-hover:border-primary-500/50',
@@ -18,8 +18,8 @@ const QuickActions = ({ aiUsage }) => {
     },
     {
       icon: Target,
-      title: 'Strategy Gap',
-      description: 'Deep-dive skill analysis',
+      title: 'Create Analysis',
+      description: 'Check role fit and skill gaps',
       meta: 'Uses 1 AI credit',
       isAiAction: true,
       color: 'from-accent-500 to-pink-500',
@@ -29,8 +29,8 @@ const QuickActions = ({ aiUsage }) => {
     },
     {
       icon: Map,
-      title: 'Roadmap Ace',
-      description: 'Launch growth trajectory',
+      title: 'Build Roadmap',
+      description: 'Generate your learning plan',
       meta: 'Uses 1 AI credit',
       isAiAction: true,
       color: 'from-amber-400 to-orange-500',
@@ -40,8 +40,8 @@ const QuickActions = ({ aiUsage }) => {
     },
     {
       icon: Briefcase,
-      title: 'Market Hunt',
-      description: 'Target 50+ career paths',
+      title: 'Browse Roles',
+      description: 'Explore available target roles',
       color: 'from-fresh-400 to-emerald-500',
       glow: 'group-hover:shadow-fresh-500/30',
       border: 'group-hover:border-fresh-500/50',

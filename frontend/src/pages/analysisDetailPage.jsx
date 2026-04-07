@@ -6,6 +6,7 @@ import {
   Briefcase,
   CheckCircle2,
   Clock3,
+  ExternalLink,
   FileText,
   Lightbulb,
   Radar,
@@ -65,6 +66,9 @@ const AnalysisDetailPage = ()=>{
   const [deleting , setDeleting] = useState(false)
   const [regenerating, setRegenerating] = useState(false)
   const [aiUsage, setAiUsage] = useState(null)
+  const [recommendedJobs, setRecommendedJobs] = useState([])
+  const [jobRecommendationMeta, setJobRecommendationMeta] = useState({ basedOn: [] })
+  const [jobsLoading, setJobsLoading] = useState(false)
   const isAiLimitReached = (aiUsage?.usesRemaining ?? 0) === 0
 
   // whenever there is a change in id in params call these means someone want analysis detail
@@ -112,6 +116,12 @@ const AnalysisDetailPage = ()=>{
       } else {
         // if cleaneddata key exist in emptyoverview the cleaned data value will override it
         setAnalysis({...emptyOverview , ...cleandata})
+        if (cleandata?.status === 'completed') {
+          fetchRecommendedJobs()
+        } else {
+          setRecommendedJobs([])
+          setJobRecommendationMeta({ basedOn: [] })
+        }
       }
     }catch(error){
       console.error(error)
@@ -153,6 +163,24 @@ const AnalysisDetailPage = ()=>{
       setAiUsage(response?.data?.aiUsage || null)
     } catch (error) {
       console.error(error)
+    }
+  }
+
+  const fetchRecommendedJobs = async () => {
+    try {
+      setJobsLoading(true)
+      const payload = await analysisService.getRecommendedJobs(id)
+      const clean = payload?.data || payload
+      setRecommendedJobs(Array.isArray(clean?.jobs) ? clean.jobs : [])
+      setJobRecommendationMeta({
+        basedOn: Array.isArray(clean?.basedOn) ? clean.basedOn : [],
+      })
+    } catch (error) {
+      console.error(error)
+      setRecommendedJobs([])
+      setJobRecommendationMeta({ basedOn: [] })
+    } finally {
+      setJobsLoading(false)
     }
   }
 
@@ -365,6 +393,14 @@ const AnalysisDetailPage = ()=>{
 
               <Panel title="Application Readiness" icon={Rocket}>
                 <ApplicationReadinessCard readiness={analysis?.applicationReadiness} />
+              </Panel>
+
+              <Panel title="Live Job Recommendations" icon={Briefcase}>
+                <RecommendedJobsCard
+                  jobs={recommendedJobs}
+                  jobsLoading={jobsLoading}
+                  basedOn={jobRecommendationMeta?.basedOn || []}
+                />
               </Panel>
             </div>
 
@@ -920,5 +956,121 @@ const InfoRow = ({ label, value }) => (
     <span className="font-medium text-neutral-900 dark:text-white">{value}</span>
   </div>
 );
+
+const RecommendedJobsCard = ({ jobs, jobsLoading, basedOn }) => {
+  if (jobsLoading) {
+    return (
+      <div className="space-y-3">
+        {[1, 2, 3].map((item) => (
+          <div key={item} className="animate-pulse rounded-2xl border border-neutral-200 p-4 dark:border-neutral-700">
+            <div className="h-4 w-40 rounded bg-neutral-200 dark:bg-neutral-700" />
+            <div className="mt-3 h-3 w-24 rounded bg-neutral-100 dark:bg-neutral-800" />
+            <div className="mt-4 h-3 w-full rounded bg-neutral-100 dark:bg-neutral-800" />
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  if (!jobs?.length) {
+    return (
+      <div className="space-y-3">
+        <p className="text-sm text-neutral-500 dark:text-neutral-400">
+          No live jobs available right now for this analysis context.
+        </p>
+        {basedOn?.length ? (
+          <p className="text-xs text-neutral-400 dark:text-neutral-500">
+            Searched using: {basedOn.map((item) => item?.title).filter(Boolean).join(', ')}
+          </p>
+        ) : null}
+      </div>
+    )
+  }
+
+  const labelTone = {
+    apply_now: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300',
+    apply_after_resume_fixes: 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300',
+    apply_after_skill_upgrade: 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300',
+    stretch_role: 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300',
+  }
+
+  const labelCopy = {
+    apply_now: 'Apply Now',
+    apply_after_resume_fixes: 'Apply After Resume Fixes',
+    apply_after_skill_upgrade: 'Apply After Skill Upgrade',
+    stretch_role: 'Stretch Role',
+  }
+
+  return (
+    <div className="space-y-4">
+      {basedOn?.length ? (
+        <div className="rounded-2xl bg-neutral-50 px-4 py-3 text-xs text-neutral-500 dark:bg-neutral-900/60 dark:text-neutral-400">
+          Based on: <span className="font-semibold text-neutral-800 dark:text-neutral-200">{basedOn.map((item) => item?.title).filter(Boolean).join(' • ')}</span>
+        </div>
+      ) : null}
+
+      {jobs.slice(0, 6).map((job, index) => (
+        <div key={job?.externalId || job?.redirectUrl || index} className="rounded-2xl border border-neutral-200 p-4 transition hover:border-primary-200 hover:shadow-soft dark:border-neutral-700 dark:hover:border-primary-800/40">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <h3 className="text-base font-semibold text-neutral-900 dark:text-white">{job?.title || 'Role'}</h3>
+              <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">
+                {job?.company || 'Unknown company'} {job?.location ? `• ${job.location}` : ''}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className={`rounded-full px-3 py-1 text-[11px] font-semibold ${labelTone[job?.recommendationLabel] || 'bg-neutral-100 text-neutral-700 dark:bg-neutral-700 dark:text-neutral-200'}`}>
+                {labelCopy[job?.recommendationLabel] || 'Review'}
+              </span>
+              <span className="rounded-full bg-neutral-100 px-3 py-1 text-[11px] font-semibold text-neutral-700 dark:bg-neutral-700 dark:text-neutral-200">
+                {job?.recommendationScore || 0}/100
+              </span>
+            </div>
+          </div>
+
+          {job?.description ? (
+            <p className="mt-3 text-sm leading-6 text-neutral-600 dark:text-neutral-300">
+              {String(job.description).slice(0, 220)}{String(job.description).length > 220 ? '...' : ''}
+            </p>
+          ) : null}
+
+          {job?.recommendationReasons?.length ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {job.recommendationReasons.map((reason, reasonIndex) => (
+                <span key={`${reason}-${reasonIndex}`} className="rounded-full bg-primary-50 px-2.5 py-1 text-[11px] font-medium text-primary-700 dark:bg-primary-900/20 dark:text-primary-300">
+                  {reason}
+                </span>
+              ))}
+            </div>
+          ) : null}
+
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-neutral-500 dark:text-neutral-400">
+            <div className="flex flex-wrap gap-3">
+              {job?.salaryMin || job?.salaryMax ? (
+                <span>
+                  Salary: {job?.salaryMin ? `₹${Math.round(job.salaryMin).toLocaleString('en-IN')}` : 'N/A'}
+                  {job?.salaryMax ? ` - ₹${Math.round(job.salaryMax).toLocaleString('en-IN')}` : ''}
+                </span>
+              ) : null}
+              {job?.contractTime ? <span className="capitalize">{String(job.contractTime).replace('_', ' ')}</span> : null}
+            </div>
+
+            {job?.redirectUrl ? (
+              <a
+                href={job.redirectUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 rounded-full bg-neutral-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-primary-600 dark:bg-white dark:text-neutral-900 dark:hover:bg-primary-100"
+              >
+                View Job
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            ) : null}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
 
 export default AnalysisDetailPage;

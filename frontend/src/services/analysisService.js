@@ -71,6 +71,11 @@ const analysisService = {
     return extractPayload(response);
   },
 
+  getRecommendedJobs: async (analysisId) => {
+    const response = await api.get(`/analysis/${analysisId}/recommended-jobs`);
+    return extractPayload(response);
+  },
+
   regenerateAnalysis: async (analysisId, preferences) => {
     const response = await api.put(`/analysis/${analysisId}`, {
       ...(preferences ? { preferences } : {}),

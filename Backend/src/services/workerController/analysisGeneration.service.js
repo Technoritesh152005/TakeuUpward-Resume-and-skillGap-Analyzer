@@ -8,6 +8,7 @@ import logger from '../../utils/logs.js'
 import { refundAiUsage } from '../aiQuota.service.js'
 import { ANALYSIS_PROCESSING_STAGE, ANALYSIS_STATUS } from '../../config/constant.js'
 import readinessEngineService from '../readinessEngine.service.js'
+import closestWinnableRoleService from '../closestWinnableRole.service.js'
 
 const ANALYSIS_JOB_TIMEOUT_MS = 120000;
 
@@ -462,6 +463,29 @@ export const processAnalysisGenerationJob = async ({ analysisId, userId, resumeI
             importantGapCount: analysis.skillGaps?.important?.length || 0,
             experienceGap: analysis.experienceAnalysis?.gap || 0,
             readinessLevel: analysis.readinessLevel,
+        })
+
+        const relatedRoleIds = Array.isArray(jobRole?.relatedRoles) ? jobRole.relatedRoles : []
+        const nearbyRoles = await jobRoleModel.find({
+            isActive: true,
+            _id: { $ne: jobRole._id },
+            $or: [
+                { _id: { $in: relatedRoleIds } },
+                {
+                    category: jobRole.category,
+                    experienceLevel: jobRole.experienceLevel,
+                },
+            ],
+        })
+            .limit(8)
+
+        analysis.closestWinnableRole = closestWinnableRoleService.findClosestWinnableRole({
+            resumeData: resume.parsedData,
+            currentAnalysis: {
+                applicationReadiness: analysis.applicationReadiness,
+            },
+            targetRole: jobRole,
+            candidateRoles: nearbyRoles,
         })
 
         analysis.status = ANALYSIS_STATUS.COMPLETED

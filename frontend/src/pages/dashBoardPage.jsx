@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FileText, Target, TrendingUp, BookOpen, Crown, Zap, ShieldCheck, Sparkles } from 'lucide-react';
+import { FileText, Target, TrendingUp, BookOpen, Crown, Zap, ShieldCheck } from 'lucide-react';
 import DashboardLayout from '../components/layout/DashboardLayout.jsx'
 import WelcomeBanner from '../components/dashboard/WelcomeBanner.jsx'
 import StatsCard from '../components/dashboard/StatsCard.jsx';
@@ -60,28 +60,11 @@ const DashboardPage = () => {
   return (
     <DashboardLayout>
       <div className="space-y-6 pb-6">
-        
-        {/* Row 1: Mission Briefing */}
         <section className="animate-in fade-in slide-in-from-top-4 duration-700">
-           <WelcomeBanner />
+          <WelcomeBanner />
         </section>
 
-        {/* Row 2: Rapid Access Nodes */}
-        <section className="animate-in fade-in slide-in-from-top-6 duration-1000 delay-100">
-           <QuickActions aiUsage={dashboardData?.aiUsage} />
-        </section>
-
-        {/* Row 3: Core Performance Metrics */}
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 animate-in fade-in slide-in-from-top-8 duration-1000 delay-200">
-          <StatsCard
-            title="AI Credits Left"
-            value={`${dashboardData?.aiUsage?.usesRemaining ?? 0}/${dashboardData?.aiUsage?.dailyLimit ?? 4}`}
-            change={dashboardData?.aiUsage ? `${dashboardData.aiUsage.usedToday} used` : null}
-            changeType={(dashboardData?.aiUsage?.usesRemaining ?? 0) > 0 ? "increase" : "decrease"}
-            icon={Sparkles}
-            color="purple"
-            loading={loading}
-          />
           <StatsCard
             title="Active Intelligence"
             value={dashboardData?.stats.totalResumes || 0}
@@ -120,52 +103,47 @@ const DashboardPage = () => {
           />
         </section>
 
-        {/* Row 4: Deep Analytics Grid */}
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300">
-          
-          {/* Performance Trend (8Cols on XL) */}
           <div className="xl:col-span-8 flex flex-col gap-6">
-            <SkillProgressGraph 
+            <SkillProgressGraph
               data={{ analysisHistory: dashboardData?.analysisHistory || [] }}
               loading={loading}
             />
-            
+
             <div className="flex-1">
-              <SkillProgressChart 
-                skills={dashboardData?.skillProgress || []} 
-                loading={loading} 
+              <SkillProgressChart
+                skills={dashboardData?.skillProgress || []}
+                loading={loading}
               />
             </div>
           </div>
 
-          {/* Operation Status (4Cols on XL) */}
           <div className="xl:col-span-4 flex flex-col gap-6">
             <div className="flex-1">
-              <RecentActivity 
-                activities={dashboardData?.activities || []} 
-                loading={loading} 
+              <RecentActivity
+                activities={dashboardData?.activities || []}
+                loading={loading}
               />
             </div>
-            
+
             <div className="flex-1">
-              <RoadmapPreview 
-                roadmap={dashboardData?.roadmap} 
-                loading={loading} 
+              <RoadmapPreview
+                roadmap={dashboardData?.roadmap}
+                loading={loading}
               />
             </div>
           </div>
         </div>
 
-        {/* Row 5: Critical Vulnerability Scan (Skill Gaps) */}
         {dashboardData?.skillGapsSummary && dashboardData.skillGapsSummary.total > 0 && (
           <section className="bg-white/4 backdrop-blur-xl rounded-[32px] p-8 border border-white/8 relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-8 opacity-5">
-               <Crown className="w-32 h-32 text-white" />
+              <Crown className="w-32 h-32 text-white" />
             </div>
-            
+
             <h3 className="text-sm font-black text-white uppercase tracking-widest mb-8 flex items-center gap-3">
               <div className="w-8 h-8 rounded-lg bg-danger-600/20 border border-danger-500/30 flex items-center justify-center">
-                 <Zap className="w-4 h-4 text-danger-400" />
+                <Zap className="w-4 h-4 text-danger-400" />
               </div>
               Vulnerability Assessment
             </h3>
@@ -181,7 +159,7 @@ const DashboardPage = () => {
               </div>
               <div className="text-center bg-white/5 p-6 rounded-3xl border border-white/5 group-hover:bg-white/10 transition-colors">
                 <div className="text-4xl font-black text-amber-400 tracking-tighter mb-1">
-                   {dashboardData.skillGapsSummary.important}
+                  {dashboardData.skillGapsSummary.important}
                 </div>
                 <div className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">
                   Important Gaps
@@ -204,13 +182,17 @@ const DashboardPage = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="mt-8 flex items-center gap-2.5 px-4 py-3 bg-success-500/10 border border-success-500/20 rounded-2xl w-fit">
-               <ShieldCheck className="w-4 h-4 text-success-400" />
-               <p className="text-[10px] font-black text-success-400 uppercase tracking-widest italic">Optimization Protocol Recommended</p>
+              <ShieldCheck className="w-4 h-4 text-success-400" />
+              <p className="text-[10px] font-black text-success-400 uppercase tracking-widest italic">Optimization Protocol Recommended</p>
             </div>
           </section>
         )}
+
+        <section className="animate-in fade-in slide-in-from-top-6 duration-1000 delay-100">
+          <QuickActions aiUsage={dashboardData?.aiUsage} />
+        </section>
       </div>
     </DashboardLayout>
   );
