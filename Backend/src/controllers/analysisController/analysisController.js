@@ -513,6 +513,45 @@ export const regenerateAnalysis = asyncHandler(async (req, res) => {
     if (!analysis) {
       throw new ApiError(404, 'Analysis not found');
     }
+
+    if (analysis.status === ANALYSIS_STATUS.FAILED) {
+      analysis.status = ANALYSIS_STATUS.QUEUED;
+      analysis.processingStage = ANALYSIS_PROCESSING_STAGE.QUEUED;
+      analysis.error = undefined;
+      analysis.queuedAt = new Date();
+      analysis.processingStartedAt = undefined;
+      analysis.completedAt = undefined;
+      analysis.processingTime = undefined;
+
+      await analysis.save();
+      await clearAnalysisCache(req.user._id, analysis._id);
+
+      try {
+        await enqueueAnalysisGeneration({
+          analysisId: analysis._id,
+          resumeId: analysis.resume?._id || analysis.resume,
+          jobRoleId: analysis.jobRole?._id || analysis.jobRole,
+          userId: req.user._id,
+        });
+
+        return res.status(202).json(
+          new ApiResponse(202, { analysis, aiUsage: req.aiUsage }, 'Analysis retry queued successfully')
+        );
+      } catch (error) {
+        if (req.aiQuotaReserved) {
+          req.aiUsage = await refundAiUsage(req.user._id);
+          req.aiQuotaReserved = false;
+        }
+
+        analysis.status = ANALYSIS_STATUS.FAILED;
+        analysis.processingStage = ANALYSIS_PROCESSING_STAGE.FAILED;
+        analysis.error = error.message;
+        await analysis.save();
+        await clearAnalysisCache(req.user._id, analysis._id);
+
+        throw error;
+      }
+    }
   
     logger.info(`Regenerating analysis: ${analysis._id}`);
   

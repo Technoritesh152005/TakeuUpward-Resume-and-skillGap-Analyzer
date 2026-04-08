@@ -61,6 +61,11 @@ const roadmapService = {
     return extractPayload(response);
   },
 
+  retryRoadmap: async (id) => {
+    const response = await api.post(`/roadmap/${id}/retry`);
+    return extractPayload(response);
+  },
+
   getRoadmapByAnalysis: async (analysisId) => {
     const response = await api.get(`/roadmap/analysis/${analysisId}`);
     return extractPayload(response);

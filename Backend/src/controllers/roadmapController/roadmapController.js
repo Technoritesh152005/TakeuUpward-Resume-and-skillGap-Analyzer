@@ -50,19 +50,19 @@ const getSkillVariants = (item) => {
         ...(Array.isArray(item?.skillsCovered) ? item.skillsCovered : []),
         item?.title,
     ]
-    // removes null undefined or ''
+        // removes null undefined or ''
         .filter(Boolean)
         // split text using , / 
         // "React, Node.js" → ["React", " Node.js"]
-// "Frontend Developer (React)" → ["Frontend Developer ", "React"]
+        // "Frontend Developer (React)" → ["Frontend Developer ", "React"]
         .flatMap((value) => String(value)
             .split(/[,/()|-]/g)
             // clean each part 
             .map((part) => part.trim())
             .filter(Boolean));
 
-            // set removes raw value
-            // Spread operator (...) is used when you want to expand or copy values
+    // set removes raw value
+    // Spread operator (...) is used when you want to expand or copy values
     return [...new Set(rawValues)]
 }
 
@@ -342,17 +342,17 @@ const normalizeRoadmapPayload = (roadmapData) => {
         ? roadmapData.milestones.map(normalizeMilestone)
         : [];
 
-        return {
-            duration : {
-                weeks : extractNumber(roadmapData?.duration?.weeks , 0),
-            },
-            phases,
-            projects,
-            quickwins,
-            milestones,
-            certification,
+    return {
+        duration: {
+            weeks: extractNumber(roadmapData?.duration?.weeks, 0),
+        },
+        phases,
+        projects,
+        quickwins,
+        milestones,
+        certification,
 
-        }
+    }
 }
 export const createRoadmap = asyncHandler(async (req, res) => {
 
@@ -503,6 +503,59 @@ export const getRoadmapStatus = asyncHandler(async (req, res) => {
     res.status(200).json(
         new ApiResponse(200, roadmap, 'Roadmap status fetched successfully')
     )
+})
+
+export const retryRoadmap = asyncHandler(async (req, res) => {
+
+    const roadmap = roadmapModel.findOne({
+        _id: req.params.id,
+        user: req.user.id,
+        isActive: true,
+    }).select('_id analysis status processingStage error user queuedAt processingStartedAt completedAt processingTime')
+
+    if (!roadmap) {
+        throw new ApiError(404, 'Roadmap not found')
+    }
+
+    if (roadmap.status !== 'FAILED') {
+        throw new ApiError(400, 'Only failed roadmaps can be retried')
+    }
+
+    roadmap.status = ROADMAP_STATUS.QUEUED
+    roadmap.processingStage = ROADMAP_PROCESSING_STAGE.QUEUED
+    roadmap.error = ''
+    roadmap.queuedAt = new Date()
+    roadmap.processingStartedAt = null
+    roadmap.completedAt = null
+    roadmap.processingTime = null
+    await roadmap.save()
+
+    // clear this roadmap from cache if added 
+    await clearRoadmapCache(roadmap.analysis, req.user._id)
+
+    try {
+        // enqueu the roadmap in the queue
+        await enqueueRoadmapGeneration({
+            roadmapId: roadmap._id,
+            analysisId: roadmap.analysis,
+            userid: req.user._id
+        })
+
+        return res.status(202)
+            .json(new ApiResponse(201, { roadmap, aiUsage: req.aiUsage }, 'Roadmap retry queued sucessfully'))
+    } catch (error) {
+        if (req.aiQuotaReserved) {
+            req.aiUsage = await refundAiUsage(req.user._id)
+            req.aiQuotaReserved = false
+        }
+        throw new Error('Error occured while queuing the roadmap', error.message)
+    }
+
+    roadmap.status = ROADMAP_STATUS.FAILED
+    roadmap.processingStage = ROADMAP_PROCESSING_STAGE.FAILED
+    roadmap.error = error.message
+    await roadmap.save()
+    await clearRoadmapCache(roadmap.analysis, req.user._id)
 })
 
 export const markItemComplete = asyncHandler(async (req, res) => {

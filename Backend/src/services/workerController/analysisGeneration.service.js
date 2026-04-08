@@ -5,6 +5,7 @@ import skillgapanalysis from '../ai.services/skill_gap_analysis.js'
 import generateAtsScore from '../ai.services/ats_score_generator.js'
 import redisClient from '../../config/redis.js'
 import logger from '../../utils/logs.js'
+import { logMetric } from '../../utils/metrics.js'
 import { refundAiUsage } from '../aiQuota.service.js'
 import { ANALYSIS_PROCESSING_STAGE, ANALYSIS_STATUS } from '../../config/constant.js'
 import readinessEngineService from '../readinessEngine.service.js'
@@ -377,6 +378,11 @@ export const processAnalysisGenerationJob = async ({ analysisId, userId, resumeI
     analysis.error = undefined
     await analysis.save()
     await clearAnalysisCache(userId, analysisId)
+    logMetric('analysis.queue_wait_ms', {
+        analysisId: String(analysisId),
+        userId: String(userId),
+        value: analysis.queuedAt ? analysis.processingStartedAt.getTime() - new Date(analysis.queuedAt).getTime() : undefined,
+    })
 
     try {
         const skillGapPromise = skillgapanalysis.performDeepSkillGapAnalyze(
@@ -497,6 +503,12 @@ export const processAnalysisGenerationJob = async ({ analysisId, userId, resumeI
 
         await analysis.save()
         await clearAnalysisCache(userId, analysisId)
+        logMetric('analysis.processing_time_ms', {
+            analysisId: String(analysisId),
+            userId: String(userId),
+            value: analysis.processingTime,
+            status: analysis.status,
+        })
 
         logger.info(`Analysis generated successfully for user: ${userId}`)
         return analysis
@@ -506,6 +518,12 @@ export const processAnalysisGenerationJob = async ({ analysisId, userId, resumeI
         analysis.processingStage = ANALYSIS_PROCESSING_STAGE.FAILED
         await analysis.save()
         await clearAnalysisCache(userId, analysisId)
+        logMetric('analysis.processing_time_ms', {
+            analysisId: String(analysisId),
+            userId: String(userId),
+            value: analysis.processingStartedAt ? Date.now() - new Date(analysis.processingStartedAt).getTime() : undefined,
+            status: analysis.status,
+        })
 
         await refundAiUsageSafely(userId)
         logger.error(`Error while generating analysis: ${error.message}`)

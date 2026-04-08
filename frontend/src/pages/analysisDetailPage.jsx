@@ -21,6 +21,7 @@ import {format} from 'date-fns'
 import DashboardLayout from '../components/layout/DashboardLayout.jsx'
 import analysisService from '../services/analysisService.js'
 import dashboardService from '../services/dashboardServices.js'
+import { getSafeAnalysisError } from '../utils/analysisError.js'
 
 const emptyOverview = {
   matchScore: 0,
@@ -220,7 +221,7 @@ const AnalysisDetailPage = ()=>{
       const clean = payload?.analysis || payload?.data || payload
       setAnalysis({ ...emptyOverview, ...clean })
       if (payload?.aiUsage) setAiUsage(payload.aiUsage)
-      toast.success('Analysis regenerated successfully')
+      toast.success(clean?.status === 'queued' ? 'Analysis retry queued successfully' : 'Analysis regenerated successfully')
     } catch (error) {
       console.error(error)
       toast.error(error?.response?.data?.message || 'Failed to regenerate analysis')
@@ -288,11 +289,11 @@ const AnalysisDetailPage = ()=>{
 	            <button
 	              type="button"
 	              onClick={handleRegenerateAnalysis}
-	              disabled={regenerating || isAiLimitReached || analysis?.status !== 'completed'}
+	              disabled={regenerating || isAiLimitReached || !['completed', 'failed'].includes(analysis?.status)}
 	              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-blue-200 bg-blue-50 px-5 py-3 text-sm font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-blue-900/40 dark:bg-blue-900/15 dark:text-blue-300"
 	            >
 	              <Target className="h-4 w-4" />
-	              {regenerating ? 'Regenerating...' : 'Regenerate Analysis'}
+	              {regenerating ? 'Retrying Analysis...' : analysis?.status === 'failed' ? 'Retry Analysis' : 'Regenerate Analysis'}
 	            </button>
 	            <button
 	              type="button"
@@ -340,6 +341,13 @@ const AnalysisDetailPage = ()=>{
         </div>
       ) : ['queued', 'processing', 'finalizing'].includes(analysis?.status) ? (
         <AnalysisProcessingState analysis={analysis} />
+      ) : analysis?.status === 'failed' ? (
+        <AnalysisFailedState
+          analysis={analysis}
+          regenerating={regenerating}
+          isAiLimitReached={isAiLimitReached}
+          onRetry={handleRegenerateAnalysis}
+        />
       ) : (
         <>
           <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -669,6 +677,49 @@ const BreakdownBlock = ({ breakdown }) => {
     </div>
   );
 };
+
+const AnalysisFailedState = ({ analysis, regenerating, isAiLimitReached, onRetry }) => (
+  <section className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.15fr)_340px]">
+    <Panel title="Analysis Generation Failed" icon={Target}>
+      <div className="rounded-3xl border border-red-200 bg-red-50 p-5 dark:border-red-900/40 dark:bg-red-900/15">
+        <p className="text-lg font-semibold text-red-800 dark:text-red-200">The analysis job did not complete.</p>
+        <p className="mt-2 text-sm leading-6 text-red-700 dark:text-red-300">
+          {getSafeAnalysisError(analysis?.error)}
+        </p>
+        <div className="mt-5 flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={onRetry}
+            disabled={regenerating || isAiLimitReached}
+            className="inline-flex items-center gap-2 rounded-2xl bg-red-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {regenerating ? 'Retrying...' : 'Retry Analysis'}
+          </button>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="inline-flex items-center gap-2 rounded-2xl border border-red-200 bg-white px-5 py-3 text-sm font-semibold text-red-700 transition hover:bg-red-50 dark:border-red-900/40 dark:bg-transparent dark:text-red-300"
+          >
+            Refresh Status
+          </button>
+        </div>
+        {isAiLimitReached ? (
+          <p className="mt-4 text-xs font-medium text-red-600 dark:text-red-300">Daily AI limit reached. Resets at 12:00 AM IST.</p>
+        ) : null}
+      </div>
+    </Panel>
+
+    <div className="space-y-5 xl:sticky xl:top-24 xl:self-start">
+      <Panel title="Failure Details" icon={Clock3}>
+        <div className="space-y-3 text-sm text-neutral-600 dark:text-neutral-300">
+          <InfoRow label="Status" value={String(analysis?.status || 'failed')} />
+          <InfoRow label="Stage" value={String(analysis?.processingStage || 'failed').replaceAll('_', ' ')} />
+          <InfoRow label="Role" value={analysis?.jobRole?.title || 'Selected role'} />
+        </div>
+      </Panel>
+    </div>
+  </section>
+)
 
 const GapSummaryCard = ({ label, value, className }) => (
   <div className={`rounded-2xl px-4 py-5 ${className}`}>
