@@ -11,21 +11,13 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts';
-import { CalendarRange, LineChart as LineIcon, BarChart3, TrendingUp, Sparkles } from 'lucide-react';
+import { LineChart as LineIcon, BarChart3, Sparkles } from 'lucide-react';
+import { buildVisibleAnalysisChartData } from '../../utils/analysisChart.js';
 
 const chartModes = [
   { id: 'line', label: 'Line', icon: LineIcon },
   { id: 'bar', label: 'Bar', icon: BarChart3 },
 ];
-
-const formatPointLabel = (point) => {
-  const rawDate = point?.date ? new Date(point.date) : null;
-  const dateLabel = rawDate && !Number.isNaN(rawDate.getTime())
-    ? rawDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
-    : point?.label || 'Analysis';
-
-  return point?.label ? `${point.label} • ${dateLabel}` : dateLabel;
-};
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
@@ -52,12 +44,8 @@ const SkillProgressGraph = ({ data = {}, loading = false }) => {
   const [chartMode, setChartMode] = useState('line');
   const analysisHistory = Array.isArray(data?.analysisHistory) ? data.analysisHistory : [];
 
-  const chartData = useMemo(
-    () =>
-      analysisHistory.map((point) => ({
-        ...point,
-        displayLabel: formatPointLabel(point),
-      })),
+  const { visibleData: chartData, hiddenCount, totalCount, maxVisiblePoints } = useMemo(
+    () => buildVisibleAnalysisChartData(analysisHistory),
     [analysisHistory]
   );
 
@@ -77,6 +65,10 @@ const SkillProgressGraph = ({ data = {}, loading = false }) => {
   const latest = chartData[chartData.length - 1];
   const previous = chartData.length > 1 ? chartData[chartData.length - 2] : null;
   const matchDelta = previous ? (latest.matchScore || 0) - (previous.matchScore || 0) : 0;
+  const hasDenseHistory = chartData.length > 8;
+  const xAxisInterval = hasDenseHistory ? 1 : 0;
+  const matchDot = hasDenseHistory ? false : { r: 4, fill: '#7c3aed', strokeWidth: 2, stroke: '#000' };
+  const gapDot = hasDenseHistory ? false : { r: 3, strokeWidth: 2, stroke: '#000' };
 
   const renderChart = () => {
     if (chartMode === 'bar') {
@@ -84,7 +76,7 @@ const SkillProgressGraph = ({ data = {}, loading = false }) => {
         <ResponsiveContainer width="100%" height={320}>
           <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-            <XAxis dataKey="displayLabel" stroke="rgba(255,255,255,0.3)" style={{ fontSize: '10px', fontWeight: 'bold' }} tickLine={false} axisLine={false} dy={10} />
+            <XAxis dataKey="shortLabel" interval={xAxisInterval} stroke="rgba(255,255,255,0.3)" style={{ fontSize: '10px', fontWeight: 'bold' }} tickLine={false} axisLine={false} dy={10} />
             <YAxis yAxisId="score" domain={[0, 100]} stroke="rgba(255,255,255,0.3)" style={{ fontSize: '10px', fontWeight: 'bold' }} tickLine={false} axisLine={false} dx={-10} />
             <YAxis yAxisId="gaps" orientation="right" stroke="rgba(255,255,255,0.3)" style={{ fontSize: '10px', fontWeight: 'bold' }} tickLine={false} axisLine={false} dx={10} />
             <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
@@ -100,14 +92,14 @@ const SkillProgressGraph = ({ data = {}, loading = false }) => {
       <ResponsiveContainer width="100%" height={320}>
         <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-          <XAxis dataKey="displayLabel" stroke="rgba(255,255,255,0.3)" style={{ fontSize: '10px', fontWeight: 'bold' }} tickLine={false} axisLine={false} dy={10} />
+          <XAxis dataKey="shortLabel" interval={xAxisInterval} stroke="rgba(255,255,255,0.3)" style={{ fontSize: '10px', fontWeight: 'bold' }} tickLine={false} axisLine={false} dy={10} />
           <YAxis yAxisId="score" domain={[0, 100]} stroke="rgba(255,255,255,0.3)" style={{ fontSize: '10px', fontWeight: 'bold' }} tickLine={false} axisLine={false} dx={-10} />
           <YAxis yAxisId="gaps" orientation="right" stroke="rgba(255,255,255,0.3)" style={{ fontSize: '10px', fontWeight: 'bold' }} tickLine={false} axisLine={false} dx={10} />
           <Tooltip content={<CustomTooltip />} />
           <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '10px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }} />
-          <Line yAxisId="score" type="monotone" dataKey="matchScore" name="Match Score" stroke="#7c3aed" strokeWidth={4} dot={{ r: 4, fill: '#7c3aed', strokeWidth: 2, stroke: '#000' }} activeDot={{ r: 6, strokeWidth: 0 }} />
-          <Line yAxisId="gaps" type="monotone" dataKey="criticalGaps" name="Critical Gaps" stroke="#f43f5e" strokeWidth={3} dot={{ r: 3, fill: '#f43f5e', strokeWidth: 2, stroke: '#000' }} />
-          <Line yAxisId="gaps" type="monotone" dataKey="importantGaps" name="Important Gaps" stroke="#3b82f6" strokeWidth={3} dot={{ r: 3, fill: '#3b82f6', strokeWidth: 2, stroke: '#000' }} />
+          <Line yAxisId="score" type="monotone" dataKey="matchScore" name="Match Score" stroke="#7c3aed" strokeWidth={4} dot={matchDot} activeDot={{ r: 6, strokeWidth: 0 }} />
+          <Line yAxisId="gaps" type="monotone" dataKey="criticalGaps" name="Critical Gaps" stroke="#f43f5e" strokeWidth={3} dot={gapDot} activeDot={{ r: 5, strokeWidth: 0 }} />
+          <Line yAxisId="gaps" type="monotone" dataKey="importantGaps" name="Important Gaps" stroke="#3b82f6" strokeWidth={3} dot={gapDot} activeDot={{ r: 5, strokeWidth: 0 }} />
         </LineChart>
       </ResponsiveContainer>
     );
@@ -115,8 +107,6 @@ const SkillProgressGraph = ({ data = {}, loading = false }) => {
 
   return (
     <div className="rounded-[32px] border border-white/8 bg-white/4 p-8 backdrop-blur-xl shadow-2xl relative group overflow-hidden">
-      
-      {/* Background Flare */}
       <div className="absolute top-0 right-0 h-32 w-32 bg-primary-500/10 rounded-full blur-[60px] opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
 
       <div className="mb-8 flex flex-col gap-6 md:flex-row md:items-start md:justify-between relative z-10">
@@ -128,8 +118,13 @@ const SkillProgressGraph = ({ data = {}, loading = false }) => {
             Performance Analytics
           </h2>
           <p className="mt-2 text-xs font-medium text-neutral-500 tracking-tight max-w-sm">
-            Visualizing your trajectory toward market alignment. Red dots represent skill gaps that need closure.
+            Visualizing your trajectory toward market alignment with a cleaner rolling view of recent analyses.
           </p>
+          {hiddenCount > 0 ? (
+            <p className="mt-2 text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+              Showing last {maxVisiblePoints} of {totalCount} analyses
+            </p>
+          ) : null}
         </div>
 
         <div className="flex items-center gap-1.5 rounded-2xl bg-white/5 border border-white/8 p-1">
@@ -160,8 +155,8 @@ const SkillProgressGraph = ({ data = {}, loading = false }) => {
 
       <div className="mt-8 grid grid-cols-1 gap-6 border-t border-white/8 pt-8 md:grid-cols-3 relative z-10">
         <div className="text-center group/stat">
-          <div className="text-3xl font-black text-white tracking-tighter group-hover:scale-110 transition-transform duration-500">{chartData.length}</div>
-          <div className="mt-2 text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Analyses Point</div>
+          <div className="text-3xl font-black text-white tracking-tighter group-hover:scale-110 transition-transform duration-500">{totalCount}</div>
+          <div className="mt-2 text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Total Analyses</div>
         </div>
         <div className="text-center group/stat">
           <div className="text-3xl font-black text-primary-400 tracking-tighter group-hover:scale-110 transition-transform duration-500">{latest.matchScore || 0}%</div>
@@ -175,11 +170,10 @@ const SkillProgressGraph = ({ data = {}, loading = false }) => {
         </div>
       </div>
 
-      {/* Insight Tag */}
       <div className="mt-6 flex items-center gap-2.5 rounded-2xl bg-white/5 border border-white/5 px-4 py-3">
         <Sparkles className="h-4 w-4 text-accent-400" />
         <p className="text-[10px] font-bold text-neutral-400 tracking-tight uppercase">
-          Pro Insight: <span className="text-neutral-200">Closing 2 more critical gaps will boost readiness to 89%</span>.
+          Clean View: <span className="text-neutral-200">Dense history is compressed into a recent rolling window for readability</span>.
         </p>
       </div>
     </div>

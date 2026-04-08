@@ -17,6 +17,7 @@ import toast from 'react-hot-toast'
 import DashboardLayout from '../components/layout/DashboardLayout.jsx'
 import analysisService from '../services/analysisService.js'
 import dashboardService from '../services/dashboardServices.js'
+import { getSafeAnalysisError } from '../utils/analysisError.js'
 
 
 // in js u must not have quotes in object keys value
@@ -156,7 +157,7 @@ const AnalysisListPage = ()=>{
       const updatedAnalysis = payload?.analysis || payload?.data || payload
       if (payload?.aiUsage) setAiUsage(payload.aiUsage)
       setAnalyses((current) => current.map((item) => item?._id === analysisId ? { ...item, ...updatedAnalysis } : item))
-      toast.success('Analysis regenerated successfully')
+      toast.success(updatedAnalysis?.status === 'queued' ? 'Analysis retry queued successfully' : 'Analysis regenerated successfully')
     } catch (error) {
       console.error(error)
       toast.error(error?.response?.data?.message || 'Failed to regenerate analysis')
@@ -341,7 +342,7 @@ return (
 
                   <p className="mt-4 line-clamp-2 text-sm leading-6 text-neutral-600 dark:text-neutral-300">
                     {analysis.status === 'failed'
-                      ? (analysis?.error || 'Analysis failed before completion.')
+                      ? getSafeAnalysisError(analysis?.error)
                       : analysis.status === 'queued'
                         ? (processingStageText[analysis?.processingStage] || 'Analysis is queued and will start shortly.')
                       : analysis.status === 'processing'
@@ -384,14 +385,14 @@ return (
                 </div>
 
                 <div className="flex items-center gap-3">
-                  {analysis?.status === 'completed' ? (
+                  {['completed', 'failed'].includes(analysis?.status) ? (
                     <button
                       type="button"
                       onClick={(event) => handleRegenerateAnalysis(event, analysis._id)}
                       disabled={regeneratingId === analysis._id || isAiLimitReached}
                       className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-xs font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-blue-900/40 dark:bg-blue-900/15 dark:text-blue-300"
                     >
-                      {regeneratingId === analysis._id ? 'Regenerating...' : 'Regenerate'}
+                      {regeneratingId === analysis._id ? 'Retrying...' : analysis?.status === 'failed' ? 'Retry Analysis' : 'Regenerate'}
                     </button>
                   ) : null}
 

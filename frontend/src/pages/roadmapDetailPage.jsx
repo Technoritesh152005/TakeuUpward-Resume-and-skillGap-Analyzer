@@ -19,6 +19,7 @@ import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import DashboardLayout from '../components/layout/DashboardLayout.jsx';
 import roadmapService from '../services/roadmapService.js';
+import dashboardService from '../services/dashboardServices.js';
 
 const emptyRoadmap = {
   title: '',
@@ -98,12 +99,19 @@ const RoadmapDetailPage = () => {
   const [loading, setLoading] = useState(false);
   const [roadmap, setRoadmap] = useState(emptyRoadmap);
   const [completingKey, setCompletingKey] = useState('');
+  const [retrying, setRetrying] = useState(false);
+  const [aiUsage, setAiUsage] = useState(null);
+  const isAiLimitReached = (aiUsage?.usesRemaining ?? 0) === 0;
 
   useEffect(() => {
     if (id) {
       fetchRoadmap();
     }
   }, [id]);
+
+  useEffect(() => {
+    fetchAiUsage();
+  }, []);
 
   // Poll only while the roadmap job is still active.
   useEffect(() => {
@@ -132,6 +140,15 @@ const RoadmapDetailPage = () => {
       if (!silent) {
         setLoading(false);
       }
+    }
+  };
+
+  const fetchAiUsage = async () => {
+    try {
+      const response = await dashboardService.getDashboardData();
+      setAiUsage(response?.data?.aiUsage || null);
+    } catch (error) {
+      console.error(error);
     }
   };
 
@@ -179,6 +196,27 @@ const RoadmapDetailPage = () => {
       toast.error('Failed to mark the item as completed');
     } finally {
       setCompletingKey('');
+    }
+  };
+
+  const handleRetryRoadmap = async () => {
+    if (isAiLimitReached) {
+      toast.error('Daily AI limit reached. Resets at 12:00 AM IST');
+      return;
+    }
+
+    try {
+      setRetrying(true);
+      const response = await roadmapService.retryRoadmap(id);
+      const clean = response?.roadmap || response?.data || response;
+      setRoadmap((current) => ({ ...current, ...clean }));
+      if (response?.aiUsage) setAiUsage(response.aiUsage);
+      toast.success('Roadmap retry queued successfully');
+    } catch (error) {
+      console.error(error);
+      toast.error(error?.response?.data?.message || 'Failed to retry roadmap');
+    } finally {
+      setRetrying(false);
     }
   };
 
@@ -265,6 +303,13 @@ const RoadmapDetailPage = () => {
           </div>
         ) : ['queued', 'processing', 'finalizing'].includes(roadmap?.status) ? (
           <RoadmapProcessingState roadmap={roadmap} />
+        ) : roadmap?.status === 'failed' ? (
+          <RoadmapFailedState
+            roadmap={roadmap}
+            retrying={retrying}
+            isAiLimitReached={isAiLimitReached}
+            onRetry={handleRetryRoadmap}
+          />
         ) : (
           <section className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.45fr)_340px]">
             <div className="space-y-6">
@@ -802,6 +847,67 @@ const RoadmapProcessingState = ({ roadmap }) => {
     </section>
   );
 };
+
+const getSafeRoadmapError = (error) => {
+  const raw = String(error || '').trim();
+  if (!raw) return 'The roadmap worker could not finish this request.';
+
+  const normalized = raw.toLowerCase();
+  if (normalized.includes('quota') || normalized.includes('rate limit')) {
+    return 'Roadmap generation could not finish because the AI provider was temporarily unavailable.';
+  }
+  if (normalized.includes('timeout')) {
+    return 'Roadmap generation timed out before the worker could finish.';
+  }
+  if (normalized.includes('json') || normalized.includes('parse')) {
+    return 'Roadmap generation returned an invalid response format.';
+  }
+
+  return 'Roadmap generation failed before completion.';
+};
+
+const RoadmapFailedState = ({ roadmap, retrying, isAiLimitReached, onRetry }) => (
+  <section className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.15fr)_340px]">
+    <Panel title="Roadmap Generation Failed" icon={Rocket}>
+      <div className="rounded-3xl border border-red-200 bg-red-50 p-5 dark:border-red-900/40 dark:bg-red-900/15">
+        <p className="text-lg font-semibold text-red-800 dark:text-red-200">The roadmap job did not complete.</p>
+        <p className="mt-2 text-sm leading-6 text-red-700 dark:text-red-300">
+          {getSafeRoadmapError(roadmap?.error)}
+        </p>
+        <div className="mt-5 flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={onRetry}
+            disabled={retrying || isAiLimitReached}
+            className="inline-flex items-center gap-2 rounded-2xl bg-red-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {retrying ? 'Retrying...' : 'Retry Roadmap'}
+          </button>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="inline-flex items-center gap-2 rounded-2xl border border-red-200 bg-white px-5 py-3 text-sm font-semibold text-red-700 transition hover:bg-red-50 dark:border-red-900/40 dark:bg-transparent dark:text-red-300"
+          >
+            Refresh Status
+          </button>
+        </div>
+        {isAiLimitReached ? (
+          <p className="mt-4 text-xs font-medium text-red-600 dark:text-red-300">Daily AI limit reached. Resets at 12:00 AM IST.</p>
+        ) : null}
+      </div>
+    </Panel>
+
+    <div className="space-y-5 xl:sticky xl:top-24 xl:self-start">
+      <Panel title="Failure Details" icon={Clock3}>
+        <div className="space-y-3 text-sm text-neutral-600 dark:text-neutral-300">
+          <InfoRow label="Status" value={String(roadmap?.status || 'failed')} />
+          <InfoRow label="Stage" value={String(roadmap?.processingStage || 'failed').replaceAll('_', ' ')} />
+          <InfoRow label="Role" value={roadmap?.analysis?.jobRole?.title || 'Selected role'} />
+        </div>
+      </Panel>
+    </div>
+  </section>
+);
 
 const HeroStat = ({ label, value }) => (
   <div className="rounded-2xl bg-white/10 px-4 py-4 backdrop-blur-sm">

@@ -485,3 +485,35 @@ REMAINING TODOS - 2026-04-05
 //06-04-20206
 resume details in detailed analysis is looking conjusted and there must be some timer so that after that timer analysis must not be executed. cause something failed it dont gets show
 also not ready or processing analysis is not being deleyed
+
+
+========================================
+REMAINING TODOS - 2026-04-08
+========================================
+
+1. RETRY / FAILURE POLISH
+- show clear failed state for analysis jobs
+- show clear failed state for roadmap jobs
+- display safe user-facing error reason
+- add retry action for failed analysis
+- add retry action for failed roadmap
+- verify quota refund behavior on failed jobs and timeouts
+
+2. METRICS / OBSERVABILITY
+- track queue wait time
+- track processing time
+- track Gemini JSON repair rate
+- track deterministic fallback rate
+- track OCR usage and OCR failure rate
+- track Adzuna/live-job fetch failure rate
+
+3. LIVE JOB RECOMMENDATION POLISH
+- improve per-job matching using job description keywords
+- improve location handling and fallback search behavior
+- add filters like remote / hybrid / onsite
+- add salary and job-type filters if data exists
+
+4. DASHBOARD / UX POLISH
+- restore any remaining dashboard widgets to the cleaner older tone if needed
+- check recent activity and graph cards for over-stylized copy
+- remove any remaining overly themed language where it feels unnatural

@@ -10,6 +10,7 @@ import {
     updateReference,
     getRoadmapById,
     getRoadmapStatus,
+    retryRoadmap,
     getProgressOfUser,
     markItemComplete
 }
@@ -46,6 +47,7 @@ router.get('/analysis/:analysisId',protectAccess,validateRoadmapAnalysisId,getRo
 // 4.get roadmap by id
 router.get('/:id/status',protectAccess,validateRoadmapId,getRoadmapStatus)
 router.get('/:id',protectAccess,validateRoadmapId,getRoadmapById)
+router.post('/:id/retry',protectAccess,validateRoadmapId,requireAiQuota('roadmap retry'),retryRoadmap)
 
 // 5. get users progress on roadmap
 router.get('/:id/progress',protectAccess,validateRoadmapId,getProgressOfUser)

@@ -4,6 +4,7 @@ import resourceModel from '../../models/resources.model.js'
 import roadmapModel from '../../models/roadmap.model.js'
 import performRoadmapInstance from '../ai.services/roadmap_planner.js'
 import logger from '../../utils/logs.js'
+import { logMetric } from '../../utils/metrics.js'
 import redisClient from '../../config/redis.js'
 import { refundAiUsage } from '../aiQuota.service.js'
 import { ROADMAP_PROCESSING_STAGE, ROADMAP_STATUS } from '../../config/constant.js'
@@ -302,6 +303,12 @@ export const processRoadmapGenerationJob = async ({ analysisId, userId, roadmapI
     await roadmap.save()
     // when generating new roadmap clear all the old data in cache of this analysis id and user id cause user neeeds to get new roadmap not old one
     await clearRoadmapCache(analysisId, userId)
+    logMetric('roadmap.queue_wait_ms', {
+        roadmapId: String(roadmapId),
+        analysisId: String(analysisId),
+        userId: String(userId),
+        value: roadmap.queuedAt ? roadmap.processingStartedAt.getTime() - new Date(roadmap.queuedAt).getTime() : undefined,
+    })
 
     try {
 
@@ -376,9 +383,16 @@ export const processRoadmapGenerationJob = async ({ analysisId, userId, roadmapI
             ? roadmap.completedAt.getTime() - roadmap.processingStartedAt.getTime()
             : undefined
 
-            await roadmap.save()
+	            await roadmap.save()
+                logMetric('roadmap.processing_time_ms', {
+                    roadmapId: String(roadmapId),
+                    analysisId: String(analysisId),
+                    userId: String(userId),
+                    value: roadmap.processingTime,
+                    status: roadmap.status,
+                })
 
-            await progressModel.findOneAndUpdate(
+	            await progressModel.findOneAndUpdate(
                 {
                     user: userId,
                     roadmap: roadmap._id
@@ -404,6 +418,13 @@ export const processRoadmapGenerationJob = async ({ analysisId, userId, roadmapI
         roadmap.processingStage = ROADMAP_PROCESSING_STAGE.FAILED
         await roadmap.save()
         await clearRoadmapCache(analysisId, userId)
+        logMetric('roadmap.processing_time_ms', {
+            roadmapId: String(roadmapId),
+            analysisId: String(analysisId),
+            userId: String(userId),
+            value: roadmap.processingStartedAt ? Date.now() - new Date(roadmap.processingStartedAt).getTime() : undefined,
+            status: roadmap.status,
+        })
 
         await refundAiUsageSafely(userId)
         logger.error(`Error while generating roadmap: ${error.message}`)
