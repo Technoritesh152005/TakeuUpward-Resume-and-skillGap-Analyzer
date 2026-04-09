@@ -1,6 +1,21 @@
 import adzunaService from './adzuna.service.js'
 
 class RecommendJobs {
+    normalizeText(value) {
+        return String(value || '')
+            .toLowerCase()
+            .replace(/[^a-z0-9+#./\s-]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+    }
+
+    tokenize(value) {
+        return this.normalizeText(value)
+            .split(' ')
+            .map((item) => item.trim())
+            .filter((item) => item.length >= 3)
+    }
+
     toSafeNumber(value, fallback = 0) {
         if (typeof value === 'number' && Number.isFinite(value)) {
             return value
@@ -23,6 +38,67 @@ class RecommendJobs {
             analysis?.resume?.parsedData?.profile?.location ||
             ''
         )
+    }
+
+    buildEvidenceProfile(analysis = {}) {
+        const strengths = Array.isArray(analysis?.candidateStrength) ? analysis.candidateStrength : []
+        const extractedSkills = Array.isArray(analysis?.extractedSkills) ? analysis.extractedSkills : []
+        const criticalGaps = Array.isArray(analysis?.skillGaps?.critical) ? analysis.skillGaps.critical : []
+        const importantGaps = Array.isArray(analysis?.skillGaps?.important) ? analysis.skillGaps.important : []
+
+        return {
+            strengths: strengths.map((item) => String(item?.skill || '').trim()).filter(Boolean),
+            extractedSkills: extractedSkills.map((item) => String(item || '').trim()).filter(Boolean),
+            criticalGaps: criticalGaps.map((item) => String(item?.skill || '').trim()).filter(Boolean),
+            importantGaps: importantGaps.map((item) => String(item?.skill || '').trim()).filter(Boolean),
+        }
+    }
+
+    collectMatchingSkills(jobText, analysis = {}) {
+        const evidence = this.buildEvidenceProfile(analysis)
+        const candidateSignals = Array.from(new Set([
+            ...evidence.strengths,
+            ...evidence.extractedSkills,
+        ]))
+
+        return candidateSignals
+            .filter((skill) => {
+                const normalizedSkill = this.normalizeText(skill)
+                return normalizedSkill && jobText.includes(normalizedSkill)
+            })
+            .slice(0, 4)
+    }
+
+    collectMatchedCriticalGaps(jobText, analysis = {}) {
+        const evidence = this.buildEvidenceProfile(analysis)
+
+        return evidence.criticalGaps
+            .filter((skill) => {
+                const normalizedSkill = this.normalizeText(skill)
+                return normalizedSkill && jobText.includes(normalizedSkill)
+            })
+            .slice(0, 3)
+    }
+
+    hasLocationAlignment(job = {}, candidateLocation = '') {
+        const normalizedCandidateLocation = this.normalizeText(candidateLocation)
+        const normalizedJobLocation = this.normalizeText(job?.location)
+
+        if (!normalizedCandidateLocation || !normalizedJobLocation) {
+            return false
+        }
+
+        return normalizedJobLocation.includes(normalizedCandidateLocation)
+            || normalizedCandidateLocation.includes(normalizedJobLocation)
+    }
+
+    isRemoteFriendly(job = {}) {
+        const normalizedLocation = this.normalizeText(job?.location)
+        const normalizedDescription = this.normalizeText(job?.description)
+
+        return normalizedLocation.includes('remote')
+            || normalizedDescription.includes('remote')
+            || normalizedDescription.includes('work from home')
     }
 
     buildJobRoleSearchPlan(analysis = {}) {
@@ -67,6 +143,10 @@ class RecommendJobs {
         const readinessLabel = analysis?.applicationReadiness?.label
         const targetRoleTitle = analysis?.jobRole?.title
         const closestRoleTitle = analysis?.closestWinnableRole?.title
+        const candidateLocation = this.takeLocationDetails(analysis)
+        const jobText = this.normalizeText([job?.title, job?.description, job?.category].filter(Boolean).join(' '))
+        const matchedSkills = this.collectMatchingSkills(jobText, analysis)
+        const matchedCriticalGaps = this.collectMatchedCriticalGaps(jobText, analysis)
 
         if (sourceType === 'target_role' && targetRoleTitle) {
             reasons.push(`Matches your selected target role: ${targetRoleTitle}`)
@@ -76,7 +156,19 @@ class RecommendJobs {
             reasons.push(`Aligned with your closest winnable role: ${closestRoleTitle}`)
         }
 
-        if (job?.location) {
+        if (matchedSkills.length) {
+            reasons.push(`Matches your resume evidence in ${matchedSkills.join(', ')}`)
+        }
+
+        if (matchedCriticalGaps.length) {
+            reasons.push(`This role still expects ${matchedCriticalGaps.join(', ')}, which are current critical gaps`)
+        }
+
+        if (this.hasLocationAlignment(job, candidateLocation) && candidateLocation) {
+            reasons.push(`Location aligns with your resume location: ${candidateLocation}`)
+        } else if (this.isRemoteFriendly(job)) {
+            reasons.push('Marked as remote-friendly in the job listing')
+        } else if (job?.location) {
             reasons.push(`Available in ${job.location}`)
         }
 
@@ -99,23 +191,46 @@ class RecommendJobs {
         const atsScore = this.toSafeNumber(analysis?.atsScore?.overall, 0)
         const criticalGapCount = Array.isArray(analysis?.skillGaps?.critical) ? analysis.skillGaps.critical.length : 0
         const importantGapCount = Array.isArray(analysis?.skillGaps?.important) ? analysis.skillGaps.important.length : 0
+        const targetRoleTitle = analysis?.jobRole?.title || ''
+        const closestRoleTitle = analysis?.closestWinnableRole?.title || ''
+        const candidateLocation = this.takeLocationDetails(analysis)
+        const jobText = this.normalizeText([job?.title, job?.description, job?.category].filter(Boolean).join(' '))
+        const matchedSkills = this.collectMatchingSkills(jobText, analysis)
+        const matchedCriticalGaps = this.collectMatchedCriticalGaps(jobText, analysis)
+
+        const targetRoleBoost = targetRoleTitle && jobText.includes(this.normalizeText(targetRoleTitle)) ? 10 : 0
+        const closestRoleBoost = sourceType === 'closest_winnable_role' && closestRoleTitle && jobText.includes(this.normalizeText(closestRoleTitle))
+            ? 8
+            : 0
+        const matchedSkillsBoost = matchedSkills.length * 6
+        const criticalGapPenalty = matchedCriticalGaps.length * 10
+        const locationBoost = this.hasLocationAlignment(job, candidateLocation) ? 8 : 0
+        const remoteBoost = !locationBoost && this.isRemoteFriendly(job) ? 5 : 0
 
         const roleBoost = sourceType === 'closest_winnable_role'
             ? this.toSafeNumber(closest?.winnableScore, 0) * 0.35
             : 12
 
         const baseScore = Math.round(
-            (matchScore * 0.35) +
-            (readinessScore * 0.30) +
-            (atsScore * 0.15) +
+            (matchScore * 0.25) +
+            (readinessScore * 0.22) +
+            (atsScore * 0.10) +
             roleBoost -
-            (criticalGapCount * 8) -
-            (importantGapCount * 3)
+            (criticalGapCount * 4) -
+            (importantGapCount * 2) +
+            targetRoleBoost +
+            closestRoleBoost +
+            matchedSkillsBoost +
+            locationBoost +
+            remoteBoost -
+            criticalGapPenalty
         )
 
         return {
             score: Math.max(0, Math.min(100, baseScore)),
             label: this.mapReadinessLabel(readiness?.label, sourceType),
+            matchedSkills,
+            matchedCriticalGaps,
         }
     }
 
@@ -180,6 +295,8 @@ class RecommendJobs {
                     ...job,
                     recommendationLabel: scoring.label,
                     recommendationScore: scoring.score,
+                    matchedSkills: scoring.matchedSkills,
+                    matchedCriticalGaps: scoring.matchedCriticalGaps,
                     recommendationReasons: this.buildReasons(job, analysis, job.sourceRoleType),
                 }
             })

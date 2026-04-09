@@ -214,6 +214,31 @@ const normalizeProficiency = (value) => {
     return 'beginner';
 };
 
+const buildGapConfidence=(bucket , importance)=>{
+    const safeImp = Number(importance) || 0;
+
+    if(bucket ==='critical' || safeImp >=8) return 'high'
+    if(bucket ==='important' || safeImp >= 6) return 'medium'
+    return 'low'
+}
+
+
+// this is to find out confidence gap of candidatStrength 
+
+const buildStrengthConfidence=(strength)=>{
+    const safeImp = Number(strength.importance)||0
+    const proficiency = String(strength?.proficiency || '').trim().toLowerCase()
+
+    // we calculate high confidence based on his importance or if its tough and he still have means confidence is high
+    if(safeImp >= 8 || ['advanced','expert'].includes(proficiency)){
+        return 'high'
+    }
+
+    if(safeImp >=6 || proficiency ==='intermediate'){
+        return 'medium'
+    }
+    return 'low'
+}
 const buildMatchBreakdown = (jobRole, skillGapAnalysisData) => {
     const criticalMatched = jobRole.requiredSkills.critical.length -
         (skillGapAnalysisData.skillGaps.critical?.length || 0);
@@ -249,21 +274,35 @@ const buildSkillArtifacts = (skillGapAnalysisData) => {
         critical: (skillGapAnalysisData.skillGaps?.critical || []).map((item) => ({
             ...item,
             difficulty: normalizeDifficulty(item?.difficulty),
+            confidence: buildGapConfidence('critical', item?.importance),
+            sourceType: 'hybrid',
         })),
         important: (skillGapAnalysisData.skillGaps?.important || []).map((item) => ({
             ...item,
             difficulty: normalizeDifficulty(item?.difficulty),
+            confidence: buildGapConfidence('important', item?.importance),
+            sourceType: 'hybrid',
         })),
         niceToHave: (skillGapAnalysisData.skillGaps?.niceToHave || []).map((item) => ({
             ...item,
             difficulty: normalizeDifficulty(item?.difficulty),
+            confidence: buildGapConfidence('niceToHave', item?.importance),
+            sourceType: 'hybrid',
         })),
     };
 
-    const normalizedStrengths = (skillGapAnalysisData.strengths || []).map((item) => ({
-        ...item,
-        proficiency: normalizeProficiency(item?.proficiency),
-    }));
+    const normalizedStrengths = (skillGapAnalysisData.strengths || []).map((item) => {
+        const normalizedItem = {
+            ...item,
+            proficiency: normalizeProficiency(item?.proficiency),
+        };
+
+        return {
+            ...normalizedItem,
+            confidence: buildStrengthConfidence(normalizedItem),
+            sourceType: 'hybrid',
+        };
+    });
 
     const extractedSkills = new Set();
     normalizedSkillGaps.critical?.forEach((item) => {

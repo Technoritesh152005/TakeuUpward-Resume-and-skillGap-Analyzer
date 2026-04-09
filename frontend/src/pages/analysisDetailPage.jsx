@@ -742,6 +742,16 @@ const GapList = ({ title, items }) => (
                   {item.difficulty}
                 </span>
               ) : null}
+              {item?.confidence ? (
+                <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium capitalize ${getConfidenceTone(item.confidence)}`}>
+                  {item.confidence} confidence
+                </span>
+              ) : null}
+              {item?.sourceType ? (
+                <span className="rounded-full bg-primary-50 px-2.5 py-1 text-[11px] font-medium capitalize text-primary-700 dark:bg-primary-900/20 dark:text-primary-300">
+                  {String(item.sourceType).replace('_', ' ')}
+                </span>
+              ) : null}
             </div>
             <p className="mt-2 text-sm leading-6 text-neutral-600 dark:text-neutral-300">{item?.reason || 'No explanation available.'}</p>
             <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs text-neutral-500 dark:text-neutral-400">
@@ -767,6 +777,16 @@ const StrengthList = ({ items }) => (
             <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-medium capitalize text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300">
               {item?.proficiency || 'strong'}
             </span>
+            {item?.confidence ? (
+              <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium capitalize ${getConfidenceTone(item.confidence)}`}>
+                {item.confidence} confidence
+              </span>
+            ) : null}
+            {item?.sourceType ? (
+              <span className="rounded-full bg-primary-50 px-2.5 py-1 text-[11px] font-medium capitalize text-primary-700 dark:bg-primary-900/20 dark:text-primary-300">
+                {String(item.sourceType).replace('_', ' ')}
+              </span>
+            ) : null}
           </div>
           <p className="mt-2 text-sm leading-6 text-neutral-600 dark:text-neutral-300">
             {item?.uniqueAdvantage || item?.relevance || 'Relevant strength identified in your profile.'}
@@ -1008,6 +1028,12 @@ const InfoRow = ({ label, value }) => (
   </div>
 );
 
+const getConfidenceTone = (confidence) => {
+  if (confidence === 'high') return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300'
+  if (confidence === 'medium') return 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-300'
+  return 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300'
+}
+
 const RecommendedJobsCard = ({ jobs, jobsLoading, basedOn }) => {
   if (jobsLoading) {
     return (
@@ -1090,6 +1116,26 @@ const RecommendedJobsCard = ({ jobs, jobsLoading, basedOn }) => {
               {job.recommendationReasons.map((reason, reasonIndex) => (
                 <span key={`${reason}-${reasonIndex}`} className="rounded-full bg-primary-50 px-2.5 py-1 text-[11px] font-medium text-primary-700 dark:bg-primary-900/20 dark:text-primary-300">
                   {reason}
+                </span>
+              ))}
+            </div>
+          ) : null}
+
+          {job?.matchedSkills?.length ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {job.matchedSkills.map((skill, skillIndex) => (
+                <span key={`${skill}-${skillIndex}`} className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300">
+                  Strength match: {skill}
+                </span>
+              ))}
+            </div>
+          ) : null}
+
+          {job?.matchedCriticalGaps?.length ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {job.matchedCriticalGaps.map((skill, skillIndex) => (
+                <span key={`${skill}-${skillIndex}`} className="rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-medium text-red-700 dark:bg-red-900/20 dark:text-red-300">
+                  Gap pressure: {skill}
                 </span>
               ))}
             </div>

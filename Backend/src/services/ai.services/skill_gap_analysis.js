@@ -87,6 +87,7 @@ class SkillGapAnalysis {
             title: this.toString(jobRole?.title),
             category: this.toString(jobRole?.category),
             experienceLevel: this.toString(jobRole?.experienceLevel),
+            responsibilities: this.toStringArray(jobRole?.responsibilities, 8),
             requiredSkills: {
                 critical: this.toStringArray(jobRole?.requiredSkills?.critical, 10),
                 important: this.toStringArray(jobRole?.requiredSkills?.important, 10),
@@ -425,7 +426,7 @@ Perform comprehensive gap analysis and return ONLY valid JSON:
       {
         "skill": "Docker",
         "importance": 9,
-        "reason": "Essential for containerization",
+        "reason": "Docker matters because this role expects containerized deployment workflows. It is expected in the critical skills and responsibilities, but the resume does not show direct Docker evidence in experience, projects, or tools.",
         "learningTime": "4-6 weeks",
         "difficulty": "intermediate",
         "prerequisites": ["Linux basics", "CLI"]
@@ -438,8 +439,8 @@ Perform comprehensive gap analysis and return ONLY valid JSON:
     {
       "skill": "React",
       "proficiency": "advanced",
-      "relevance": "Core requirement for frontend",
-      "uniqueAdvantage": "3 years production experience",
+      "relevance": "React is directly relevant because it appears in the role requirements and the resume already shows matching implementation experience.",
+      "uniqueAdvantage": "The resume shows production-level React work, which makes this a stronger-than-average match for the role.",
       "importance": 9
     }
   ],
@@ -461,6 +462,16 @@ Perform comprehensive gap analysis and return ONLY valid JSON:
     "Get AWS certification"
   ]
 }
+
+Important rules for reasoning quality:
+- Every skill gap reason must include:
+  1. why the skill matters for this role
+  2. where it was expected, such as required skills or responsibilities
+  3. what evidence is missing from the resume
+- Every strength relevance should explain why it matches the role.
+- Every uniqueAdvantage should explain what concrete resume evidence makes that strength valuable.
+- Do not use vague reasons like "important skill" or "good to have" without context.
+- Stay grounded only in the provided resume and role data.
 
 Return ONLY the JSON object, no markdown formatting.
 `;
@@ -549,7 +560,8 @@ Return ONLY the JSON object, no markdown formatting.
                     skillGaps[bucket].push({
                         skill: skillName,
                         importance: item?.importance || defaultImportance,
-                        reason: item?.description || `Missing ${bucket} skill for this role`,
+                        reason: item?.description
+                            || `${skillName} matters because it appears in the ${bucket} requirements for ${jobRole?.title || 'this role'}, but the resume does not show clear evidence of it in the listed skills, experience, or projects.`,
                         learningTime: bucket === 'critical' ? '4-8 weeks' : '2-6 weeks',
                         difficulty: bucket === 'critical' ? 'advanced' : 'intermediate',
                         prerequisites: [],

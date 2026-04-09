@@ -517,3 +517,75 @@ REMAINING TODOS - 2026-04-08
 - restore any remaining dashboard widgets to the cleaner older tone if needed
 - check recent activity and graph cards for over-stylized copy
 - remove any remaining overly themed language where it feels unnatural
+
+5. LANDING PAGE POLISH / STITCH BRIEF
+- landing page should feel clearer, more trustworthy, and more product-real, not just visually advanced
+- reduce overuse of buzzwords like neural, inference engine, adaptive logic, technical evolution where it hurts clarity
+- hero section should state the problem more directly:
+  - why resume is not getting shortlisted
+  - what skills are missing
+  - what to fix next
+- hero CTA copy should be simpler and outcome-driven:
+  - Upload Resume and Get Analysis
+  - See Skill Gaps
+  - Generate My Roadmap
+- add a “What You Get” section with 4 concrete outputs:
+  - ATS fixes
+  - skill gap analysis
+  - multi-role comparison
+  - personalized roadmap
+- add a trust/proof strip near hero:
+  - PDF and DOCX support
+  - secure upload
+  - AI retry and fallback
+  - background processing for heavy analysis
+- add a short “How It Works” section focused on real user flow:
+  - upload resume
+  - choose target role
+  - get analysis
+  - compare roles
+  - generate roadmap
+- add one realistic before/after style result example to make the output feel concrete
+- remove or replace any fake-sounding stats unless they are measured for real:
+  - 3500+ analyses
+  - 99% reliability
+  - 60s inference time
+- if metrics are not verified, replace them with capability claims instead of hard numbers
+- architecture section should stay, but be shorter and more grounded in user benefit
+- landing page should explain trust and reliability more clearly:
+  - what happens if AI fails
+  - that retry/fallback exists
+  - that user data is protected
+- final tone goal:
+  - less “AI marketing”
+  - more “clear product value + trust + outcome”
+
+7. REAL-WORLD PRODUCT STRENGTHENING
+- project already solves a real problem, but only partially as a decision-support MVP
+- to make it feel more like a real-world trusted product, improve:
+  - explanation quality for every missing skill or recommendation:
+    - why it matters
+    - where it was expected
+    - what resume evidence was missing
+  - confidence / trust labels:
+    - what is deterministic
+    - what is AI-inferred
+    - what is low-confidence
+  - job recommendation quality:
+    - better keyword matching
+    - better location matching
+    - stronger reason generation per job
+    - remote / hybrid / onsite filters
+  - more actionability:
+    - better resume bullet rewrite suggestions
+    - clearer before/after examples
+  - progress over time:
+    - score delta
+    - gaps closed
+    - readiness improved
+  - deterministic safeguards where possible:
+    - ATS checks
+    - structure checks
+    - keyword coverage
+- goal:
+  - move from "good AI resume analyzer" to "career decision-support system users can trust more"
