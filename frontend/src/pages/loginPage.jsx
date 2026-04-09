@@ -368,44 +368,14 @@ const LoginPage = () => {
           </div>
           <span
             style={{
-              fontSize: "18px",
+              fontSize: "20px",
               fontWeight: 800,
               letterSpacing: "-0.03em",
               color: "#f1f5f9",
               fontFamily: "Manrope, Inter, sans-serif",
             }}
           >
-            Resume<span style={{ color: "#a78bfa" }}>AI</span>
-          </span>
-          {/* live badge */}
-          <span
-            style={{
-              marginLeft: "auto",
-              fontSize: "10px",
-              fontWeight: 600,
-              letterSpacing: "0.06em",
-              textTransform: "uppercase",
-              color: "#34d399",
-              background: "rgba(16,185,129,0.12)",
-              border: "1px solid rgba(16,185,129,0.25)",
-              borderRadius: "999px",
-              padding: "3px 8px",
-              display: "flex",
-              alignItems: "center",
-              gap: "5px",
-            }}
-          >
-            <span
-              style={{
-                width: "5px",
-                height: "5px",
-                borderRadius: "50%",
-                background: "#34d399",
-                boxShadow: "0 0 6px #34d399",
-                animation: "pulse 1.5s ease-in-out infinite",
-              }}
-            />
-            Free
+            Takeu<span style={{ color: "#a78bfa" }}>Upward</span>
           </span>
         </div>
 
@@ -673,7 +643,7 @@ const LoginPage = () => {
               onMouseEnter={(e) => (e.currentTarget.style.color = "#e879f9")}
               onMouseLeave={(e) => (e.currentTarget.style.color = "#a78bfa")}
             >
-              Create free account
+              Create account
             </Link>
           </p>
         </form>

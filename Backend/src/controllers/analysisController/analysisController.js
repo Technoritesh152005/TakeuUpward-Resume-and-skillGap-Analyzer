@@ -333,7 +333,10 @@ export const getRecommendedJobsForAnalysis = asyncHandler(async (req, res) => {
     const recommendations = await jobRecommendationService.getRecommendationsForAnalysis(analysis)
 
     res.status(200).json(
-        new ApiResponse(200, recommendations, 'Recommended jobs fetched successfully')
+        new ApiResponse(200, {
+            basedOn: recommendations?.basedOn || [],
+            jobs: recommendations?.jobs || [],
+        }, 'Recommended jobs fetched successfully')
     )
 })
 

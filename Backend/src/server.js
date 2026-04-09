@@ -24,17 +24,23 @@ process.on('uncaughtException', (err) => {
   process.exit(1);
 });
 
-// Connect to database
-connectDb();
-const analysisWorker = startAnalysisWorker()
-const roadmapWorker = startRoadmapWorker()
-
-// Start server
 const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, () => {
-  logger.info(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
-  logger.info(`API documentation: http://localhost:${PORT}/api/${process.env.API_VERSION || 'v1'}`);
-});
+let server;
+let analysisWorker;
+let roadmapWorker;
+
+const startServer = async () => {
+  await connectDb();
+  analysisWorker = startAnalysisWorker();
+  roadmapWorker = startRoadmapWorker();
+
+  server = app.listen(PORT, () => {
+    logger.info(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+    logger.info(`API documentation: http://localhost:${PORT}/api/${process.env.API_VERSION || 'v1'}`);
+  });
+};
+
+await startServer();
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err) => {
@@ -44,9 +50,14 @@ process.on('unhandledRejection', (err) => {
   logger.error(err.stack);
   
   // Close server gracefully
-  server.close(() => {
-    process.exit(1);
-  });
+  if (server) {
+    server.close(() => {
+      process.exit(1);
+    });
+    return;
+  }
+
+  process.exit(1);
 });
 
 // Graceful shutdown
@@ -56,10 +67,10 @@ const gracefulShutdown = (signal) => {
   server.close(() => {
     logger.info('HTTP server closed');
 
-    analysisWorker.close().catch((error) => {
+    analysisWorker?.close().catch((error) => {
       logger.error(`Failed to close analysis worker cleanly: ${error.message}`);
     });
-    roadmapWorker.close().catch((error) => {
+    roadmapWorker?.close().catch((error) => {
       logger.error(`Failed to close roadmap worker cleanly: ${error.message}`);
     });
     

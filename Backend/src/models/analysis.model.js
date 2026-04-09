@@ -86,6 +86,14 @@ const analysisSchema = mongoose.Schema(
                     skill: String,
                     importance: Number,
                     reason: String,
+                    confidence: {
+                        type: String,
+                        enum: ['low', 'medium', 'high']
+                    },
+                    sourceType: {
+                        type: String,
+                        enum: ['deterministic', 'ai_inferred', 'hybrid']
+                    },
                     learningTime: String,
                     difficulty: {
                         type: String,
@@ -99,6 +107,14 @@ const analysisSchema = mongoose.Schema(
                     skill: String,
                     importance: Number,
                     reason: String,
+                    confidence: {
+                        type: String,
+                        enum: ['low', 'medium', 'high']
+                    },
+                    sourceType: {
+                        type: String,
+                        enum: ['deterministic', 'ai_inferred', 'hybrid']
+                    },
                     learningTime: String,
                     difficulty: {
                         type: String,
@@ -112,6 +128,14 @@ const analysisSchema = mongoose.Schema(
                     skill: String,
                     importance: Number,
                     reason: String,
+                    confidence: {
+                        type: String,
+                        enum: ['low', 'medium', 'high']
+                    },
+                    sourceType: {
+                        type: String,
+                        enum: ['deterministic', 'ai_inferred', 'hybrid']
+                    },
                     learningTime: String,
                     difficulty: {
                         type: String,
@@ -127,6 +151,14 @@ const analysisSchema = mongoose.Schema(
             {
                 skill: String,
                 importance: Number,
+                confidence: {
+                    type: String,
+                    enum: ['low', 'medium', 'high']
+                },
+                sourceType: {
+                    type: String,
+                    enum: ['deterministic', 'ai_inferred', 'hybrid']
+                },
                 proficiency: {
                     type: String,
                     enum: ['beginner', 'intermediate', 'advanced', 'expert']

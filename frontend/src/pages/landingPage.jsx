@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import {
   Brain, Map, Shield, Upload, Search, BarChart3, Rocket,
   CheckCircle, ArrowRight, Zap, Target, ChevronRight, Sparkles,
-  TrendingUp, FileText
+  TrendingUp, FileText, Database
 } from 'lucide-react';
 import Navbar from '../components/layout/navbar.jsx';
 import Footer from '../components/layout/footer.jsx';
@@ -194,22 +194,17 @@ const LandingPage = () => {
       `}</style>
 
       <Navbar />
-
-      {/* ════════════════════════════════════════
-          HERO
-      ════════════════════════════════════════ */}
       <section className="relative min-h-screen flex items-center pt-20 pb-16 overflow-hidden">
         {/* Aurora blobs */}
         <div className="absolute inset-0 bg-neutral-950 pointer-events-none">
-          <div className="absolute -top-40 -left-32 w-[650px] h-[650px] bg-primary-700/30 rounded-full blur-[130px] animate-aurora-1" />
-          <div className="absolute top-20 -right-40 w-[550px] h-[550px] bg-fresh-600/20 rounded-full blur-[110px] animate-aurora-2" />
-          <div className="absolute -bottom-32 left-[25%] w-[700px] h-[700px] bg-energy-600/15 rounded-full blur-[150px] animate-aurora-3" />
-          <div className="absolute top-[45%] left-[2%] w-[380px] h-[380px] bg-accent-600/18 rounded-full blur-[90px] animate-aurora-4" />
+          <div className="absolute -top-40 -left-32 w-[650px] h-[650px] bg-primary-700/20 rounded-full blur-[130px]" />
+          <div className="absolute top-20 -right-40 w-[550px] h-[550px] bg-fresh-600/15 rounded-full blur-[110px]" />
+          <div className="absolute -bottom-32 left-[25%] w-[700px] h-[700px] bg-energy-600/10 rounded-full blur-[150px]" />
         </div>
 
         {/* Grid */}
         <div className="absolute inset-0 pointer-events-none" style={{
-          backgroundImage: 'linear-gradient(rgba(139,92,246,0.055) 1px,transparent 1px),linear-gradient(90deg,rgba(139,92,246,0.055) 1px,transparent 1px)',
+          backgroundImage: 'linear-gradient(rgba(139,92,246,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(139,92,246,0.04) 1px,transparent 1px)',
           backgroundSize: '64px 64px'
         }} />
 
@@ -218,27 +213,21 @@ const LandingPage = () => {
 
             {/* Left */}
             <div className="text-center lg:text-left">
-              {/* Badge */}
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-600/12 border border-primary-500/30 mb-8 backdrop-blur-sm animate-fade-in">
-                <span className="w-2 h-2 bg-primary-400 rounded-full animate-pulse" />
-                <span className="text-sm font-medium text-primary-300">AI-Powered Career Intelligence System v1.0</span>
-              </div>
-
               {/* Headline */}
               <h1 className="text-5xl md:text-6xl xl:text-[4.5rem] font-extrabold leading-[1.06] mb-6 tracking-tight animate-slide-up">
-                <span className="text-white">The Engineering</span>
+                <span className="text-white font-black italic">TakeU</span><span className="text-white">Upward</span>
                 <br />
                 <span className="text-grad-anim min-h-[1.1em] block">
                   {typed}<span className="cursor-blink text-primary-400">|</span>
                 </span>
-                <span className="text-white">Engine</span>
+                <span className="text-white">Career Engine</span>
               </h1>
 
               {/* Sub */}
               <p className="text-lg md:text-xl text-neutral-400 mb-10 max-w-[520px] mx-auto lg:mx-0 leading-relaxed animate-slide-up" style={{ animationDelay: '0.1s' }}>
-                Systematically analyze your professional experience against technical benchmarks. 
-                Identify <span className="text-white font-semibold">critical skill gaps</span> and 
-                optimize <span className="text-primary-400 font-semibold">ATS compatibility</span> through neural inference.
+                Systematically bridge the gap between your professional experience and technical benchmarks. 
+                Identify <span className="text-white font-semibold">structural skill deficits</span> and 
+                verify <span className="text-primary-400 font-semibold">ATS index performance</span> through semantic analysis.
               </p>
 
               {/* CTAs */}
@@ -246,11 +235,10 @@ const LandingPage = () => {
                 <button
                   onClick={() => navigate('/signup')}
                   className="group relative inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-bold text-base text-white overflow-hidden transition-all duration-300 hover:scale-105"
-                  style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)', boxShadow: '0 0 48px rgba(124,58,237,0.45),0 4px 20px rgba(0,0,0,0.35)' }}
+                  style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)', boxShadow: '0 0 48px rgba(124,58,237,0.45)' }}
                 >
-                  <div className="absolute inset-0 bg-gradient-to-r from-primary-500 to-accent-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   <Rocket className="w-5 h-5 relative z-10 group-hover:rotate-12 transition-transform duration-300" />
-                  <span className="relative z-10">Initialize Analysis</span>
+                  <span className="relative z-10">Analyze Profile Readiness</span>
                 </button>
                 <button
                   onClick={() => navigate('/login')}
@@ -260,12 +248,16 @@ const LandingPage = () => {
                 </button>
               </div>
 
-              {/* Trust */}
-              <div className="flex flex-wrap items-center gap-5 justify-center lg:justify-start text-sm text-neutral-500 animate-fade-in" style={{ animationDelay: '0.4s' }}>
-                {['No credit card', 'Results in 60s', 'Privacy protected'].map((t, i) => (
-                  <div key={i} className="flex items-center gap-1.5">
-                    <CheckCircle className="w-4 h-4 text-success-400" />
-                    <span>{t}</span>
+              {/* Key Trust Points */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:justify-start text-xs font-bold text-neutral-500 uppercase tracking-widest animate-fade-in" style={{ animationDelay: '0.4s' }}>
+                {[
+                  { t: 'Enterprise Parsing', d: 'PDF/DOCX Recovery' },
+                  { t: 'ATS Indexing', d: 'Semantic Validation' },
+                  { t: 'Growth Pipelines', d: 'Deterministic Paths' },
+                ].map((p, i) => (
+                  <div key={i} className="flex flex-col gap-1 border-l border-neutral-800 pl-4 py-1">
+                    <span className="text-white">{p.t}</span>
+                    <span className="text-[10px] text-neutral-600">{p.d}</span>
                   </div>
                 ))}
               </div>
@@ -380,124 +372,122 @@ const LandingPage = () => {
       </section>
 
       {/* ════════════════════════════════════════
-          MARQUEE
-      ════════════════════════════════════════ */}
-      <div className="relative py-4 border-y border-neutral-800/70 bg-neutral-900/40 backdrop-blur-sm overflow-hidden select-none">
-        <div className="flex">
-          <div className="marquee-track flex whitespace-nowrap">
-            {[...marquee, ...marquee].map((item, i) => (
-              <span key={i} className="mx-8 text-sm font-medium text-neutral-500">
-                {item} <span className="mx-6 text-neutral-700">◆</span>
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* ════════════════════════════════════════
           FEATURES
       ════════════════════════════════════════ */}
-      <section id="features" className="section-padding relative overflow-hidden">
-        <div className="absolute inset-0 bg-neutral-950 pointer-events-none">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[600px] bg-primary-700/8 rounded-full blur-[180px]" />
-        </div>
-
+      <section id="features" className="section-padding relative overflow-hidden bg-neutral-950">
         <div className="container-custom relative">
           {/* Header */}
           <div ref={featRef} className={`reveal ${featVis ? 'vis' : ''} text-center mb-16`}>
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-600/10 border border-primary-500/20 mb-6">
               <Brain className="w-4 h-4 text-primary-400" />
-              <span className="text-sm font-semibold text-primary-300">System Capabilities</span>
+              <span className="text-sm font-semibold text-primary-300">Core Capabilities</span>
             </div>
             <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-5 tracking-tight">
-              Advanced <span className="text-grad-anim">Career Intelligence</span> Features
+              Strategic <span className="text-grad-anim">Professional</span> Alignment
             </h2>
             <p className="text-lg text-neutral-400 max-w-2xl mx-auto">
-              Our system leverages neural extraction and adaptive logic to provide precise professional alignment.
+              Our system leverages semantic extraction and adaptive benchmarks to reconcile profile data with industry standards.
             </p>
           </div>
 
           {/* Cards */}
           <div className="grid md:grid-cols-3 gap-6">
-            {features.map((f, i) => (
-              <div
-                key={i}
-                className={`reveal ${featVis ? 'vis' : ''} rev-d${i + 1} group relative rounded-2xl bg-gradient-to-br ${f.grad} border ${f.border} p-8 hover:-translate-y-2 transition-all duration-500 cursor-default overflow-hidden`}
-              >
-                <div className="absolute top-0 right-0 w-40 h-40 rounded-full blur-3xl opacity-10 bg-white pointer-events-none" />
-                <div className={`w-14 h-14 ${f.iconBg} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 border border-white/8`}>
-                  <f.icon className={`w-7 h-7 ${f.iconCol}`} />
-                </div>
-                <h3 className="text-xl font-bold text-white mb-3">{f.title}</h3>
-                <p className="text-sm text-neutral-400 leading-relaxed mb-5">{f.desc}</p>
-                <ul className="space-y-2">
-                  {f.bullets.map((b, j) => (
-                    <li key={j} className="flex items-center gap-2 text-sm text-neutral-300">
-                      <ChevronRight className={`w-4 h-4 flex-shrink-0 ${f.iconCol}`} />
-                      {b}
-                    </li>
-                  ))}
-                </ul>
+            <div className={`reveal ${featVis ? 'vis' : ''} rev-d1 group relative rounded-2xl bg-gradient-to-br from-primary-600/20 to-transparent border border-primary-600/25 p-8 transition-all duration-500 cursor-default`}>
+              <div className="w-14 h-14 bg-primary-600/20 rounded-2xl flex items-center justify-center mb-6 border border-white/8">
+                <Brain className="w-7 h-7 text-primary-400" />
               </div>
-            ))}
+              <h3 className="text-xl font-bold text-white mb-3">Automated Technical Indexing</h3>
+              <p className="text-sm text-neutral-400 leading-relaxed mb-5">High-fidelity profile extraction mapping semantic entities against verifiable role benchmarks.</p>
+              <ul className="space-y-2">
+                {['Role-aware entity extraction', 'Semantic skill correlation', 'Competency hierarchy mapping'].map((b, j) => (
+                  <li key={j} className="flex items-center gap-2 text-sm text-neutral-300">
+                    <ChevronRight className="w-4 h-4 text-primary-400" />
+                    {b}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className={`reveal ${featVis ? 'vis' : ''} rev-d2 group relative rounded-2xl bg-gradient-to-br from-fresh-600/20 to-transparent border border-fresh-600/25 p-8 transition-all duration-500 cursor-default`}>
+              <div className="w-14 h-14 bg-fresh-600/20 rounded-2xl flex items-center justify-center mb-6 border border-white/8">
+                <Map className="w-7 h-7 text-fresh-400" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-3">Strategic Competency Benchmarking</h3>
+              <p className="text-sm text-neutral-400 leading-relaxed mb-5">Generates precise deficit roadmaps structured into execution-ready technical sprints.</p>
+              <ul className="space-y-2">
+                {['Gap-to-Goal alignment', 'Validated resource indexing', 'Targeted learning pathways'].map((b, j) => (
+                  <li key={j} className="flex items-center gap-2 text-sm text-neutral-300">
+                    <ChevronRight className="w-4 h-4 text-fresh-400" />
+                    {b}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className={`reveal ${featVis ? 'vis' : ''} rev-d3 group relative rounded-2xl bg-gradient-to-br from-energy-600/20 to-transparent border border-energy-600/25 p-8 transition-all duration-500 cursor-default`}>
+              <div className="w-14 h-14 bg-energy-600/20 rounded-2xl flex items-center justify-center mb-6 border border-white/8">
+                <Shield className="w-7 h-7 text-energy-400" />
+              </div>
+              <h3 className="text-xl font-bold text-white mb-3">Algorithmic Screening Simulation</h3>
+              <p className="text-sm text-neutral-400 leading-relaxed mb-5">Predictive scoring that simulates modern screening systems to detect structural and keyword indexing issues.</p>
+              <ul className="space-y-2">
+                {['ATS syntax validation', 'Keyword density indexing', 'Structural barrier detection'].map((b, j) => (
+                  <li key={j} className="flex items-center gap-2 text-sm text-neutral-300">
+                    <ChevronRight className="w-4 h-4 text-energy-400" />
+                    {b}
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
       </section>
 
       {/* ════════════════════════════════════════
-          HOW IT WORKS
+          SYSTEMATIC PIPELINE
       ════════════════════════════════════════ */}
-      <section id="how-it-works" className="section-padding relative overflow-hidden" style={{
-        background: 'linear-gradient(180deg, #080e1a 0%, #0c1220 50%, #080e1a 100%)'
-      }}>
-        <div className="absolute inset-0 pointer-events-none" style={{
-          backgroundImage: 'radial-gradient(ellipse at 50% 50%, rgba(124,58,237,0.06) 0%, transparent 55%)'
-        }} />
-
-        <div className="container-custom relative">
+      <section id="workflow" className="section-padding bg-neutral-900/50">
+        <div className="container-custom">
           <div ref={stepsRef} className={`reveal ${stepsVis ? 'vis' : ''} text-center mb-16`}>
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-fresh-600/10 border border-fresh-500/20 mb-6">
-              <Zap className="w-4 h-4 text-fresh-400" />
-              <span className="text-sm font-semibold text-fresh-300">Analysis Pipeline</span>
-            </div>
-            <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-4 tracking-tight">
-              Systematic Processing Flow
+            <h2 className="text-3xl md:text-5xl font-extrabold text-white mb-6">
+              Systematic <span className="text-grad-anim">Processing</span> Pipeline
             </h2>
-            <p className="text-neutral-500 text-xl font-semibold">From Data Ingestion to Intelligence</p>
+            <p className="text-lg text-neutral-400 max-w-2xl mx-auto">
+              A 5-step deterministic flow designed to align professional profiles with high-growth technical trajectories.
+            </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5 relative">
-            {/* Connector line */}
-            <div className="hidden lg:block absolute top-[52px] left-[13%] right-[13%] h-px glow-bar" style={{
-              background: 'linear-gradient(90deg,#7c3aed40,#06b6d440,#d946ef40,#3b82f640)'
-            }} />
-
-            {steps.map((s, i) => (
-              <div
-                key={i}
-                className={`reveal ${stepsVis ? 'vis' : ''} rev-d${i + 1} group relative bg-neutral-900/60 backdrop-blur-sm rounded-2xl p-6 border border-neutral-800 hover:border-primary-600/40 hover:-translate-y-2 transition-all duration-500 cursor-default`}
-              >
-                <div className={`w-12 h-12 ${s.bg} rounded-xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-300 relative z-10 border border-white/8`}>
-                  <s.icon className={`w-6 h-6 ${s.col}`} />
+          <div className="grid md:grid-cols-5 gap-4 relative">
+            {[
+              { t: 'Profile Ingestion', d: 'Semantic extraction of experience data from unstructured documents.', i: FileText, c: 'text-primary-400' },
+              { t: 'Goal Definition', d: 'Benchmarking against specific roles and enterprise-level requirements.', i: Target, c: 'text-fresh-400' },
+              { t: 'Gap Analysis', d: 'Identifying structural deficits in skills, keywords, and syntax.', i: Search, c: 'text-energy-400' },
+              { t: 'Benchmarking', d: 'Ranking profile readiness against verified industry datasets.', i: BarChart3, c: 'text-accent-400' },
+              { t: 'Execution Roadmap', d: 'Generating a sprint-based plan to resolve identified deficits.', i: Map, c: 'text-primary-400' }
+            ].map((s, i) => (
+              <div key={i} className={`reveal ${stepsVis ? 'vis' : ''} rev-d${i+1} flex flex-col items-center text-center p-6 rounded-2xl bg-neutral-950 border border-neutral-800 transition-all duration-300 hover:border-neutral-600`}>
+                <div className={`w-12 h-12 rounded-xl bg-neutral-900 flex items-center justify-center mb-4 border border-white/5`}>
+                  <s.i className={`w-6 h-6 ${s.c}`} />
                 </div>
-                <div className="absolute top-5 right-5 text-5xl font-black text-neutral-800/60 select-none group-hover:text-neutral-700/60 transition-colors">{s.num}</div>
-                <h3 className="text-base font-bold text-white mb-2 relative z-10">{s.title}</h3>
-                <p className="text-sm text-neutral-500 leading-relaxed relative z-10">{s.desc}</p>
+                <h4 className="text-sm font-bold text-white mb-2">{s.t}</h4>
+                <p className="text-xs text-neutral-500 leading-relaxed">{s.d}</p>
+                {i < 4 && (
+                  <div className="hidden md:block absolute top-1/2 -right-2 translate-x-1/2 -translate-y-1/2 z-20">
+                    <ArrowRight className="w-4 h-4 text-neutral-800" />
+                  </div>
+                )}
               </div>
             ))}
           </div>
 
-          <div className="text-center mt-14">
+          <div className="mt-16 text-center">
             <button
               onClick={() => navigate('/signup')}
-              className="group inline-flex items-center gap-3 px-9 py-4 rounded-2xl font-bold text-white text-base transition-all duration-300 hover:scale-105"
-              style={{ background: 'linear-gradient(135deg,#7c3aed,#06b6d4)', boxShadow: '0 0 48px rgba(124,58,237,0.35)' }}
+              className="px-10 py-4 rounded-2xl font-bold text-white transition-all duration-300 hover:scale-105"
+              style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)', boxShadow: '0 0 40px rgba(124,58,237,0.3)' }}
             >
-              <Rocket className="w-5 h-5 group-hover:rotate-12 transition-transform duration-300" />
-              Initialize Pipeline
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
+              Initialize Profile Scan
             </button>
-            <p className="text-sm text-neutral-600 mt-4">Average processing time per analysis: \u003c 60s</p>
           </div>
         </div>
       </section>
@@ -505,112 +495,75 @@ const LandingPage = () => {
       {/* ════════════════════════════════════════
           ANALYSIS PREVIEW
       ════════════════════════════════════════ */}
-      <section ref={previewRef} className={`reveal ${previewVis ? 'vis' : ''} section-padding relative overflow-hidden`}>
-        <div className="absolute inset-0 bg-neutral-950 pointer-events-none">
-          <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-energy-600/10 rounded-full blur-[120px] animate-blob" />
-          <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-accent-600/10 rounded-full blur-[120px] animate-blob-delay-2" />
-        </div>
-
+      <section ref={previewRef} className={`reveal ${previewVis ? 'vis' : ''} section-padding relative overflow-hidden bg-neutral-950`}>
         <div className="container-custom relative">
           <div className="text-center mb-14">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-energy-600/10 border border-energy-500/20 mb-6">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg- energy-600/10 border border-energy-500/20 mb-6">
               <BarChart3 className="w-4 h-4 text-energy-400" />
               <span className="text-sm font-semibold text-energy-300">Data Points & Insights</span>
             </div>
             <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-5 tracking-tight">
-              Comprehensive <span className="text-grad-anim">Intelligence</span> Output
+              Comprehensive <span className="text-grad-anim">Recruiter</span> Output
             </h2>
             <p className="text-lg text-neutral-400 max-w-2xl mx-auto">
-              Our system generates multi-dimensional metrics across technical readiness, soft skills, and ATS compatibility.
+              Our system generates multi-dimensional metrics across technical readiness and ATS compatibility.
             </p>
           </div>
 
-          {/* Mock Dashboard Card */}
           <div className="max-w-4xl mx-auto bg-neutral-900/70 backdrop-blur-xl rounded-3xl border border-white/8 overflow-hidden shadow-dark-lg">
-            {/* Fake browser bar */}
             <div className="flex items-center gap-2 px-5 py-3 border-b border-white/5 bg-neutral-950/60">
               <div className="w-3 h-3 rounded-full bg-danger-600/60" />
               <div className="w-3 h-3 rounded-full bg-warning-600/60" />
               <div className="w-3 h-3 rounded-full bg-success-600/60" />
-              <div className="flex-1 mx-4 max-w-xs mx-auto">
-                <div className="h-5 bg-neutral-800 rounded-full flex items-center px-3">
-                  <span className="text-[10px] text-neutral-600">system.career-intel.ai/analysis/hash_7k9...</span>
-                </div>
-              </div>
             </div>
 
             <div className="p-6 md:p-8">
-              {/* Role row */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 mb-8">
                 <div>
                   <div className="text-xs text-neutral-500 mb-1">Inference Context</div>
-                  <div className="text-2xl font-bold text-white">Cloud Infrastructure Engineer</div>
-                  <div className="text-sm text-neutral-500 mt-1">AWS \u00b7 Kubernetes \u00b7 Terraform \u00b7 Python</div>
+                  <div className="text-2xl font-bold text-white">Fullstack Engineering Lead</div>
+                  <div className="text-sm text-neutral-500 mt-1">Node.js \u00b7 System Design \u00b7 Leadership</div>
                 </div>
                 <div className="flex gap-3 flex-shrink-0">
                   <div className="px-5 py-3 bg-success-600/15 border border-success-600/25 rounded-xl text-center">
-                    <div className="text-3xl font-black text-success-400">78%</div>
+                    <div className="text-3xl font-black text-success-400">92%</div>
                     <div className="text-xs text-neutral-500">Role Fit</div>
-                  </div>
-                  <div className="px-5 py-3 bg-accent-600/15 border border-accent-600/25 rounded-xl text-center">
-                    <div className="text-3xl font-black text-accent-400">89</div>
-                    <div className="text-xs text-neutral-500">ATS Index</div>
                   </div>
                 </div>
               </div>
 
               <div className="grid md:grid-cols-2 gap-6">
-                {/* Strengths */}
                 <div>
                   <div className="flex items-center gap-2 text-sm font-semibold text-success-300 mb-3">
                     <CheckCircle className="w-4 h-4" /> Technical Strengths
                   </div>
                   <div className="space-y-2">
-                    {['Infrastructure as Code (IaC)', 'CI/CD Pipeline Design', 'Containerization Strategies', 'Network Security Protocols'].map((s, i) => (
-                      <div key={i} className="flex items-center gap-3 p-3 bg-success-600/8 border border-success-600/10 rounded-xl">
+                    {['Distributed Systems Design', 'Microservices Orchestration', 'Strategic Team Leadership'].map((s, i) => (
+                      <div key={i} className="flex items-center gap-3 p-3 bg-neutral-900/50 border border-white/5 rounded-xl">
                         <div className="w-2 h-2 bg-success-400 rounded-full flex-shrink-0" />
-                        <span className="text-sm text-neutral-200">{s}</span>
+                        <span className="text-sm text-neutral-300">{s}</span>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                {/* Gaps */}
                 <div>
                   <div className="flex items-center gap-2 text-sm font-semibold text-danger-300 mb-3">
-                    <Target className="w-4 h-4" /> Detected Skill Deficits
+                    <Target className="w-4 h-4" /> Structural Deficits
                   </div>
                   <div className="space-y-2">
                     {[
-                      { s: 'Kubernetes (Advanced)', l: 'Critical', cls: 'bg-danger-600/20 text-danger-300 border-danger-600/20' },
-                      { s: 'Serverless Architecture', l: 'Important', cls: 'bg-warning-600/20 text-warning-300 border-warning-600/20' },
-                      { s: 'Go/Golang Proficiency', l: 'Important', cls: 'bg-warning-600/20 text-warning-300 border-warning-600/20' },
-                      { s: 'Monitoring (Prometheus)', l: 'Nice-to-have', cls: 'bg-neutral-700/40 text-neutral-400 border-neutral-700' },
+                      { s: 'Go/Golang Efficiency', l: 'Critical' },
+                      { s: 'GCP Data Pipeline', l: 'Important' },
+                      { s: 'Kubernetes Auth Patterns', l: 'Important' }
                     ].map((g, i) => (
-                      <div key={i} className="flex items-center justify-between p-3 bg-danger-600/6 border border-danger-600/10 rounded-xl gap-3">
-                        <span className="text-sm text-neutral-200 truncate">{g.s}</span>
-                        <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium border flex-shrink-0 ${g.cls}`}>{g.l}</span>
+                      <div key={i} className="flex items-center justify-between p-3 bg-neutral-900/50 border border-white/5 rounded-xl">
+                        <span className="text-sm text-neutral-300">{g.s}</span>
+                        <span className="text-[10px] font-bold text-danger-400 uppercase">{g.l}</span>
                       </div>
                     ))}
                   </div>
                 </div>
-              </div>
-
-              {/* Roadmap teaser */}
-              <div className="mt-6 p-4 bg-primary-600/10 border border-primary-600/20 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <Map className="w-8 h-8 text-primary-400 flex-shrink-0" />
-                  <div>
-                    <div className="text-sm font-semibold text-white">Adaptive Roadmap Generated</div>
-                    <div className="text-xs text-neutral-400 font-mono">NEXT_SPRINT: K8S_SECURITY \u00b7 WK 01-02</div>
-                  </div>
-                </div>
-                <button
-                  onClick={() => navigate('/signup')}
-                  className="px-5 py-2.5 bg-primary-600 hover:bg-primary-500 rounded-xl text-sm font-semibold text-white transition-colors flex items-center gap-2 whitespace-nowrap"
-                >
-                  View Full Roadmap <ArrowRight className="w-4 h-4" />
-                </button>
               </div>
             </div>
           </div>
@@ -618,70 +571,51 @@ const LandingPage = () => {
       </section>
 
       {/* ════════════════════════════════════════
-          ARCHITECTURE HIGHLIGHTS
+          ARCHITECTURE
       ════════════════════════════════════════ */}
-      <section className="section-padding relative bg-neutral-900/20 border-y border-white/5">
-        <div className="container-custom">
+      <section className="section-padding relative overflow-hidden bg-neutral-950 border-t border-neutral-900/50">
+        <div className="container-custom relative">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div>
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-accent-600/10 border border-accent-500/20 mb-6">
-                <Rocket className="w-4 h-4 text-accent-400" />
-                <span className="text-sm font-semibold text-accent-300">Technical Architecture</span>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-600/10 border border-primary-500/20 mb-6 font-mono text-[10px] text-primary-400 uppercase font-bold tracking-widest">
+                Internal Architecture
               </div>
-              <h2 className="text-4xl font-extrabold text-white mb-6">Engineered for <span className="text-grad-anim">Reliability</span></h2>
+              <h2 className="text-4xl font-extrabold text-white mb-8 tracking-tight">
+                Built for <span className="text-grad-anim">Reliable</span> Technical Intelligence
+              </h2>
+              
               <div className="space-y-6">
                 {[
-                  { t: 'Parallel Inference', d: 'Utilizes concurrent AI requests to generate multi-role comparisons and roadmaps in parallel, reducing latency.' },
-                  { t: 'Failsafe Fallbacks', d: 'Built-in deterministic logic ensures system availability even if upstream AI services experience rate limits or failures.' },
-                  { t: 'Structured Data Extraction', d: 'Extracts entities into validated JSON schemas, ensuring consistent analysis across different resume formats.' },
-                ].map((item, i) => (
-                  <div key={i} className="flex gap-4 p-5 rounded-2xl bg-white/5 border border-white/5 hover:border-white/10 transition-colors">
-                    <div className="w-10 h-10 rounded-xl bg-primary-600/20 flex items-center justify-center flex-shrink-0 text-primary-400 font-bold">0{i+1}</div>
+                  { t: 'Asynchronous Workflow', d: 'Queue-based processing via BullMQ and Redis ensures 100% job reliability even under high structural load.', i: Shield },
+                  { t: 'Heuristic Mapping', d: 'Proprietary mapping logic that reconciles non-standard job titles with international technical standards.', i: Zap },
+                  { t: 'Semantic Signal Recovery', d: 'Advanced LLM context windowing to recover implicit skills from resume bullet points.', i: Brain }
+                ].map((item, idx) => (
+                  <div key={idx} className="flex gap-5 group">
+                    <div className="w-12 h-12 rounded-xl bg-neutral-900 flex-shrink-0 flex items-center justify-center border border-white/5 group-hover:bg-primary-600/20 transition-colors">
+                      <item.i className="w-6 h-6 text-primary-400" />
+                    </div>
                     <div>
-                      <h4 className="text-white font-bold mb-1">{item.t}</h4>
-                      <p className="text-sm text-neutral-400 leading-relaxed">{item.d}</p>
+                      <h4 className="text-lg font-bold text-white mb-1">{item.t}</h4>
+                      <p className="text-neutral-500 text-sm leading-relaxed">{item.d}</p>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
-            <div className="relative group">
-              <div className="absolute inset-0 bg-primary-600/20 blur-[100px] rounded-full opacity-50 group-hover:opacity-80 transition-opacity" />
-              <div className="relative rounded-3xl border border-white/10 bg-neutral-950 p-8 overflow-hidden shadow-2xl">
-                <div className="flex items-center gap-3 mb-8">
-                  <div className="w-2 h-2 rounded-full bg-danger-500" />
-                  <div className="w-2 h-2 rounded-full bg-warning-500" />
-                  <div className="w-2 h-2 rounded-full bg-success-500" />
-                  <div className="ml-4 text-[10px] text-neutral-600 font-mono tracking-widest">ARCHITECTURE.LOG</div>
+            
+            <div className="relative">
+              <div className="absolute inset-0 bg-primary-600/20 blur-[120px] rounded-full" />
+              <div className="relative aspect-square rounded-3xl overflow-hidden border border-white/10 bg-neutral-900/50 backdrop-blur-xl p-8 flex flex-col justify-center items-center text-center">
+                <div className="w-24 h-24 rounded-full bg-primary-500/10 flex items-center justify-center mb-8">
+                  <Database className="w-12 h-12 text-primary-400" />
                 </div>
-                <div className="space-y-3 font-mono text-[13px]">
-                  <div className="flex gap-4 transition-colors hover:bg-white/5 p-1 rounded">
-                    <span className="text-neutral-700">01</span>
-                    <span className="text-primary-400">INIT</span>
-                    <span className="text-neutral-500 whitespace-nowrap">RESUME_PARSER_ENGINE...</span>
-                  </div>
-                  <div className="flex gap-4 transition-colors hover:bg-white/5 p-1 rounded">
-                    <span className="text-neutral-700">02</span>
-                    <span className="text-fresh-400">EXEC</span>
-                    <span className="text-neutral-500 whitespace-nowrap">SEMANTIC_ENTITY_MAPPING</span>
-                  </div>
-                  <div className="flex gap-4 transition-colors hover:bg-white/5 p-1 rounded">
-                    <span className="text-neutral-700">03</span>
-                    <span className="text-energy-400">CALC</span>
-                    <span className="text-neutral-500 whitespace-nowrap">ATS_SCORE_SIMULATION</span>
-                  </div>
-                  <div className="flex gap-4 transition-colors hover:bg-white/5 p-1 rounded">
-                    <span className="text-neutral-700">04</span>
-                    <span className="text-accent-400">GENE</span>
-                    <span className="text-neutral-500 whitespace-nowrap">ADAPTIVE_PLAN_LOGIC</span>
-                  </div>
-                  <div className="flex gap-4 p-1 rounded items-center">
-                    <span className="text-neutral-700">05</span>
-                    <span className="text-success-400">DONE</span>
-                    <div className="h-1 flex-1 bg-neutral-800 rounded-full overflow-hidden ml-2">
-                      <div className="h-full bg-success-500 w-full animate-pulse" />
-                    </div>
-                  </div>
+                <h3 className="text-2xl font-bold text-white mb-4">Account-Based Security</h3>
+                <p className="text-neutral-400 max-w-sm mb-8 leading-relaxed">
+                  Your professional data is encrypted in transit and at rest. We implement secure access controls to protect your career records.
+                </p>
+                <div className="flex gap-4">
+                  <div className="px-4 py-2 rounded-lg bg-neutral-800 border border-white/5 text-[10px] font-bold text-neutral-400 uppercase tracking-widest">AES-256</div>
+                  <div className="px-4 py-2 rounded-lg bg-neutral-800 border border-white/5 text-[10px] font-bold text-neutral-400 uppercase tracking-widest">TLS 1.3</div>
                 </div>
               </div>
             </div>
@@ -689,99 +623,20 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* ════════════════════════════════════════
-          STATS
-      ════════════════════════════════════════ */}
-      <section ref={statsRef} className={`reveal ${statsVis ? 'vis' : ''} py-24 relative overflow-hidden`} style={{
-        background: 'linear-gradient(135deg, rgba(124,58,237,0.12) 0%, rgba(6,182,212,0.08) 50%, rgba(217,70,239,0.08) 100%)'
-      }}>
-        <div className="absolute inset-0 border-y border-white/5 pointer-events-none" />
-        <div className="container-custom relative">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-10">
-            <StatCounter target={50} suffix="+" label="Job Clusters" sub="Technically validated" colorClass="text-primary-400" />
-            <StatCounter target={3500} suffix="+" label="Analyses" sub="Generated to date" colorClass="text-fresh-400" />
-            <StatCounter target={60} suffix="s" label="Inference Time" sub="Per analysis cycle" colorClass="text-energy-400" />
-            <StatCounter target={99} suffix="%" label="Reliability" sub="System availability" colorClass="text-accent-400" />
-          </div>
-        </div>
-      </section>
-
-      {/* ════════════════════════════════════════
-          ENGINEERING PHILOSOPHY
-      ════════════════════════════════════════ */}
+      {/* FINAL CTA */}
       <section className="section-padding relative overflow-hidden">
         <div className="container-custom relative text-center">
-          <div className="max-w-3xl mx-auto mb-16">
-            <h2 className="text-4xl font-extrabold text-white mb-6">Engineering <span className="text-grad-anim">Philosophy</span></h2>
-            <p className="text-lg text-neutral-400 leading-relaxed">
-              This project bridges the gap between raw AI generation and deterministic career planning. 
-              By combining <span className="text-white font-semibold">structured data extraction</span> with 
-              <span className="text-white font-semibold">LLM-driven insights</span>, we create a reliable system 
-              that acts as a technical co-pilot for career growth.
+          <div className="max-w-3xl mx-auto py-20 px-10 rounded-[3rem] bg-gradient-to-br from-primary-600 to-indigo-900 relative overflow-hidden">
+            <h2 className="text-4xl md:text-5xl font-black text-white mb-6 relative z-10 italic">TakeUUpward</h2>
+            <p className="text-lg text-white/80 mb-10 relative z-10 max-w-xl mx-auto">
+              Align your technical profile with industry standards today. Experience precision career strategy.
             </p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              { t: 'Student-First Design', d: 'Focused on those transitioning from academia to their first technical role.' },
-              { t: 'Stack Transitions', d: 'Optimal for developers switching between technology stacks (e.g., Backend \u2192 DevOps).' },
-              { t: 'ATS Readiness', d: 'Engineered to survive automated screening barriers in the modern hiring pipeline.' },
-            ].map((use, i) => (
-              <div key={i} className="p-8 rounded-3xl bg-white/5 border border-white/5 hover:border-primary-500/30 transition-all text-left">
-                <h4 className="text-white font-bold mb-3">{use.t}</h4>
-                <p className="text-sm text-neutral-500 leading-relaxed">{use.d}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ════════════════════════════════════════
-          FINAL CTA
-      ════════════════════════════════════════ */}
-      <section ref={ctaRef} className={`reveal ${ctaVis ? 'vis' : ''} section-padding relative overflow-hidden`}>
-        <div className="absolute inset-0 bg-neutral-950 pointer-events-none">
-          <div className="absolute inset-0" style={{
-            background: 'radial-gradient(ellipse at 50% 40%, rgba(124,58,237,0.18) 0%, transparent 60%)'
-          }} />
-        </div>
-
-        <div className="container-custom relative text-center">
-          <div className="max-w-3xl mx-auto">
-            <h2 className="text-5xl md:text-6xl font-extrabold text-white mb-6 tracking-tight leading-tight">
-              Initialize Your<br />
-              <span className="text-grad-anim">Technical Evolution</span>
-            </h2>
-
-            <p className="text-xl text-neutral-400 mb-10 max-w-xl mx-auto opacity-80">
-              Systematically bridge your professional gaps with neural intelligence and adaptive career roadmaps.
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-5 justify-center mb-16">
-              <button
-                onClick={() => navigate('/signup')}
-                className="group relative inline-flex items-center justify-center gap-3 px-10 py-5 rounded-2xl font-bold text-lg text-white overflow-hidden transition-all duration-300 hover:scale-105"
-                style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)', boxShadow: '0 0 60px rgba(124,58,237,0.5),0 4px 24px rgba(0,0,0,0.4)' }}
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-primary-500 to-accent-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                <Rocket className="w-6 h-6 relative z-10 group-hover:rotate-12 transition-transform" />
-                <span className="relative z-10">Start Analysis Pipeline</span>
-              </button>
-              <button
-                onClick={() => navigate('/login')}
-                className="inline-flex items-center justify-center gap-2 px-9 py-5 rounded-2xl font-bold text-lg text-neutral-300 border border-neutral-700 bg-white/5 backdrop-blur-sm hover:bg-white/10 hover:border-neutral-600 transition-all duration-300 hover:scale-105"
-              >
-                Access Dashboard <ChevronRight className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="flex flex-wrap justify-center gap-10 text-xs font-mono text-neutral-600 tracking-wider uppercase">
-              {['Verified AI Inference', '99% System Uptime', 'Secure Data Handling', 'Adaptive Logic v1.0'].map((t, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 bg-primary-500 rounded-full animate-pulse" />
-                  <span>{t}</span>
-                </div>
-              ))}
-            </div>
+            <button
+              onClick={() => navigate('/signup')}
+              className="px-10 py-5 rounded-2xl bg-white text-primary-600 font-bold text-lg hover:scale-105 transition-transform shadow-2xl relative z-10"
+            >
+              Analyze Profile Now
+            </button>
           </div>
         </div>
       </section>

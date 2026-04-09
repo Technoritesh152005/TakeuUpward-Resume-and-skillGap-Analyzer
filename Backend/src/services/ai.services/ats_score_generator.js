@@ -428,6 +428,7 @@ ${invalidJson}
             title: this.toString(jobRole?.title),
             category: this.toString(jobRole?.category),
             experienceLevel: this.toString(jobRole?.experienceLevel),
+            responsibilities: this.toStringArray(jobRole?.responsibilities).slice(0, 8),
             requiredSkills: {
                 critical: this.toStringArray(jobRole?.requiredSkills?.critical).slice(0, 10),
                 important: this.toStringArray(jobRole?.requiredSkills?.important).slice(0, 10),
@@ -570,6 +571,13 @@ Return ONLY valid JSON:
   ],
   "estimatedImprovement": "Expected score: 85-90 after fixes"
 }
+
+Important rules for ATS guidance quality:
+- weakPhrases should identify vague or low-signal resume wording, not generic criticism
+- rewriteSuggestions should explain how to rewrite bullets into stronger, evidence-based statements
+- suggestions should stay grounded in the provided resume and target role
+- recommendedKeywords should prioritize role-relevant terms actually missing from the resume
+- avoid generic advice unless the resume data truly gives no better evidence
 
 Return ONLY the JSON object, no markdown formatting.
 `;
