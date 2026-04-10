@@ -1,5 +1,5 @@
 import logger from '../../utils/logs.js';
-import { getModel } from '../../config/gemini.js';
+import { generateContentWithFallback } from '../../config/gemini.js';
 
 class AnalyzeResumeStructure {
   // take the first balanced JSON object/array block only
@@ -153,8 +153,7 @@ INVALID JSON:
 ${invalidJson}
 `;
 
-    const model = getModel();
-    const result = await model.generateContent({
+    const result = await generateContentWithFallback({
       contents: [{ role: 'user', parts: [{ text: repairPrompt }] }],
       generationConfig: {
         responseMimeType: 'application/json',
@@ -275,8 +274,7 @@ IMPORTANT:
 - Be thorough in extraction
 `;
 
-      const model = getModel();
-      const result = await model.generateContent({
+      const result = await generateContentWithFallback({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         generationConfig: {
           responseMimeType: 'application/json',

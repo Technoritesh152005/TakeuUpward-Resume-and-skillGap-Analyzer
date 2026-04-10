@@ -169,11 +169,35 @@
     @apply bg-neutral-900/75 backdrop-blur-2xl border;
     border-color: rgba(255, 255, 255, 0.07);
   }
+  .glass-premium {
+    @apply bg-neutral-900/40 backdrop-blur-3xl border border-white/10
+           shadow-[0_8px_32px_0_rgba(0,0,0,0.37)]
+           transition-all duration-300;
+  }
+  .glass-card {
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.05),
+      rgba(255, 255, 255, 0.01)
+    );
+    @apply backdrop-blur-md border border-white/10 rounded-3xl;
+  }
   .glow-primary {
-    box-shadow: 0 0 32px rgba(139,92,246,0.3);
+    box-shadow: 0 0 32px rgba(139,92,246,0.2);
   }
   .glow-accent {
-    box-shadow: 0 0 32px rgba(59,130,246,0.3);
+    box-shadow: 0 0 32px rgba(59,130,246,0.2);
+  }
+  .glow-border {
+    @apply transition-all duration-500;
+    box-shadow: inset 0 0 12px rgba(255,255,255,0.02);
+  }
+  .glow-border:hover {
+    @apply border-primary-500/40;
+    box-shadow: inset 0 0 20px rgba(139,92,246,0.05), 0 0 15px rgba(139,92,246,0.1);
+  }
+  .text-glow {
+    text-shadow: 0 0 12px currentColor;
   }
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
