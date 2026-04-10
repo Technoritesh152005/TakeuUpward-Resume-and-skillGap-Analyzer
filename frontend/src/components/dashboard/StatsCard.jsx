@@ -73,7 +73,7 @@ const StatsCard = ({
                 )}
                 <span>{change}</span>
               </div>
-              <span className="text-[10px] text-neutral-600 font-bold uppercase tracking-tight">Active Pulse</span>
+              <span className="text-[10px] text-neutral-600 font-black uppercase tracking-widest">Recent Activity</span>
             </div>
           )}
         </div>

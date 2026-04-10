@@ -22,7 +22,13 @@ import {
   Stars,
   BarChart3,
   ChevronRight,
+  Search,
+  ShieldCheck,
+  Zap,
+  Cpu,
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+
 // Toasts show small success/error popup messages.
 import toast from 'react-hot-toast';
 // Shared dashboard shell for authenticated pages.
@@ -33,6 +39,22 @@ import resumeService from '../services/resumeService.js';
 import analysisService from '../services/analysisService.js';
 import jobRoleService from '../services/jobRoleService.js';
 import dashboardService from '../services/dashboardServices.js';
+import { getRoleTheme, getStatusConfig } from '../utils/analysisTheme.js';
+
+// Animation variants
+const containerVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    transition: { duration: 0.6, staggerChildren: 0.1 }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, scale: 0.95 },
+  visible: { opacity: 1, scale: 1, transition: { duration: 0.4 } }
+};
 
 // Safe fallback object for the analysis result area.
 const emptyOverview = {
@@ -49,34 +71,33 @@ const emptyOverview = {
 const createAnalysisStages = [
   {
     title: 'Reading Resume',
-    description: 'Looking at your skills and experience.',
+    description: 'Scanning your professional experience and skills.',
     icon: ScanSearch,
   },
   {
-    title: 'Checking Job Fit',
-    description: 'Seeing how well your skills match the job.',
+    title: 'Analyzing Fit',
+    description: 'Comparing your background with role requirements.',
     icon: Brain,
   },
   {
-    title: 'Finishing Analysis',
-    description: 'Preparing your match score and tips.',
+    title: 'Generating Insights',
+    description: 'Preparing your match score and recommendations.',
     icon: Stars,
   },
 ];
 
-// data for processing status
 const analysisStageMeta = {
   queued: {
-    title: 'Queueing Analysis',
-    description: 'Your analysis request is waiting for the worker to pick it up.',
+    title: 'In Queue',
+    description: 'Your analysis is waiting to be processed.',
   },
   processing: {
-    title: 'Processing Analysis',
-    description: 'The worker is generating your skill-gap and ATS analysis now.',
+    title: 'Analyzing',
+    description: 'We are currently reviewing your skills and experience.',
   },
   finalizing: {
-    title: 'Finalizing Result',
-    description: 'Saving the analysis summary, strengths, gaps, and ATS insights.',
+    title: 'Finalizing',
+    description: 'Saving your results and generating final tips.',
   },
 };
 
@@ -319,63 +340,75 @@ const AnalysisPage = () => {
         )}
 
         {/* ════════════════════════════════════════
-            MODERN HEADER
+            ELITE HEADER
         ════════════════════════════════════════ */}
-        <header className="mb-10 rounded-3xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-8 md:p-12 shadow-sm">
-          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+        <header className="mb-10 px-8 py-10 rounded-3xl border border-white/10 bg-neutral-900 shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-primary-500/5 rounded-full blur-[100px] -mr-32 -mt-32" />
+          
+          <div className="relative z-10 flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
             <div className="space-y-3">
-              <div className="inline-flex items-center gap-2 rounded-full bg-primary-100 dark:bg-primary-900/30 px-4 py-1.5 text-xs font-bold text-primary-600 dark:text-primary-400">
-                <Sparkles className="w-4 h-4" />
-                <span>AI Career Assistant</span>
-              </div>
-              <h1 className="text-3xl md:text-5xl font-bold text-neutral-900 dark:text-white tracking-tight">
-                Analysis <span className="text-primary-600">Workspace</span>
+              <motion.div 
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="inline-flex items-center gap-2 rounded-full bg-primary-500/10 border border-primary-500/20 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-primary-400"
+              >
+                <Sparkles className="w-3 h-3" />
+                <span>Career Intelligence Engine</span>
+              </motion.div>
+              <h1 className="text-4xl md:text-5xl font-bold text-white tracking-tight">
+                Skill Gap <span className="text-primary-400">Analysis</span>
               </h1>
-              <p className="text-neutral-500 dark:text-neutral-400 max-w-xl text-lg leading-relaxed">
-                Check how well your resume matches different job roles and see how you can improve to get hired faster.
+              <p className="text-neutral-400 max-w-xl text-base font-medium">
+                Compare your profile against industry standards to identify growth opportunities and career fit.
               </p>
             </div>
             
-            <button
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => navigate('/resumes')}
-              className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 font-bold text-sm transition-all hover:scale-105 active:scale-95 shadow-lg"
+              className="inline-flex items-center justify-center gap-2 px-6 py-4 rounded-2xl bg-white text-neutral-950 font-bold text-sm transition-all shadow-lg hover:bg-neutral-100"
             >
-              My Resumes <Rocket className="w-4 h-4" />
-            </button>
+              Manage Resumes <Rocket className="w-4 h-4" />
+            </motion.button>
           </div>
         </header>
 
         {/* ════════════════════════════════════════
-            MAIN CONTENT
+            CONTROL INTERFACE
         ════════════════════════════════════════ */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-8 space-y-8">
-            {/* Simple Tab Switcher */}
-            <div className="flex gap-2 p-1.5 rounded-2xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 w-fit">
-              <button
-                onClick={() => setActiveTab('create')}
-                className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all ${
-                  activeTab === 'create' 
-                  ? 'bg-white dark:bg-neutral-900 text-primary-600 shadow-sm' 
-                  : 'text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'
-                }`}
-              >
-                <ClipboardList className="w-4 h-4" /> Create Analysis
-              </button>
-              <button
-                onClick={() => setActiveTab('compare')}
-                className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all ${
-                  activeTab === 'compare' 
-                  ? 'bg-white dark:bg-neutral-900 text-primary-600 shadow-sm' 
-                  : 'text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300'
-                }`}
-              >
-                <GitCompareArrows className="w-4 h-4" /> Compare Roles
-              </button>
+            {/* Mode Selector */}
+            <div className="flex gap-2 p-1.5 rounded-2xl bg-neutral-900/50 border border-white/5 w-fit backdrop-blur-xl">
+              {[
+                { id: 'create', label: 'Analysis Tool', icon: Cpu },
+                { id: 'compare', label: 'Role Comparison', icon: GitCompareArrows },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-2.5 px-5 py-3 rounded-xl text-xs font-bold transition-all duration-300 ${
+                    activeTab === tab.id 
+                    ? 'bg-primary-600 text-white shadow-lg' 
+                    : 'text-neutral-500 hover:text-neutral-300'
+                  }`}
+                >
+                  <tab.icon className="w-4 h-4" /> {tab.label}
+                </button>
+              ))}
             </div>
 
-            {/* Main Selection Area */}
-            <div className="rounded-3xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 md:p-8 shadow-sm">
+            {/* Selection Engine */}
+            <motion.div 
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+              className="rounded-[2.5rem] border border-white/10 bg-neutral-900/40 backdrop-blur-3xl p-8 md:p-12 shadow-2xl relative"
+            >
+              <div className="absolute top-0 right-0 p-8">
+                {activeTab === 'create' && <Zap className="w-6 h-6 text-primary-500/20" />}
+              </div>
               {loadingBase ? (
                 <div className="space-y-6 animate-pulse">
                   <div className="h-10 bg-neutral-100 dark:bg-neutral-800 rounded-xl w-1/3" />
@@ -386,74 +419,79 @@ const AnalysisPage = () => {
                 </div>
               ) : activeTab === 'create' ? (
                 <form onSubmit={handleCreateAnalysis} className="space-y-8">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Field label="Choose Resume">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <Field label="Select Resume">
                       <select
                         value={selectedResumeId}
                         onChange={(e) => setSelectedResumeId(e.target.value)}
-                        className="w-full h-14 px-4 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-neutral-900 dark:text-white font-medium focus:ring-2 focus:ring-primary-500 outline-none transition-all"
+                        className="w-full h-14 px-5 rounded-2xl border border-white/10 bg-white/5 text-white font-bold text-sm focus:ring-2 focus:ring-primary-500 outline-none transition-all cursor-pointer hover:bg-white/10"
                       >
-                        <option value="">Choose a resume...</option>
+                        <option value="" className="bg-neutral-900" disabled>Select your resume...</option>
                         {resumes.map((r) => (
-                          <option key={r._id} value={r._id}>{r.originalFileName || r.fileName}</option>
+                          <option key={r._id} value={r._id} className="bg-neutral-900">{r.originalFileName || r.fileName}</option>
                         ))}
                       </select>
                     </Field>
 
-                    <Field label="Choose Job Role">
-                      <div className="space-y-3">
-                        <input
-                          type="text"
-                          value={jobRoleSearch}
-                          onChange={(e) => setJobRoleSearch(e.target.value)}
-                          placeholder="Search for a job..."
-                          className="w-full h-14 px-4 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-neutral-900 dark:text-white font-medium focus:ring-2 focus:ring-primary-500 outline-none transition-all"
-                        />
+                    <Field label="Target Job Role">
+                      <div className="space-y-4">
+                        <div className="relative">
+                          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
+                          <input
+                            type="text"
+                            value={jobRoleSearch}
+                            onChange={(e) => setJobRoleSearch(e.target.value)}
+                            placeholder="Find a job role..."
+                            className="w-full h-14 pl-12 pr-4 rounded-2xl border border-white/10 bg-white/5 text-white font-bold text-sm focus:ring-2 focus:ring-primary-500 outline-none transition-all"
+                          />
+                        </div>
                         <select 
                           value={selectedJobRoleId} 
                           onChange={(e) => setSelectedJobRoleId(e.target.value)}
-                          className="w-full h-14 px-4 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-neutral-900 dark:text-white font-medium focus:ring-2 focus:ring-primary-500 outline-none transition-all"
+                          className="w-full h-14 px-5 rounded-2xl border border-white/10 bg-white/5 text-white font-bold text-sm focus:ring-2 focus:ring-primary-500 outline-none transition-all cursor-pointer hover:bg-white/10"
                         >
-                          <option value="">Select job link...</option>
+                          <option value="" className="bg-neutral-900" disabled>Select target role...</option>
                           {filteredJobRoles.map((role) => (
-                            <option key={role._id} value={role._id}>{role.title}</option>
+                            <option key={role._id} value={role._id} className="bg-neutral-900">{role.title}</option>
                           ))}
                         </select>
                       </div>
                     </Field>
                   </div>
 
-                  <div className="p-6 rounded-2xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 space-y-6">
-                    <h3 className="text-sm font-bold text-neutral-900 dark:text-white uppercase tracking-wider">Analysis Settings</h3>
+                  <div className="p-8 rounded-3xl bg-white/5 border border-white/5 space-y-6">
+                    <h3 className="text-xs font-bold text-primary-400 uppercase tracking-widest">Analysis Preferences</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                       <Field label="Hours per Week">
-                        <input type="number" min="1" max="168" value={hoursPerWeek} onChange={(e) => setHoursPerWeek(e.target.value)} className="w-full h-12 px-4 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white" />
+                        <input type="number" min="1" max="168" value={hoursPerWeek} onChange={(e) => setHoursPerWeek(e.target.value)} className="w-full h-12 px-4 rounded-xl border border-white/10 bg-neutral-950 text-white font-bold text-sm focus:ring-2 focus:ring-primary-500 outline-none" />
                       </Field>
-                      <Field label="Your Budget">
-                        <select value={budget} onChange={(e) => setBudget(e.target.value)} className="w-full h-12 px-4 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white">
-                          {['free', 'low', 'medium', 'high'].map(b => <option key={b} value={b}>{b[0].toUpperCase() + b.slice(1)}</option>)}
+                      <Field label="Learning Budget">
+                        <select value={budget} onChange={(e) => setBudget(e.target.value)} className="w-full h-12 px-4 rounded-xl border border-white/10 bg-neutral-950 text-white font-bold text-sm focus:ring-2 focus:ring-primary-500 outline-none">
+                          {['free', 'low', 'medium', 'high'].map(b => <option key={b} value={b} className="bg-neutral-900">{b.charAt(0).toUpperCase() + b.slice(1)}</option>)}
                         </select>
                       </Field>
                       <Field label="Learning Style">
-                        <select value={learningStyle} onChange={(e) => setLearningStyle(e.target.value)} className="w-full h-12 px-4 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white">
-                          {['mixed', 'visual', 'auditory', 'reading', 'kinesthetic'].map(s => <option key={s} value={s}>{s[0].toUpperCase() + s.slice(1)}</option>)}
+                        <select value={learningStyle} onChange={(e) => setLearningStyle(e.target.value)} className="w-full h-12 px-4 rounded-xl border border-white/10 bg-neutral-950 text-white font-bold text-sm focus:ring-2 focus:ring-primary-500 outline-none">
+                          {['mixed', 'visual', 'auditory', 'reading', 'kinesthetic'].map(s => <option key={s} value={s} className="bg-neutral-900">{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
                         </select>
                       </Field>
                     </div>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row items-center gap-4 pt-4">
-                    <button 
+                  <div className="flex flex-col sm:flex-row items-center gap-6 pt-2">
+                    <motion.button 
                       type="submit" 
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
                       disabled={creating || isAiLimitReached} 
-                      className="w-full sm:w-auto px-10 py-5 rounded-2xl bg-primary-600 hover:bg-primary-700 text-white font-bold text-lg shadow-lg disabled:opacity-50 transition-all active:scale-95 flex items-center justify-center gap-3"
+                      className="w-full sm:w-auto px-10 py-5 rounded-2xl bg-primary-600 hover:bg-primary-500 text-white font-bold text-base shadow-xl disabled:opacity-50 transition-all flex items-center justify-center gap-3"
                     >
-                      {creating ? <Loader2 className="w-6 h-6 animate-spin" /> : <Target className="w-6 h-6" />}
-                      {creating ? 'Working...' : `Start Analysis`}
-                    </button>
+                      {creating ? <Loader2 className="w-5 h-5 animate-spin" /> : <ShieldCheck className="w-5 h-5" />}
+                      {creating ? 'Analyzing Profile...' : `Start Analysis`}
+                    </motion.button>
                     {isAiLimitReached && (
-                      <p className="text-xs font-bold text-red-500 bg-red-100 dark:bg-red-900/30 px-4 py-2 rounded-lg border border-red-200 dark:border-red-800">
-                        Daily help limit reached. Try tomorrow!
+                      <p className="text-sm font-bold text-red-400">
+                        Daily limit reached. Resets at midnight.
                       </p>
                     )}
                   </div>
@@ -531,127 +569,154 @@ const AnalysisPage = () => {
                   </button>
                 </form>
               )}
-            </div>
+            </motion.div>
 
-            {/* Results Display */}
+            {/* Results Display Area */}
             {analysisOverview.matchScore > 0 ? (
-              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-5 duration-700">
-                <div className="flex items-center gap-3">
-                  <div className="w-1.5 h-8 bg-primary-600 rounded-full" />
-                  <h2 className="text-2xl font-bold text-neutral-900 dark:text-white tracking-tight">Your Analysis Results</h2>
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-10"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-2 h-10 bg-primary-600 rounded-full" />
+                  <div>
+                    <h2 className="text-3xl font-bold text-white tracking-tight">Analysis Results</h2>
+                    <p className="text-xs font-bold text-neutral-500 uppercase tracking-widest mt-1">Review your match scores and recommendations</p>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                  <StatCard label="Match Score" value={`${analysisOverview.matchScore}%`} tone={scoreTone(analysisOverview.matchScore)} icon={Target} />
-                  <StatCard label="Your Readiness" value={analysisOverview.readinessLevel} tone="text-blue-500" icon={Rocket} />
-                  <StatCard label="Time Needed" value={`${analysisOverview?.estimatedTimeToReady?.weeks} Weeks`} tone="text-amber-500" icon={Clock3} />
+                  <StatCard label="Overall Match" value={`${analysisOverview.matchScore}%`} tone={scoreTone(analysisOverview.matchScore)} icon={Target} />
+                  <StatCard label="Readiness" value={analysisOverview.readinessLevel} icon={Rocket} />
+                  <StatCard label="Review Period" value={`${analysisOverview?.estimatedTimeToReady?.weeks} Weeks`} icon={Clock3} />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-8">
                     <BreakdownBlock title="Skill Categories" breakdown={analysisOverview.matchBreakDown} />
                     <ListBlock
-                      title="Your Strengths"
-                      icon={CheckCircle2}
+                      title="Top Strengths"
+                      icon={ShieldCheck}
                       items={(analysisOverview.candidateStrength || []).map(s => s.skill)}
-                      colorClass="text-emerald-500"
+                      theme={getRoleTheme(analysisOverview?.jobRole?.category, analysisOverview?.jobRole?.title)}
                     />
                   </div>
                   <div className="space-y-8">
                     <GapBlock gaps={analysisOverview.skillGaps} />
                     <ListBlock
-                      title="Improvement Tips"
-                      icon={AlertTriangle}
+                      title="Key Suggestions"
+                      icon={Zap}
                       items={analysisOverview?.aiSuggestion?.recommendations || []}
-                      colorClass="text-amber-500"
+                      theme={getRoleTheme(analysisOverview?.jobRole?.category, analysisOverview?.jobRole?.title)}
                     />
                   </div>
                 </div>
-              </div>
+              </motion.div>
             ) : (
-              <div className="p-16 rounded-[2rem] border-2 border-dashed border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-center space-y-4 shadow-sm">
-                <div className="w-16 h-16 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center mx-auto text-neutral-400">
-                  <Brain className="w-8 h-8" />
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="p-16 md:p-24 rounded-[2.5rem] border border-white/5 bg-neutral-900/20 text-center space-y-6 backdrop-blur-sm"
+              >
+                <div className="w-20 h-20 rounded-3xl bg-white/5 flex items-center justify-center mx-auto text-neutral-700 border border-white/5 transition-transform duration-500 hover:scale-105">
+                  <Brain className="w-10 h-10" />
                 </div>
-                <div className="space-y-1">
-                  <h3 className="text-xl font-bold text-neutral-900 dark:text-white">Ready to Analyze</h3>
-                  <p className="text-neutral-500 dark:text-neutral-400 max-w-sm mx-auto">
-                    Choose a resume and a job role above to see your scores and get career tips.
+                <div className="space-y-2">
+                  <h3 className="text-2xl font-bold text-white tracking-tight">Ready for Analysis</h3>
+                  <p className="text-neutral-500 max-w-sm mx-auto font-medium">
+                    Configure your resume and target role above to generate a professional skill gap analysis.
                   </p>
                 </div>
-              </div>
+              </motion.div>
             )}
           </div>
 
-          {/* User Sidebar */}
-          <aside className="lg:col-span-4 space-y-8">
-            {/* ATS Score Card */}
-            <div className="rounded-3xl border border-neutral-200 dark:border-neutral-800 bg-neutral-900 p-8 shadow-xl text-white">
-              <h3 className="text-lg font-bold mb-6 flex items-center gap-3">
-                <div className="w-1 h-6 bg-primary-500 rounded-full" />
-                Resume Check (ATS)
-              </h3>
-              <div className="space-y-6">
-                <MiniMeter label="Total Score" value={analysisOverview?.atsScore?.overall || 0} />
-                <div className="grid grid-cols-2 gap-4">
-                  <MetricSquare label="Layout" value={analysisOverview?.atsScore?.structure?.score || 0} />
-                  <MetricSquare label="Keywords" value={analysisOverview?.atsScore?.keywords?.score || 0} />
-                  <MetricSquare label="Formatting" value={analysisOverview?.atsScore?.formatting?.score || 0} />
-                  <MetricSquare label="Content" value={analysisOverview?.atsScore?.content?.score || 0} />
-                </div>
-                <p className="text-[10px] text-neutral-500 uppercase tracking-widest text-center mt-2 font-bold">
-                  Shows how bot-friendly your resume is
-                </p>
+        {/* Side Panel */}
+        <aside className="lg:col-span-4 space-y-8">
+          {/* ATS Intelligence Card */}
+          <div className="rounded-3xl border border-white/10 bg-neutral-900 p-8 shadow-2xl text-white relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-primary-500/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-primary-500/10 transition-colors duration-700" />
+            <h3 className="text-xs font-bold mb-6 flex items-center gap-3 uppercase tracking-widest text-primary-400">
+              <div className="w-1.5 h-6 bg-primary-500 rounded-full" />
+              Resume Score (ATS)
+            </h3>
+            <div className="space-y-6">
+              <MiniMeter label="Overall Compatibility" value={analysisOverview?.atsScore?.overall || 0} />
+              <div className="grid grid-cols-2 gap-3">
+                <MetricSquare label="Structure" value={analysisOverview?.atsScore?.structure?.score || 0} />
+                <MetricSquare label="Keywords" value={analysisOverview?.atsScore?.keywords?.score || 0} />
+                <MetricSquare label="Formatting" value={analysisOverview?.atsScore?.formatting?.score || 0} />
+                <MetricSquare label="Content" value={analysisOverview?.atsScore?.content?.score || 0} />
               </div>
+              <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest text-center mt-2">
+                Evaluated by industry standards
+              </p>
             </div>
+          </div>
 
-            {/* Comparison Log */}
-            <div className="rounded-3xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-8 shadow-sm">
-              <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-6 flex items-center gap-3">
-                <div className="w-1 h-6 bg-blue-500 rounded-full" />
-                Compare History
+            {/* Comparison Intelligence */}
+            <div className="rounded-3xl border border-white/10 bg-neutral-900/60 p-8 backdrop-blur-xl shadow-2xl relative overflow-hidden">
+              <h3 className="text-xs font-bold text-white mb-6 flex items-center gap-3 uppercase tracking-widest">
+                <div className="w-1.5 h-6 bg-blue-500 rounded-full" />
+                Comparison History
               </h3>
               {!comparisonResult?.comparisons?.length ? (
-                <div className="py-10 text-center space-y-3">
-                  <GitCompareArrows className="w-10 h-10 text-neutral-200 dark:text-neutral-800 mx-auto" />
-                  <p className="text-xs text-neutral-500">Pick some roles to see which one fits you best!</p>
+                <div className="py-12 text-center space-y-4">
+                  <div className="w-14 h-14 rounded-full bg-white/5 flex items-center justify-center mx-auto text-neutral-600">
+                    <GitCompareArrows className="w-6 h-6" />
+                  </div>
+                  <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest max-w-[180px] mx-auto">
+                    Compare multiple roles to see your best fit.
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {comparisonResult.comparisons.map((item, idx) => (
-                    <div key={idx} className="group p-5 rounded-2xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 transition-all hover:border-primary-500">
+                    <motion.div 
+                      key={idx} 
+                      whileHover={{ x: 4 }}
+                      className="group p-4 rounded-xl bg-white/5 border border-white/5 transition-all hover:bg-white/10"
+                    >
                       <div className="flex justify-between items-start mb-3">
-                        <p className="text-sm font-bold text-neutral-900 dark:text-white leading-tight max-w-[70%]">{item?.jobRole?.title}</p>
-                        <span className="text-xs font-bold text-primary-600">{item?.matchScore || item?.matchPercentage}%</span>
+                        <p className="text-xs font-bold text-white leading-tight max-w-[75%]">{item?.jobRole?.title}</p>
+                        <span className="text-xs font-bold text-primary-400">{item?.matchScore || item?.matchPercentage}%</span>
                       </div>
-                      <div className="h-1.5 w-full bg-neutral-200 dark:bg-neutral-700 rounded-full overflow-hidden">
-                        <div className="h-full bg-primary-600 rounded-full" style={{ width: `${item?.matchScore || item?.matchPercentage}%` }} />
+                      <div className="h-1 w-full bg-neutral-800 rounded-full overflow-hidden">
+                        <motion.div 
+                          initial={{ width: 0 }}
+                          animate={{ width: `${item?.matchScore || item?.matchPercentage}%` }}
+                          className="h-full bg-primary-500 rounded-full" 
+                        />
                       </div>
-                    </div>
+                    </motion.div>
                   ))}
                   
-                  <div className="mt-8 p-6 rounded-3xl bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 space-y-2">
-                    <div className="flex items-center gap-2 text-xs font-bold text-primary-600 dark:text-primary-400 uppercase tracking-widest">
-                      <Trophy className="w-4 h-4" /> Best Choice
+                  <div className="mt-8 p-6 rounded-2xl bg-primary-500/10 border border-primary-500/20 space-y-2">
+                    <div className="flex items-center gap-2 text-[10px] font-bold text-primary-400 uppercase tracking-widest">
+                      <Trophy className="w-3 h-3" /> Recommended Role
                     </div>
-                    <p className="text-lg font-bold text-neutral-900 dark:text-white">{comparisonResult?.bestFit?.title}</p>
+                    <p className="text-lg font-bold text-white tracking-tight leading-tight">{comparisonResult?.bestFit?.title}</p>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Usage Info */}
-            <div className="p-6 rounded-2xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700">
-              <div className="flex items-center justify-between mb-2">
+            <div className="p-6 rounded-2xl bg-white/5 border border-white/5 relative overflow-hidden group">
+              <div className="flex items-center justify-between mb-3">
                 <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">AI Credits</span>
-                <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300">{aiUsage?.usesRemaining ?? 0} Uses Left</span>
+                <span className="text-xs font-bold text-white">{aiUsage?.usesRemaining ?? 0} REMAINING</span>
               </div>
-              <div className="h-1.5 w-full bg-neutral-200 dark:bg-neutral-700 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-emerald-500 rounded-full transition-all duration-1000" 
-                  style={{ width: `${((aiUsage?.usesRemaining ?? 0) / (aiUsage?.dailyLimit ?? 10)) * 100}%` }} 
+              <div className="h-1.5 w-full bg-neutral-800 rounded-full overflow-hidden">
+                <motion.div 
+                   initial={{ width: 0 }}
+                   animate={{ width: `${((aiUsage?.usesRemaining ?? 0) / (aiUsage?.dailyLimit ?? 10)) * 100}%` }}
+                   className="h-full bg-emerald-500 rounded-full" 
                 />
               </div>
+              <p className="text-[9px] font-bold text-neutral-600 uppercase tracking-widest mt-3 text-center">
+                Resets daily at UTC 00:00
+              </p>
             </div>
           </aside>
         </div>
@@ -662,20 +727,22 @@ const AnalysisPage = () => {
 
 const Field = ({ label, children }) => (
   <div className="space-y-2">
-    <label className="text-xs font-bold text-neutral-500 uppercase tracking-widest ml-1">{label}</label>
+    <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest ml-1">
+      {label}
+    </label>
     {children}
   </div>
 );
 
 const StatCard = ({ label, value, tone, icon: Icon }) => (
-  <div className="rounded-3xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 shadow-sm hover:shadow-md transition-all">
+  <div className="rounded-3xl border border-white/5 bg-neutral-900/40 p-6 md:p-8 shadow-2xl backdrop-blur-xl group hover:border-primary-500/30 transition-all duration-300">
     <div className="flex justify-between items-start">
-      <div className="space-y-1">
+      <div className="space-y-2">
         <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">{label}</p>
-        <p className={`text-2xl font-bold tracking-tight ${tone}`}>{value}</p>
+        <p className={`text-3xl md:text-4xl font-bold tracking-tight capitalize ${tone || 'text-white'}`}>{value}</p>
       </div>
-      <div className="p-3 rounded-2xl bg-neutral-50 dark:bg-neutral-800 text-neutral-400">
-        <Icon className="w-5 h-5" />
+      <div className="p-3 rounded-xl bg-white/5 border border-white/5 text-neutral-400 group-hover:text-primary-400 transition-colors">
+        <Icon className="w-5 h-5 md:w-6 md:h-6" />
       </div>
     </div>
   </div>
@@ -683,25 +750,33 @@ const StatCard = ({ label, value, tone, icon: Icon }) => (
 
 const BreakdownBlock = ({ title, breakdown }) => {
   const rows = [
-    { label: 'Must-Have Skills', key: 'criticalSkills', col: 'bg-primary-600' },
-    { label: 'Important Skills', key: 'importantSkills', col: 'bg-blue-600' },
-    { label: 'Bonus Skills', key: 'niceToHaveSkills', col: 'bg-emerald-600' },
+    { label: 'Core Skills', key: 'criticalSkills', col: 'from-primary-600 to-indigo-600' },
+    { label: 'Important Skills', key: 'importantSkills', col: 'from-blue-600 to-cyan-600' },
+    { label: 'Secondary Skills', key: 'niceToHaveSkills', col: 'from-emerald-600 to-teal-600' },
   ];
 
   return (
-    <div className="rounded-3xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-8 shadow-sm">
-      <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-6">{title}</h3>
+    <div className="rounded-3xl border border-white/5 bg-neutral-900/60 p-8 shadow-2xl backdrop-blur-xl">
+      <h3 className="text-xs font-bold text-white mb-8 flex items-center gap-3 uppercase tracking-widest">
+        <div className="w-1.5 h-6 bg-primary-600 rounded-full" />
+        {title}
+      </h3>
       <div className="space-y-6">
         {rows.map((row) => {
           const item = breakdown?.[row.key] || { matched: 0, total: 0, percentage: 0 };
           return (
-            <div key={row.key} className="space-y-2">
-              <div className="flex items-center justify-between text-xs font-bold text-neutral-600 dark:text-neutral-400">
-                <span className="uppercase tracking-widest">{row.label}</span>
-                <span className="font-bold text-neutral-900 dark:text-white">{item.matched}/{item.total}</span>
+            <div key={row.key} className="space-y-2.5">
+              <div className="flex items-center justify-between text-[10px] font-bold text-neutral-500 uppercase tracking-widest">
+                <span>{row.label}</span>
+                <span className="text-white">{item.matched}/{item.total} Done</span>
               </div>
-              <div className="h-2 w-full bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
-                <div className={`h-full ${row.col} rounded-full transition-all duration-1000`} style={{ width: `${item.percentage}%` }} />
+              <div className="h-1.5 w-full bg-neutral-800 rounded-full overflow-hidden">
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${item.percentage}%` }}
+                  transition={{ duration: 1, ease: "easeOut" }}
+                  className={`h-full bg-gradient-to-r ${row.col} rounded-full`} 
+                />
               </div>
             </div>
           );
@@ -717,17 +792,20 @@ const GapBlock = ({ gaps }) => {
   const nice = gaps?.niceToHave?.length || 0;
 
   return (
-    <div className="rounded-3xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-8 shadow-sm">
-      <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-6">Missing Skills</h3>
+    <div className="rounded-3xl border border-white/5 bg-neutral-900/60 p-8 shadow-2xl backdrop-blur-xl">
+      <h3 className="text-xs font-bold text-white mb-8 flex items-center gap-3 uppercase tracking-widest">
+        <div className="w-1.5 h-6 bg-red-600 rounded-full" />
+        Identified Gaps
+      </h3>
       <div className="grid grid-cols-3 gap-3">
         {[
-          { l: 'Major', v: critical, c: 'text-red-600', bg: 'bg-red-50' },
-          { l: 'Moderate', v: important, c: 'text-amber-600', bg: 'bg-amber-50' },
-          { l: 'Minor', v: nice, c: 'text-blue-600', bg: 'bg-blue-50' }
+          { l: 'Critical', v: critical, c: 'text-red-400', bg: 'bg-red-500/5 border-red-500/10' },
+          { l: 'Moderate', v: important, c: 'text-amber-400', bg: 'bg-amber-500/5 border-amber-500/10' },
+          { l: 'Minor', v: nice, c: 'text-blue-400', bg: 'bg-blue-500/5 border-blue-500/10' }
         ].map((g, i) => (
-          <div key={i} className={`rounded-2xl p-4 ${g.bg} dark:bg-neutral-800 text-center border border-transparent hover:border-neutral-200 transition-all`}>
-            <p className={`text-2xl font-bold ${g.c}`}>{g.v}</p>
-            <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mt-1">{g.l}</p>
+          <div key={i} className={`rounded-2xl p-4 ${g.bg} text-center border group hover:scale-105 transition-all duration-300`}>
+            <p className={`text-3xl font-bold tracking-tight ${g.c}`}>{g.v}</p>
+            <p className="text-[9px] font-bold text-neutral-500 uppercase tracking-widest mt-1">{g.l}</p>
           </div>
         ))}
       </div>
@@ -736,77 +814,93 @@ const GapBlock = ({ gaps }) => {
 };
 
 const AnalysisGenerationCard = ({ activeStage = 0 }) => (
-  <div className="rounded-3xl bg-white dark:bg-neutral-900 p-8 shadow-2xl border border-neutral-100 dark:border-neutral-800 text-center">
-    <div className="w-20 h-20 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center mx-auto mb-6">
-      <Sparkles className="w-10 h-10 text-primary-600 animate-pulse" />
+  <div className="rounded-[2.5rem] bg-neutral-900 border border-white/10 p-10 shadow-3xl text-center relative overflow-hidden">
+    <div className="absolute top-0 inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-primary-500 to-transparent opacity-30" />
+    <div className="w-16 h-16 rounded-2xl bg-primary-500/10 flex items-center justify-center mx-auto mb-6 border border-primary-500/20">
+      <Sparkles className="w-8 h-8 text-primary-500 animate-pulse" />
     </div>
-    <h3 className="text-2xl font-bold text-neutral-900 dark:text-white mb-2">Analyzing...</h3>
-    <p className="text-neutral-500 dark:text-neutral-400 mb-8 max-w-xs mx-auto">Please wait while the AI checks your resume against the job requirements.</p>
+    <h3 className="text-2xl font-bold text-white mb-2 tracking-tight">Analyzing Profile</h3>
+    <p className="text-neutral-500 mb-10 max-w-xs mx-auto font-medium text-sm">We are reviewing your background and skills.</p>
 
-    <div className="space-y-3">
+    <div className="space-y-3 max-w-sm mx-auto">
       {createAnalysisStages.map((stage, index) => {
         const isActive = index === activeStage;
         const isPassed = index < activeStage;
         const Icon = stage.icon;
 
         return (
-          <div
+          <motion.div
             key={index}
-            className={`flex items-center gap-4 p-4 rounded-2xl border transition-all ${
+            animate={{ opacity: isActive ? 1 : 0.5, scale: isActive ? 1.02 : 1 }}
+            className={`flex items-center gap-4 p-4 rounded-xl border transition-all ${
               isActive
-              ? 'bg-primary-50 dark:bg-primary-900/20 border-primary-300'
-              : 'border-transparent opacity-60'
+              ? 'bg-primary-500/5 border-primary-500/30'
+              : 'border-transparent'
             }`}
           >
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-              isActive ? 'bg-primary-600 text-white' : isPassed ? 'bg-emerald-500 text-white' : 'bg-neutral-100 text-neutral-400'
+            <div className={`w-10 h-10 rounded-lg flex items-center justify-center border ${
+              isActive ? 'bg-primary-600 border-primary-400 text-white' : isPassed ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400' : 'bg-neutral-800 border-white/5 text-neutral-600'
             }`}>
-              {isPassed ? <CheckCircle2 className="w-5 h-5" /> : <Icon className={`w-5 h-5 ${isActive ? 'animate-spin' : ''}`} />}
+              {isPassed ? <ShieldCheck className="w-5 h-5" /> : <Icon className={`w-5 h-5 ${isActive ? 'animate-spin' : ''}`} />}
             </div>
             <div className="flex-1 text-left">
-              <p className={`text-sm font-bold ${isActive ? 'text-primary-900 dark:text-primary-100' : 'text-neutral-500'}`}>{stage.title}</p>
+              <p className={`text-xs font-bold ${isActive ? 'text-white' : 'text-neutral-500'}`}>{stage.title}</p>
+              {isActive && <p className="text-[10px] text-primary-400 mt-0.5">{stage.description}</p>}
             </div>
-          </div>
+          </motion.div>
         );
       })}
     </div>
   </div>
 );
 
-const ListBlock = ({ title, icon: Icon, items, colorClass }) => (
-  <div className="rounded-3xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-8 shadow-sm h-full">
-    <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-6 flex items-center gap-2">
-      <Icon className={`w-5 h-5 ${colorClass}`} /> {title}
+const ListBlock = ({ title, icon: Icon, items, theme }) => (
+  <div className={`rounded-3xl border border-white/5 bg-neutral-900/60 p-8 shadow-2xl backdrop-blur-xl h-full relative overflow-hidden`}>
+    {theme && <div className={`absolute -top-12 -right-12 w-32 h-32 ${theme.bg} rounded-full blur-[60px] opacity-10`} />}
+    <h3 className="text-xs font-bold text-white mb-8 flex items-center gap-3 uppercase tracking-widest">
+      <div className={`w-1.5 h-6 ${theme?.primary || 'bg-primary-600'} rounded-full`} />
+      {title}
     </h3>
     <ul className="space-y-4">
-      {items?.length ? items.slice(0, 6).map((item, idx) => (
-        <li key={idx} className="flex gap-4">
-          <div className="mt-1.5 w-1.5 h-1.5 bg-neutral-300 dark:bg-neutral-700 rounded-full flex-shrink-0" />
-          <span className="text-sm text-neutral-600 dark:text-neutral-400">{item}</span>
-        </li>
+      {items?.length ? items.slice(0, 8).map((item, idx) => (
+        <motion.li 
+          key={idx} 
+          initial={{ opacity: 0, x: -5 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: idx * 0.05 }}
+          className="flex gap-4 group/item"
+        >
+          <div className={`mt-2 w-1.5 h-1.5 rounded-full flex-shrink-0 transition-all ${theme?.bg || 'bg-neutral-700'}`} />
+          <span className="text-sm text-neutral-400 font-medium tracking-tight leading-relaxed group-hover/item:text-neutral-200 transition-colors">{item}</span>
+        </motion.li>
       )) : (
-        <li className="text-sm text-neutral-400 italic">No items found.</li>
+        <li className="text-[10px] text-neutral-600 italic uppercase font-bold tracking-widest text-center py-4">No data available</li>
       )}
     </ul>
   </div>
 );
 
 const MiniMeter = ({ label, value }) => (
-  <div className="space-y-2">
-    <div className="flex items-center justify-between text-[10px] font-bold text-neutral-400 uppercase tracking-widest">
+  <div className="space-y-2.5">
+    <div className="flex items-center justify-between text-[10px] font-bold text-neutral-500 uppercase tracking-widest">
       <span>{label}</span>
-      <span className="text-neutral-300">{value}%</span>
+      <span className="text-white bg-primary-600/20 px-2 py-0.5 rounded-full border border-primary-500/10">{value}%</span>
     </div>
     <div className="h-1.5 w-full bg-neutral-800 rounded-full overflow-hidden">
-      <div className="h-full bg-primary-600 rounded-full" style={{ width: `${value}%` }} />
+      <motion.div 
+        initial={{ width: 0 }}
+        animate={{ width: `${value}%` }}
+        transition={{ duration: 1, ease: "easeOut" }}
+        className="h-full bg-primary-600 rounded-full" 
+      />
     </div>
   </div>
 );
 
 const MetricSquare = ({ label, value }) => (
-  <div className="p-4 rounded-xl bg-neutral-800 border border-white/5 text-center transition-all hover:bg-neutral-700 shadow-sm">
-    <p className="text-xl font-bold text-white mb-1 font-mono">{value}%</p>
-    <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">{label}</p>
+  <div className="p-5 rounded-2xl bg-white/5 border border-white/5 text-center transition-all hover:bg-white/10 group overflow-hidden relative">
+    <p className="text-2xl font-bold text-white mb-1 font-mono">{value}%</p>
+    <p className="text-[9px] font-bold text-neutral-500 uppercase tracking-widest">{label}</p>
   </div>
 );
 

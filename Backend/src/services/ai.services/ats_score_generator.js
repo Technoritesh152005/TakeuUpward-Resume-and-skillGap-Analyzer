@@ -1,4 +1,4 @@
-import { getModel } from '../../config/gemini.js';
+import { generateContentWithFallback } from '../../config/gemini.js';
 import logger from '../../utils/logs.js';
 import { extractCandidateSkillSet, matchRoleSkill, expandSkillVariants } from './fallbackSkillMatcher.js';
 
@@ -347,8 +347,7 @@ INVALID JSON:
 ${invalidJson}
 `;
 
-        const model = getModel();
-        const result = await model.generateContent({
+        const result = await generateContentWithFallback({
             contents: [{ role: 'user', parts: [{ text: repairPrompt }] }],
             generationConfig: {
                 responseMimeType: 'application/json',
@@ -582,8 +581,7 @@ Important rules for ATS guidance quality:
 Return ONLY the JSON object, no markdown formatting.
 `;
 
-            const model = getModel();
-            const result = await model.generateContent({
+            const result = await generateContentWithFallback({
                 contents: [{ role: 'user', parts: [{ text: prompt }] }],
                 generationConfig: {
                     responseMimeType: 'application/json',

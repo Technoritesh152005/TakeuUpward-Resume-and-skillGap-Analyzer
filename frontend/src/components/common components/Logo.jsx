@@ -56,7 +56,7 @@ const Logo = ({ className = '', showText = true, size = 'md' }) => {
       {showText && (
         <div className="flex flex-col">
           <span className={`font-black text-white uppercase tracking-[0.2em] leading-none ${size === 'lg' ? 'text-2xl' : size === 'xl' ? 'text-3xl' : 'text-lg'}`}>
-            TakeU<span className="text-primary-400">Upward</span>
+            Takeu<span className="text-primary-400">Upward</span>
           </span>
           {size === 'xl' && (
             <span className="text-[10px] font-black text-neutral-500 uppercase tracking-[0.4em] mt-1 text-center">AI Command Center</span>
