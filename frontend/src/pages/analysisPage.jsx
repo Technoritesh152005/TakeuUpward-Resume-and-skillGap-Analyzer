@@ -1,5 +1,5 @@
 // React hooks used to store state, run side effects, and derive filtered data.
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 // Router helpers:
 // - useNavigate: move user to another route
 // - useLocation: read current URL details
@@ -22,6 +22,7 @@ import {
   Stars,
   BarChart3,
   ChevronRight,
+  ChevronDown,
   Search,
   ShieldCheck,
   Zap,
@@ -134,6 +135,7 @@ const AnalysisPage = () => {
   const [compareRoleIds, setCompareRoleIds] = useState([]);
   const [jobRoleSearch, setJobRoleSearch] = useState('');
   const [compareRoleSearch, setCompareRoleSearch] = useState('');
+  const [isJobRoleDropdownOpen, setIsJobRoleDropdownOpen] = useState(false);
 
   const [hoursPerWeek, setHoursPerWeek] = useState(10);
   const [budget, setBudget] = useState('medium');
@@ -149,6 +151,7 @@ const AnalysisPage = () => {
   const [comparisonResult, setComparisonResult] = useState(null);
   const [aiUsage, setAiUsage] = useState(null);
   const isAiLimitReached = (aiUsage?.usesRemaining ?? 0) === 0;
+  const jobRoleDropdownRef = useRef(null);
 
   useEffect(() => {
     bootstrapData();
@@ -172,6 +175,17 @@ const AnalysisPage = () => {
 
     return () => window.clearInterval(interval);
   }, [creating]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!jobRoleDropdownRef.current?.contains(event.target)) {
+        setIsJobRoleDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const bootstrapData = async () => {
     try {
@@ -227,7 +241,7 @@ const AnalysisPage = () => {
       return;
     }
     if (isAiLimitReached) {
-      toast.error('Daily limit reached. Try again tomorrow.');
+      toast.error('Daily AI credits exhausted. Try again tomorrow.');
       return;
     }
 
@@ -285,7 +299,7 @@ const AnalysisPage = () => {
       return;
     }
     if (isAiLimitReached) {
-      toast.error('Limit reached');
+      toast.error('Daily AI credits exhausted');
       return;
     }
 
@@ -318,6 +332,11 @@ const AnalysisPage = () => {
       [role.title, role.category].some((v) => String(v).toLowerCase().includes(search))
     );
   }, [jobRoles, jobRoleSearch]);
+
+  const selectedJobRole = useMemo(
+    () => jobRoles.find((role) => role._id === selectedJobRoleId) || null,
+    [jobRoles, selectedJobRoleId]
+  );
 
   const filteredCompareRoles = useMemo(() => {
     const search = compareRoleSearch.trim().toLowerCase();
@@ -434,27 +453,95 @@ const AnalysisPage = () => {
                     </Field>
 
                     <Field label="Target Job Role">
-                      <div className="space-y-4">
+                      <div className="space-y-4" ref={jobRoleDropdownRef}>
                         <div className="relative">
                           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
                           <input
                             type="text"
                             value={jobRoleSearch}
-                            onChange={(e) => setJobRoleSearch(e.target.value)}
+                            onChange={(e) => {
+                              setJobRoleSearch(e.target.value);
+                              setIsJobRoleDropdownOpen(true);
+                            }}
+                            onFocus={() => setIsJobRoleDropdownOpen(true)}
                             placeholder="Find a job role..."
-                            className="w-full h-14 pl-12 pr-4 rounded-2xl border border-white/10 bg-white/5 text-white font-bold text-sm focus:ring-2 focus:ring-primary-500 outline-none transition-all"
+                            className="w-full h-14 pl-12 pr-14 rounded-2xl border border-white/10 bg-white/5 text-white font-bold text-sm focus:ring-2 focus:ring-primary-500 outline-none transition-all"
                           />
+                          <button
+                            type="button"
+                            aria-label={isJobRoleDropdownOpen ? 'Close job role dropdown' : 'Open job role dropdown'}
+                            onClick={() => setIsJobRoleDropdownOpen((prev) => !prev)}
+                            className="absolute right-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-xl text-neutral-400 transition hover:bg-white/10 hover:text-white"
+                          >
+                            <ChevronDown className={`h-4 w-4 transition-transform ${isJobRoleDropdownOpen ? 'rotate-180' : ''}`} />
+                          </button>
                         </div>
-                        <select 
-                          value={selectedJobRoleId} 
-                          onChange={(e) => setSelectedJobRoleId(e.target.value)}
-                          className="w-full h-14 px-5 rounded-2xl border border-white/10 bg-white/5 text-white font-bold text-sm focus:ring-2 focus:ring-primary-500 outline-none transition-all cursor-pointer hover:bg-white/10"
-                        >
-                          <option value="" className="bg-neutral-900" disabled>Select target role...</option>
-                          {filteredJobRoles.map((role) => (
-                            <option key={role._id} value={role._id} className="bg-neutral-900">{role.title}</option>
-                          ))}
-                        </select>
+                        <div className="rounded-2xl border border-white/10 bg-white/5 p-2">
+                          {selectedJobRole ? (
+                            <div className="mb-2 flex items-center justify-between rounded-2xl border border-primary-500/20 bg-primary-500/10 px-4 py-3">
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-bold text-white">{selectedJobRole.title}</p>
+                                <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-primary-300">
+                                  {selectedJobRole.category || 'Selected role'}
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedJobRoleId('');
+                                  setJobRoleSearch('');
+                                  setIsJobRoleDropdownOpen(true);
+                                }}
+                                className="shrink-0 rounded-xl px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-primary-300 transition hover:bg-white/5"
+                              >
+                                Clear
+                              </button>
+                            </div>
+                          ) : null}
+
+                          {isJobRoleDropdownOpen ? (
+                            <div className="max-h-44 space-y-2 overflow-y-auto pr-1 custom-scrollbar">
+                              {filteredJobRoles.length > 0 ? (
+                                filteredJobRoles.map((role) => {
+                                  const isSelected = role._id === selectedJobRoleId
+
+                                  return (
+                                    <button
+                                      key={role._id}
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedJobRoleId(role._id);
+                                        setJobRoleSearch(role.title);
+                                        setIsJobRoleDropdownOpen(false);
+                                      }}
+                                      className={`w-full rounded-2xl border px-4 py-3 text-left transition-all ${
+                                        isSelected
+                                          ? 'border-primary-500 bg-primary-500/15'
+                                          : 'border-white/5 bg-transparent hover:border-primary-500/30 hover:bg-white/5'
+                                      }`}
+                                    >
+                                      <div className="flex items-center justify-between gap-3">
+                                        <div className="min-w-0">
+                                          <p className={`truncate text-sm font-bold ${isSelected ? 'text-primary-200' : 'text-white'}`}>
+                                            {role.title}
+                                          </p>
+                                          <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-neutral-500">
+                                            {role.category || 'General role'}
+                                          </p>
+                                        </div>
+                                        {isSelected ? <CheckCircle2 className="h-4 w-4 shrink-0 text-primary-300" /> : null}
+                                      </div>
+                                    </button>
+                                  )
+                                })
+                              ) : (
+                                <div className="rounded-2xl border border-dashed border-white/10 px-4 py-6 text-center">
+                                  <p className="text-sm font-medium text-neutral-400">No job roles match this search.</p>
+                                </div>
+                              )}
+                            </div>
+                          ) : null}
+                        </div>
                       </div>
                     </Field>
                   </div>

@@ -169,6 +169,7 @@ const AnalysisDetailPage = ()=>{
   const [jobRecommendationMeta, setJobRecommendationMeta] = useState({ basedOn: [] })
   const [jobsLoading, setJobsLoading] = useState(false)
   const isAiLimitReached = (aiUsage?.usesRemaining ?? 0) === 0
+  const isAnalysisRunning = ['queued', 'processing', 'finalizing'].includes(analysis?.status)
 
   // whenever there is a change in id in params call these means someone want analysis detail
   useEffect(()=>{
@@ -323,7 +324,7 @@ const AnalysisDetailPage = ()=>{
 
   const handleRegenerateAnalysis = async () => {
     if (isAiLimitReached) {
-      toast.error('Daily AI limit reached. Resets at 12:00 AM IST')
+      toast.error('Daily AI credits exhausted. Resets at 12:00 AM IST')
       return
     }
 
@@ -414,7 +415,7 @@ const AnalysisDetailPage = ()=>{
 
             <button
               onClick={handleDeleteAnalysis}
-              disabled={deleting}
+              disabled={deleting || isAnalysisRunning}
               className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-500/20 bg-red-500/5 px-5 py-3 text-sm font-semibold text-red-400 transition hover:bg-red-500/10"
             >
               <Trash2 className="h-4 w-4" />
@@ -424,7 +425,10 @@ const AnalysisDetailPage = ()=>{
         </div>
 
           {isAiLimitReached ? (
-            <p className="mt-4 text-xs font-medium text-red-500 dark:text-red-400">Daily AI limit reached. Resets at 12:00 AM IST.</p>
+            <p className="mt-4 text-xs font-medium text-red-500 dark:text-red-400">Daily AI credits exhausted. Resets at 12:00 AM IST.</p>
+          ) : null}
+          {isAnalysisRunning ? (
+            <p className="mt-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">Delete is disabled while analysis is running.</p>
           ) : null}
 
 	        {analysis?.status === 'completed' ? (
@@ -991,7 +995,7 @@ const AnalysisFailedState = ({ analysis, regenerating, isAiLimitReached, onRetry
           </button>
         </div>
         {isAiLimitReached ? (
-          <p className="mt-4 text-xs font-medium text-red-600 dark:text-red-300">Daily AI limit reached. Resets at 12:00 AM IST.</p>
+          <p className="mt-4 text-xs font-medium text-red-600 dark:text-red-300">Daily AI credits exhausted. Resets at 12:00 AM IST.</p>
         ) : null}
       </div>
     </Panel>

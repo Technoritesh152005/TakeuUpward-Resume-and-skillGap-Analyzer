@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Eye, Trash2, Calendar, Upload, Plus, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Eye, Trash2, Calendar, Upload, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import DashboardLayout from '../components/layout/DashboardLayout.jsx'
@@ -74,14 +74,6 @@ const resumePage = ()=> {
           </div>
           
           <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-xl focus-within:border-primary-500/50 transition-all">
-              <Search className="w-4 h-4 text-neutral-500" />
-              <input 
-                type="text" 
-                placeholder="Search resumes..." 
-                className="bg-transparent border-none outline-none text-sm text-white placeholder:text-neutral-600 w-40"
-              />
-            </div>
             <button
               onClick={() => navigate('/upload')}
               className="btn-gradient px-6 py-3 shadow-glow-sm"

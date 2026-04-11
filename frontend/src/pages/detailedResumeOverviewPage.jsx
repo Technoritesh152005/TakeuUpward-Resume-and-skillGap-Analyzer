@@ -106,8 +106,8 @@ const ResumeDetailPage = () => {
 
   if (loading) {
     return (
-      <DashboardLayout>
-        <div className="max-w-5xl mx-auto space-y-6">
+      <DashboardLayout contentContainerClassName="max-w-none" contentClassName="p-4 sm:p-6 lg:p-8">
+        <div className="w-full space-y-6">
           <div className="h-8 w-32 bg-neutral-200 dark:bg-neutral-700 rounded animate-pulse" />
           <div className="bg-white dark:bg-neutral-800 rounded-2xl p-8 border border-neutral-200 dark:border-neutral-700">
             <div className="space-y-4">
@@ -123,7 +123,7 @@ const ResumeDetailPage = () => {
 
   if (!resume) {
     return (
-      <DashboardLayout>
+      <DashboardLayout contentContainerClassName="max-w-none" contentClassName="p-4 sm:p-6 lg:p-8">
         <div className="max-w-lg mx-auto mt-16 rounded-2xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 p-8 text-center space-y-4">
           <h1 className="text-xl font-semibold text-neutral-900 dark:text-white">
             {loadError === 'missing_id' ? 'Invalid link' : 'Could not load resume'}
@@ -184,10 +184,10 @@ const ResumeDetailPage = () => {
     hasAchievements;
 
   return (
-    <DashboardLayout>
-      <div className="max-w-[1600px] mx-auto space-y-8 animate-fade-in">
+    <DashboardLayout contentContainerClassName="max-w-none" contentClassName="p-4 sm:p-6 lg:p-8">
+      <div className="w-full space-y-6 lg:space-y-8 animate-fade-in">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <button
             onClick={() => navigate('/resumes')}
             className="group flex items-center gap-2 text-neutral-500 hover:text-white transition-all font-bold uppercase tracking-widest text-xs"
@@ -198,11 +198,11 @@ const ResumeDetailPage = () => {
             Back to Resumes
           </button>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap xl:justify-end">
             <button
               onClick={handleReparse}
               disabled={reparsing}
-              className="flex items-center gap-2 px-5 py-2.5 bg-blue-600/10 text-blue-400 border border-blue-600/20 rounded-xl hover:bg-blue-600/20 transition-all disabled:opacity-50"
+              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600/10 text-blue-400 border border-blue-600/20 rounded-xl hover:bg-blue-600/20 transition-all disabled:opacity-50"
             >
               <RefreshCw className={`w-4 h-4 ${reparsing ? 'animate-spin' : ''}`} />
               <span className="text-xs font-black uppercase tracking-widest">Reparse</span>
@@ -210,7 +210,7 @@ const ResumeDetailPage = () => {
 
             <button
               onClick={() => navigate(`/analysis/create?resumeId=${id}`)}
-              className="btn-gradient px-6 py-2.5"
+              className="btn-gradient justify-center px-6 py-2.5"
             >
               <Target className="w-4 h-4" />
               <span className="text-xs font-black uppercase tracking-widest">Analyze Gaps</span>
@@ -218,7 +218,7 @@ const ResumeDetailPage = () => {
 
             <button
               onClick={handleDelete}
-              className="p-2.5 bg-danger-500/10 text-danger-400 border border-danger-500/20 rounded-xl hover:bg-danger-500/20 transition-all"
+              className="flex items-center justify-center p-2.5 bg-danger-500/10 text-danger-400 border border-danger-500/20 rounded-xl hover:bg-danger-500/20 transition-all sm:self-start"
             >
               <Trash2 className="w-4 h-4" />
             </button>
@@ -226,18 +226,18 @@ const ResumeDetailPage = () => {
         </div>
 
         {/* Resume Info Card */}
-        <div className="card-glass p-8 relative overflow-hidden group">
+        <div className="card-glass relative overflow-hidden p-5 sm:p-6 lg:p-8 group">
           <div className="absolute top-0 right-0 w-64 h-64 bg-primary-600/10 rounded-full -mr-32 -mt-32 blur-[100px]" />
-          <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
-            <div className="flex items-center gap-6">
-              <div className="w-20 h-20 bg-gradient-to-br from-primary-500 to-accent-600 rounded-3xl flex items-center justify-center shadow-glow-sm">
-                <FileText className="w-10 h-10 text-white drop-shadow-lg" />
+          <div className="relative z-10 flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6 min-w-0">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-3xl bg-gradient-to-br from-primary-500 to-accent-600 shadow-glow-sm sm:h-20 sm:w-20">
+                <FileText className="h-8 w-8 text-white drop-shadow-lg sm:h-10 sm:w-10" />
               </div>
-              <div>
-                <h1 className="text-3xl font-black text-white tracking-tight mb-2">
+              <div className="min-w-0">
+                <h1 className="mb-2 break-words text-2xl font-black tracking-tight text-white sm:text-3xl">
                   {resume.originalFileName}
                 </h1>
-                <div className="flex flex-wrap items-center gap-4 text-sm font-medium text-neutral-400">
+                <div className="flex flex-wrap items-center gap-3 text-sm font-medium text-neutral-400">
                   <span className="flex items-center gap-1.5 px-3 py-1 bg-white/5 rounded-full border border-white/5">
                     <Calendar className="w-3.5 h-3.5 text-primary-400" />
                     Uploaded {resume.createdAt ? formatDistanceToNow(new Date(resume.createdAt), { addSuffix: true }) : 'recently'}
@@ -250,19 +250,18 @@ const ResumeDetailPage = () => {
               </div>
             </div>
             
-            <div className="flex items-center gap-8">
-               <div className="text-center">
+            <div className="grid w-full grid-cols-2 gap-4 sm:w-auto xl:min-w-[280px]">
+               <div className="rounded-2xl border border-white/5 bg-white/5 px-4 py-3 text-center">
                   <p className="text-[10px] font-black text-neutral-600 uppercase tracking-[0.2em] mb-1">File Size</p>
                   <p className="text-xl font-bold text-white">{(resume.fileSize / 1024 / 1024).toFixed(2)} MB</p>
                </div>
-               <div className="h-10 w-px bg-white/10 hidden sm:block" />
-               <div className="text-right">
+               <div className="rounded-2xl border border-white/5 bg-white/5 px-4 py-3 text-center sm:text-right">
                   <p className="text-[10px] font-black text-neutral-600 uppercase tracking-[0.2em] mb-1">Status</p>
                   <div className={`badge ${
                     resume.processingStatus === 'completed'
                       ? 'badge-success'
                       : 'badge-warning'
-                  } py-1.5 px-4 text-xs`}>
+                  } py-1.5 px-4 text-xs justify-center sm:justify-start`}>
                     {resume.processingStatus || 'Processing'}
                   </div>
                </div>
@@ -279,9 +278,9 @@ const ResumeDetailPage = () => {
           </div>
         )}
 
-        <div className="flex flex-col lg:flex-row gap-8">
+        <div className="grid grid-cols-1 gap-6 2xl:grid-cols-[minmax(0,1.5fr)_minmax(360px,0.8fr)] xl:gap-8">
           
-          <div className="flex-1 space-y-8">
+          <div className="space-y-6 lg:space-y-8 min-w-0">
             {/* Summary */}
             {hasSummary && (
               <Section
@@ -430,7 +429,7 @@ const ResumeDetailPage = () => {
             )}
           </div>
 
-          <aside className="lg:w-[400px] space-y-8">
+          <aside className="space-y-6 lg:space-y-8 min-w-0">
             {/* Personal Information */}
             {hasPersonalInfo && (
               <div className="card-glass p-8 border-white/5 space-y-6">

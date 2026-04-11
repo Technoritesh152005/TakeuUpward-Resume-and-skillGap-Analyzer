@@ -71,20 +71,21 @@ const Uploadresume = () => {
 
   const uploadResume = async () => {
     if (!selectedFile) return;
+    let progressInterval;
     try {
       setUploading(true);
       setUploadingProgress(0);
       setDragActive(false);
 
-      const progressInterval = setInterval(() => {
+      progressInterval = window.setInterval(() => {
         setUploadingProgress((prev) => {
           if (prev >= 90) {
-            clearInterval(progressInterval);
+            window.clearInterval(progressInterval);
             return 90;
           }
           return prev + 10;
         });
-      }, 200);
+      }, 2000);
 
       const formData = new FormData();
       formData.append('resume', selectedFile);
@@ -103,6 +104,9 @@ const Uploadresume = () => {
       toast.error('Upload failed. Please try again.');
       setUploadingProgress(0);
     } finally {
+      if (progressInterval) {
+        window.clearInterval(progressInterval);
+      }
       setUploading(false);
     }
   };
@@ -119,8 +123,8 @@ const Uploadresume = () => {
 
   return (
     <DashboardLayout>
-      <div className="max-w-[1500px] mx-auto h-full flex flex-col justify-center px-5 py-4">
-        <div className="space-y-5 animate-fade-in text-center">
+      <div className="mx-auto flex h-full w-full max-w-[1500px] flex-col justify-center px-5 py-4">
+        <div className="w-full space-y-5 animate-fade-in text-center">
           <div>
             <h1 className="text-4xl font-black text-white mb-2 tracking-tight">
               Upload <span className="text-gradient">Resume</span>
@@ -130,7 +134,7 @@ const Uploadresume = () => {
             </p>
           </div>
 
-          <div className="card-glass p-8 relative overflow-hidden group max-w-6xl mx-auto w-full border-white/5">
+          <div className="card-glass relative mx-auto w-full max-w-[1100px] overflow-hidden border-white/5 p-8 group">
             <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary-600/10 rounded-full blur-3xl group-hover:bg-primary-600/20 transition-all duration-1000" />
             
             {!uploadedResume ? (
@@ -140,7 +144,7 @@ const Uploadresume = () => {
                   onDragLeave={handleDrag}
                   onDragOver={handleDrag}
                   onDrop={handleDrop}
-                  className={`relative border-2 border-dashed rounded-[40px] p-12 text-center transition-all duration-500 transform ${
+                  className={`relative w-full min-h-[380px] border-2 border-dashed rounded-[40px] p-12 text-center transition-all duration-500 transform ${
                     dragActive
                       ? 'border-primary-500 bg-primary-500/10 scale-[1.01] shadow-glow-sm'
                       : selectedFile
@@ -158,7 +162,7 @@ const Uploadresume = () => {
                   />
 
                   {!selectedFile ? (
-                    <div className="flex flex-col md:flex-row items-center justify-center gap-14 py-6">
+                    <div className="flex min-h-[280px] w-full flex-col items-center justify-center gap-14 py-6 md:flex-row">
                       <div className="w-28 h-28 bg-gradient-to-br from-primary-500/20 to-accent-500/20 rounded-[32px] flex items-center justify-center shadow-inner border border-white/5 group-hover:scale-110 transition-transform duration-500">
                         <Upload className="w-12 h-12 text-primary-400 group-hover:text-primary-300 animate-float" />
                       </div>
@@ -190,7 +194,7 @@ const Uploadresume = () => {
                       </div>
                     </div>
                   ) : (
-                    <div className="py-2 space-y-6 animate-scale-in">
+                    <div className="flex min-h-[280px] w-full flex-col items-center justify-center py-2 space-y-6 animate-scale-in">
                       <div className="w-20 h-20 bg-success-500/20 rounded-[28px] flex items-center justify-center mx-auto border border-success-500/20 shadow-glow-sm">
                         <FileText className="w-10 h-10 text-success-400" />
                       </div>
@@ -222,7 +226,7 @@ const Uploadresume = () => {
                       <div className="flex items-center gap-3">
                          <Loader2 className="w-5 h-5 text-primary-400 animate-spin" />
                          <span className="text-white font-black text-[10px] uppercase tracking-widest">
-                           AI Command Center: Parsing Data...
+                           Uploading resume...
                          </span>
                       </div>
                       <span className="text-primary-400 font-black tracking-tighter text-2xl italic">
@@ -266,7 +270,7 @@ const Uploadresume = () => {
                     className="w-full max-w-3xl mx-auto py-5 bg-gradient-to-r from-primary-600 to-accent-600 text-white font-black uppercase text-xs tracking-[0.3em] rounded-[24px] shadow-glow-sm hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-4"
                   >
                     <Plus className="w-5 h-5" />
-                    Initialize Deep Scan
+                    Upload Resume
                   </button>
                 )}
               </div>
