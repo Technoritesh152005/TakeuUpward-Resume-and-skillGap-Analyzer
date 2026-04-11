@@ -19,6 +19,8 @@ const chartModes = [
   { id: 'bar', label: 'Bar', icon: BarChart3 },
 ];
 
+const MATCH_SCORE_COLOR = '#22c55e';
+
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
 
@@ -67,7 +69,7 @@ const SkillProgressGraph = ({ data = {}, loading = false }) => {
   const matchDelta = previous ? (latest.matchScore || 0) - (previous.matchScore || 0) : 0;
   const hasDenseHistory = chartData.length > 8;
   const xAxisInterval = hasDenseHistory ? 1 : 0;
-  const matchDot = hasDenseHistory ? false : { r: 4, fill: '#7c3aed', strokeWidth: 2, stroke: '#000' };
+  const matchDot = hasDenseHistory ? false : { r: 4, fill: MATCH_SCORE_COLOR, strokeWidth: 2, stroke: '#000' };
   const gapDot = hasDenseHistory ? false : { r: 3, strokeWidth: 2, stroke: '#000' };
 
   const renderChart = () => {
@@ -81,7 +83,7 @@ const SkillProgressGraph = ({ data = {}, loading = false }) => {
             <YAxis yAxisId="gaps" orientation="right" stroke="rgba(255,255,255,0.3)" style={{ fontSize: '10px', fontWeight: 'bold' }} tickLine={false} axisLine={false} dx={10} />
             <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
             <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '10px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }} />
-            <Bar yAxisId="score" dataKey="matchScore" name="Match Score" fill="#7c3aed" radius={[6, 6, 0, 0]} />
+            <Bar yAxisId="score" dataKey="matchScore" name="Match Score" fill={MATCH_SCORE_COLOR} radius={[6, 6, 0, 0]} />
             <Bar yAxisId="gaps" dataKey="criticalGaps" name="Critical Gaps" fill="#f43f5e" radius={[6, 6, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
@@ -97,7 +99,7 @@ const SkillProgressGraph = ({ data = {}, loading = false }) => {
           <YAxis yAxisId="gaps" orientation="right" stroke="rgba(255,255,255,0.3)" style={{ fontSize: '10px', fontWeight: 'bold' }} tickLine={false} axisLine={false} dx={10} />
           <Tooltip content={<CustomTooltip />} />
           <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '10px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }} />
-          <Line yAxisId="score" type="monotone" dataKey="matchScore" name="Match Score" stroke="#7c3aed" strokeWidth={4} dot={matchDot} activeDot={{ r: 6, strokeWidth: 0 }} />
+          <Line yAxisId="score" type="monotone" dataKey="matchScore" name="Match Score" stroke={MATCH_SCORE_COLOR} strokeWidth={4} dot={matchDot} activeDot={{ r: 6, strokeWidth: 0, fill: MATCH_SCORE_COLOR }} />
           <Line yAxisId="gaps" type="monotone" dataKey="criticalGaps" name="Critical Gaps" stroke="#f43f5e" strokeWidth={3} dot={gapDot} activeDot={{ r: 5, strokeWidth: 0 }} />
           <Line yAxisId="gaps" type="monotone" dataKey="importantGaps" name="Important Gaps" stroke="#3b82f6" strokeWidth={3} dot={gapDot} activeDot={{ r: 5, strokeWidth: 0 }} />
         </LineChart>
@@ -159,7 +161,7 @@ const SkillProgressGraph = ({ data = {}, loading = false }) => {
           <div className="mt-2 text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Total Analyses</div>
         </div>
         <div className="text-center group/stat">
-          <div className="text-3xl font-black text-primary-400 tracking-tighter group-hover:scale-110 transition-transform duration-500">{latest.matchScore || 0}%</div>
+          <div className="text-3xl font-black text-success-400 tracking-tighter group-hover:scale-110 transition-transform duration-500">{latest.matchScore || 0}%</div>
           <div className="mt-2 text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Market Readiness</div>
         </div>
         <div className="text-center group/stat">

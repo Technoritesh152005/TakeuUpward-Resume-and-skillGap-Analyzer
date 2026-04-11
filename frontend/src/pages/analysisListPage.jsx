@@ -4,11 +4,13 @@ import {
   ArrowRight,
   CalendarDays,
   ClipboardList,
+  Clock3,
   Trash2,
   FileText,
   Filter,
   Plus,
   Search,
+  Sparkles,
   Target,
   TrendingUp,
 } from 'lucide-react'
@@ -40,6 +42,21 @@ const sortOptions = {
   scoreHigh: (a, b) => (b.matchScore || 0) - (a.matchScore || 0),
   scoreLow: (a, b) => (a.matchScore || 0) - (b.matchScore || 0),
 };
+
+const statusFilterOptions = [
+  { value: 'all', label: 'All status' },
+  { value: 'queued', label: 'Queued' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'processing', label: 'Processing' },
+  { value: 'failed', label: 'Failed' },
+]
+
+const sortByOptions = [
+  { value: 'newest', label: 'Newest first' },
+  { value: 'oldest', label: 'Oldest first' },
+  { value: 'scoreHigh', label: 'Highest score' },
+  { value: 'scoreLow', label: 'Lowest score' },
+]
 
 const getGapTotal = (analysis)=>{
   let total = 
@@ -143,6 +160,8 @@ const AnalysisListPage = ()=>{
     }
   }
 
+  const isAnalysisRunning = (status) => ['queued', 'processing', 'finalizing'].includes(status)
+
   const handleRegenerateAnalysis = async (event, analysisId) => {
     event.stopPropagation()
 
@@ -212,31 +231,112 @@ const summary = useMemo(()=>{
   }
 },[analyses])
 
+const activeRuns = useMemo(
+  () => analyses.filter((item) => ['queued', 'processing', 'finalizing'].includes(item?.status)).length,
+  [analyses]
+)
+
+const latestCompletedAnalysis = useMemo(
+  () => analyses.find((item) => item?.status === 'completed'),
+  [analyses]
+)
+
 return (
   <DashboardLayout>
     <div className="space-y-8">
-      <section className="relative overflow-hidden rounded-3xl border border-neutral-200 bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.18),_transparent_32%),linear-gradient(135deg,_#0f172a,_#111827_55%,_#0b3b2e)] p-6 text-white shadow-soft dark:border-neutral-700 md:p-8">
-        <div className="absolute inset-y-0 right-0 hidden w-1/2 bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.18),_transparent_58%)] lg:block" />
-        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-3xl">
-            <p className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-white/80">
-              <ClipboardList className="h-4 w-4" />
-              Saved Analyses
+      <section className="relative overflow-hidden rounded-[2rem] border border-sky-200/70 bg-[linear-gradient(135deg,_#f8fcff_0%,_#eef7ff_28%,_#e9fff7_100%)] p-6 shadow-soft dark:border-neutral-700 dark:bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.18),_transparent_32%),linear-gradient(135deg,_#0f172a,_#111827_55%,_#0b3b2e)] md:p-8">
+        <div className="absolute -left-20 top-0 h-56 w-56 rounded-full bg-sky-300/25 blur-3xl dark:bg-sky-500/20" />
+        <div className="absolute right-0 top-8 h-52 w-52 rounded-full bg-emerald-300/25 blur-3xl dark:bg-emerald-500/10" />
+        <div className="absolute bottom-0 right-8 h-40 w-40 rounded-full bg-white/70 blur-3xl dark:bg-white/5" />
+
+        <div className="relative grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(320px,0.9fr)] xl:items-end">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-sky-700 backdrop-blur dark:border-white/10 dark:bg-white/10 dark:text-white/80">
+              <Sparkles className="h-4 w-4" />
+              Analysis command center
+            </div>
+
+            <h1 className="mt-4 max-w-3xl text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white md:text-5xl">
+              Track every resume-to-role analysis from one sharper workspace.
+            </h1>
+
+            <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-600 dark:text-white/80 md:text-base">
+              Review fit scores, spot active runs, and jump straight from completed analysis to roadmap planning without digging through old results.
             </p>
-            <h1 className="mt-4 text-3xl font-bold tracking-tight md:text-4xl">View every analysis in one clean workspace</h1>
-            <p className="mt-3 max-w-2xl text-sm text-white/80 md:text-base">
-              Browse completed analysis runs, check fit scores at a glance, and open any result in a dedicated detailed view.
-            </p>
+
+            <div className="mt-6 grid gap-3 sm:grid-cols-3">
+              <HeroStat
+                label="Completed analyses"
+                value={summary.completed}
+                tone="sky"
+              />
+              <HeroStat
+                label="Active runs"
+                value={activeRuns}
+                tone="amber"
+              />
+              <HeroStat
+                label="AI credits left"
+                value={aiUsage?.usesRemaining ?? '--'}
+                tone={isAiLimitReached ? 'red' : 'emerald'}
+              />
+            </div>
+
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              <button
+                type="button"
+                onClick={() => navigate('/analysis/create')}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-100"
+              >
+                <Plus className="h-4 w-4" />
+                Create New Analysis
+              </button>
+
+              <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-600 backdrop-blur dark:border-white/10 dark:bg-white/10 dark:text-white/75">
+                <Clock3 className="h-4 w-4 text-slate-400 dark:text-white/60" />
+                {activeRuns > 0 ? `${activeRuns} analysis run${activeRuns === 1 ? '' : 's'} still processing` : 'No analysis jobs are currently running'}
+              </div>
+            </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => navigate('/analysis/create')}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-neutral-100"
-          >
-            <Plus className="h-4 w-4" />
-            Create New Analysis
-          </button>
+          <div className="rounded-[1.75rem] border border-white/70 bg-white/85 p-5 shadow-[0_24px_60px_rgba(15,23,42,0.08)] backdrop-blur dark:border-white/10 dark:bg-white/5 dark:shadow-none">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-white/55">
+                  Latest completed insight
+                </p>
+                <h2 className="mt-3 text-xl font-bold text-slate-900 dark:text-white">
+                  {latestCompletedAnalysis?.jobRole?.title || 'Your next strong-fit role will show up here'}
+                </h2>
+              </div>
+              <div className="rounded-2xl bg-slate-100 p-3 dark:bg-white/10">
+                <Target className="h-5 w-5 text-slate-600 dark:text-white/80" />
+              </div>
+            </div>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <InsightCard
+                label="Match score"
+                value={latestCompletedAnalysis ? `${latestCompletedAnalysis?.matchScore || 0}%` : '--'}
+              />
+              <InsightCard
+                label="ATS score"
+                value={latestCompletedAnalysis ? `${latestCompletedAnalysis?.atsScore?.overall || 0}%` : '--'}
+              />
+              <InsightCard
+                label="Role category"
+                value={latestCompletedAnalysis?.jobRole?.category || 'No completed analysis yet'}
+              />
+              <InsightCard
+                label="Time to ready"
+                value={latestCompletedAnalysis ? `${latestCompletedAnalysis?.estimatedTimeToReady?.weeks || 0} weeks` : '--'}
+              />
+            </div>
+
+            <p className="mt-4 text-sm leading-6 text-slate-600 dark:text-white/70">
+              {latestCompletedAnalysis?.aiSuggestion?.summary || 'Complete an analysis to surface a quick-read summary, benchmark scores, and the strongest next step.'}
+            </p>
+          </div>
         </div>
       </section>
 
@@ -263,31 +363,20 @@ return (
           <div className="flex flex-col gap-3 sm:flex-row">
             <label className="inline-flex items-center gap-2 rounded-2xl border border-neutral-200 px-4 py-3 text-sm text-neutral-600 dark:border-neutral-700 dark:text-neutral-300">
               <Filter className="h-4 w-4" />
-              <select
+              <FilterDropdown
                 value={statusFilter}
-                onChange={(event) => setStatusFilter(event.target.value)}
-                className="bg-transparent outline-none"
-              >
-                <option value="all">All status</option>
-                <option value="queued">Queued</option>
-                <option value="completed">Completed</option>
-                <option value="processing">Processing</option>
-                <option value="failed">Failed</option>
-              </select>
+                onChange={setStatusFilter}
+                options={statusFilterOptions}
+              />
             </label>
 
             <label className="inline-flex items-center gap-2 rounded-2xl border border-neutral-200 px-4 py-3 text-sm text-neutral-600 dark:border-neutral-700 dark:text-neutral-300">
               <CalendarDays className="h-4 w-4" />
-              <select
+              <FilterDropdown
                 value={sortBy}
-                onChange={(event) => setSortBy(event.target.value)}
-                className="bg-transparent outline-none"
-              >
-                <option value="newest">Newest first</option>
-                <option value="oldest">Oldest first</option>
-                <option value="scoreHigh">Highest score</option>
-                <option value="scoreLow">Lowest score</option>
-              </select>
+                onChange={setSortBy}
+                options={sortByOptions}
+              />
             </label>
           </div>
         </div>
@@ -415,7 +504,7 @@ return (
                       event.stopPropagation();
                       handleDeleteAnalysis(analysis._id);
                     }}
-                    disabled={deletingId === analysis._id}
+                    disabled={deletingId === analysis._id || isAnalysisRunning(analysis?.status)}
                     className="inline-flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-4 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-100 disabled:opacity-60 dark:border-red-900/40 dark:bg-red-900/15 dark:text-red-300"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -466,6 +555,75 @@ const SummaryCard = ({ label, value, icon: Icon }) => (
     <p className="mt-5 text-3xl font-bold tracking-tight text-neutral-900 dark:text-white">{value}</p>
   </div>
 );
+
+const HeroStat = ({ label, value, tone = 'sky' }) => {
+  const tones = {
+    sky: 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-500/20 dark:bg-sky-500/10 dark:text-sky-200',
+    amber: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200',
+    emerald: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-200',
+    red: 'border-red-200 bg-red-50 text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-200',
+  }
+
+  return (
+    <div className={`rounded-2xl border p-4 ${tones[tone] || tones.sky}`}>
+      <p className="text-xs font-semibold uppercase tracking-[0.16em] opacity-75">{label}</p>
+      <p className="mt-3 text-2xl font-bold tracking-tight">{value}</p>
+    </div>
+  )
+}
+
+const InsightCard = ({ label, value }) => (
+  <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 dark:border-white/10 dark:bg-white/5">
+    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-white/50">{label}</p>
+    <p className="mt-2 text-base font-semibold text-slate-900 dark:text-white">{value}</p>
+  </div>
+)
+
+const FilterDropdown = ({ value, onChange, options }) => {
+  const selectedOption = options.find((option) => option.value === value) || options[0]
+
+  return (
+    <details className="group relative min-w-[140px]">
+      <summary className="flex cursor-pointer list-none items-center gap-3 bg-transparent pr-1 text-neutral-900 outline-none marker:content-none dark:text-neutral-100">
+        <span className="truncate">{selectedOption?.label}</span>
+        <span className="pointer-events-none text-neutral-500 transition group-open:rotate-180 dark:text-neutral-400">
+          <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+            <path
+              fillRule="evenodd"
+              d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.168l3.71-3.938a.75.75 0 1 1 1.08 1.04l-4.25 4.51a.75.75 0 0 1-1.08 0l-4.25-4.51a.75.75 0 0 1 .02-1.06Z"
+              clipRule="evenodd"
+            />
+          </svg>
+        </span>
+      </summary>
+
+      <div className="absolute right-0 top-[calc(100%+0.85rem)] z-30 min-w-full overflow-hidden rounded-2xl border border-neutral-200 bg-white p-1.5 shadow-xl shadow-neutral-900/10 dark:border-neutral-700 dark:bg-neutral-900 dark:shadow-black/40">
+        {options.map((option) => {
+          const isActive = option.value === value
+
+          return (
+            <button
+              key={option.value}
+              type="button"
+              onClick={(event) => {
+                event.preventDefault()
+                onChange(option.value)
+                event.currentTarget.closest('details')?.removeAttribute('open')
+              }}
+              className={`flex w-full items-center rounded-xl px-3 py-2 text-left text-sm transition ${
+                isActive
+                  ? 'bg-primary-50 text-primary-700 dark:bg-primary-500/15 dark:text-primary-200'
+                  : 'text-neutral-700 hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-800'
+              }`}
+            >
+              {option.label}
+            </button>
+          )
+        })}
+      </div>
+    </details>
+  )
+}
 
 const MetricCard = ({ label, value, valueClass = 'text-neutral-900 dark:text-white' }) => (
   <div className="rounded-2xl bg-neutral-50 p-4 dark:bg-neutral-900/60">

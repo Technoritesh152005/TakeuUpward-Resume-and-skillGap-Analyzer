@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -7,27 +7,37 @@ import {
   Map,
   Briefcase,
   User,
-  Settings,
   LogOut,
   Menu,
   X,
-  Bell,
-  Search,
   PanelLeftClose,
   PanelLeftOpen
 } from 'lucide-react';
 import useAuthStore from '../../services/authStore.js';
-import ThemeToggle from '../common components/themeToggle.jsx';
 import Logo from '../common components/Logo.jsx';
 
-const DashboardLayout = ({ children }) => {
+const DashboardLayout = ({
+  children,
+  contentContainerClassName = 'max-w-[1600px] mx-auto',
+  contentClassName = 'p-6 sm:p-8 lg:p-10',
+}) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isDesktopSidebarCollapsed, setIsDesktopSidebarCollapsed] = useState(false);
+  const [isDesktopSidebarCollapsed, setIsDesktopSidebarCollapsed] = useState(() => {
+    if (typeof window === 'undefined') {
+      return true;
+    }
+    const stored = window.localStorage.getItem('dashboard.desktopSidebarCollapsed');
+    return stored === null ? true : stored === 'true';
+  });
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuthStore();
   const displayName = user?.fullName || user?.name || 'User';
   const initial = displayName.charAt(0).toUpperCase() || 'U';
+
+  useEffect(() => {
+    window.localStorage.setItem('dashboard.desktopSidebarCollapsed', String(isDesktopSidebarCollapsed));
+  }, [isDesktopSidebarCollapsed]);
 
   const handleLogout = async () => {
     await logout();
@@ -92,11 +102,31 @@ const DashboardLayout = ({ children }) => {
         <div className="flex flex-grow flex-col overflow-y-auto glass-panel border-r">
           
           {/* Sidebar Header / Logo */}
-          <div className={`px-6 py-10 flex items-center ${isDesktopSidebarCollapsed ? 'justify-center px-0' : ''}`}>
+          <div
+            className={`px-4 py-8 ${
+              isDesktopSidebarCollapsed
+                ? 'flex flex-col items-center gap-4'
+                : 'flex flex-col items-start gap-4 px-6'
+            }`}
+          >
             <Logo 
               size={isDesktopSidebarCollapsed ? 'sm' : 'md'} 
               showText={!isDesktopSidebarCollapsed} 
             />
+            <button
+              onClick={() => setIsDesktopSidebarCollapsed((current) => !current)}
+              className={`rounded-xl text-neutral-400 hover:bg-white/5 hover:text-white transition-all duration-300 ${
+                isDesktopSidebarCollapsed ? 'p-2' : 'p-2.5'
+              }`}
+              aria-label={isDesktopSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              title={isDesktopSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              {isDesktopSidebarCollapsed ? (
+                <PanelLeftOpen className="h-4 w-4" />
+              ) : (
+                <PanelLeftClose className="h-5 w-5" />
+              )}
+            </button>
           </div>
 
           {/* Navigation Links */}
@@ -146,27 +176,6 @@ const DashboardLayout = ({ children }) => {
                   </p>
                 </div>
               )}
-            </div>
-
-            <div className="mt-4 space-y-1 px-1">
-              <Link
-                to="/settings"
-                className={`flex rounded-xl px-3 py-2 text-xs font-bold text-neutral-500 transition-colors hover:text-white hover:bg-white/5 ${
-                  isDesktopSidebarCollapsed ? 'justify-center' : 'items-center gap-3'
-                }`}
-              >
-                <Settings className="h-4 w-4" />
-                {!isDesktopSidebarCollapsed && <span className="uppercase tracking-widest">Settings</span>}
-              </Link>
-              <button
-                onClick={handleLogout}
-                className={`flex w-full rounded-xl px-3 py-2 text-xs font-bold text-danger-400 transition-colors hover:bg-danger-500/10 ${
-                  isDesktopSidebarCollapsed ? 'justify-center' : 'items-center gap-3'
-                }`}
-              >
-                <LogOut className="h-4 w-4" />
-                {!isDesktopSidebarCollapsed && <span className="uppercase tracking-widest text-danger-500">Sign Out</span>}
-              </button>
             </div>
           </div>
         </div>
@@ -221,31 +230,15 @@ const DashboardLayout = ({ children }) => {
               >
                 <Menu className="h-5 w-5" />
               </button>
-
-              <button
-                onClick={() => setIsDesktopSidebarCollapsed((current) => !current)}
-                className="hidden lg:flex rounded-xl p-2.5 text-neutral-400 hover:bg-white/5 hover:text-white transition-all duration-300"
-              >
-                {isDesktopSidebarCollapsed ? <PanelLeftOpen className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
-              </button>
-
-              <div className="hidden max-w-sm items-center gap-3 rounded-2xl bg-white/5 border border-white/8 px-4 py-2.5 transition-all focus-within:bg-white/10 focus-within:border-primary-500/50 sm:flex">
-                <Search className="h-4 w-4 text-neutral-500" />
-                <input
-                  type="text"
-                  placeholder="Search roadmap tools..."
-                  className="w-full border-none bg-transparent text-xs font-medium text-white outline-none placeholder:text-neutral-600 tracking-tight"
-                />
-              </div>
             </div>
 
-            <div className="flex items-center gap-5">
-              <div className="hidden lg:block h-8 w-px bg-white/10" />
-              <ThemeToggle />
-
-              <button className="relative rounded-xl p-2.5 text-neutral-400 hover:bg-white/5 hover:text-white transition-all group">
-                <Bell className="h-5 w-5" />
-                <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-accent-500 ring-2 ring-neutral-950 group-hover:animate-ping" />
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleLogout}
+                className="hidden rounded-xl border border-danger-500/20 bg-danger-500/10 px-4 py-2 text-xs font-bold uppercase tracking-widest text-danger-400 transition-colors hover:bg-danger-500/20 lg:inline-flex lg:items-center lg:gap-2"
+              >
+                <LogOut className="h-4 w-4" />
+                Sign Out
               </button>
 
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-primary-600 to-accent-600 shadow-xl shadow-primary-900/40 lg:hidden focus-within:ring-2 ring-primary-500/50 cursor-pointer">
@@ -258,8 +251,8 @@ const DashboardLayout = ({ children }) => {
         </header>
 
         {/* Content Area */}
-        <main className="flex-1 p-6 sm:p-8 lg:p-10 flex flex-col h-[calc(100vh-80px)] overflow-hidden">
-          <div className="max-w-[1600px] w-full mx-auto flex-1 flex flex-col h-full bg-transparent no-scrollbar overflow-y-auto">
+        <main className={`flex-1 flex flex-col h-[calc(100vh-80px)] overflow-hidden ${contentClassName}`}>
+          <div className={`${contentContainerClassName} w-full flex-1 flex flex-col h-full bg-transparent no-scrollbar overflow-y-auto`}>
              <style>{`
                .no-scrollbar::-webkit-scrollbar { display: none; }
                .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

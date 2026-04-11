@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Eye, EyeOff, Mail, Lock, User, AlertCircle, CheckCircle } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Button from '../common components/Button';
 import Input from '../common components/input';
@@ -20,7 +20,6 @@ const SignupForm = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    acceptTerms: false,
   });
 
   const [showPassword, setShowPassword] = useState(false);
@@ -74,11 +73,6 @@ const SignupForm = () => {
 
    
 
-    // Terms validation
-    if (!formData.acceptTerms) {
-      errors.acceptTerms = 'You must accept the terms and conditions';
-    }
-
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -125,7 +119,7 @@ const SignupForm = () => {
   const passwordStrength = getPasswordStrength();
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-4">
       {/* Full Name Field */}
       <div>
         <label htmlFor="fullName" className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-2">
@@ -137,7 +131,7 @@ const SignupForm = () => {
           type="text"
           value={formData.name}
           onChange={handleChange}
-          placeholder="John Doe"
+          placeholder="Jon Snow"
           leftIcon={<User className="w-5 h-5" />}
           error={validationErrors.name}
           disabled={isLoading}
@@ -190,7 +184,7 @@ const SignupForm = () => {
         {/* Password Strength Indicator */}
         {formData.password && (
           <div className="mt-2">
-            <div className="flex items-center gap-2 mb-1">
+            <div className="mb-1 flex items-center gap-2">
               <div className="flex-1 h-2 bg-neutral-200 dark:bg-neutral-700 rounded-full overflow-hidden">
                 <div
                   className={`h-full ${passwordStrength.color} transition-all duration-300`}
@@ -232,48 +226,6 @@ const SignupForm = () => {
         />
       </div>
 
-      
-
-      {/* Terms Checkbox */}
-      <div>
-        <label className="flex items-start gap-3 cursor-pointer">
-          <input
-            type="checkbox"
-            name="acceptTerms"
-            checked={formData.acceptTerms}
-            onChange={handleChange}
-            className="w-4 h-4 mt-1 rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
-            disabled={isLoading}
-          />
-          <span className="text-sm text-neutral-600 dark:text-neutral-400">
-            I agree to the{' '}
-            <Link to="/terms" className="text-primary-600 dark:text-primary-500 hover:underline">
-              Terms of Service
-            </Link>{' '}
-            and{' '}
-            <Link to="/privacy" className="text-primary-600 dark:text-primary-500 hover:underline">
-              Privacy Policy
-            </Link>
-          </span>
-        </label>
-        {validationErrors.acceptTerms && (
-          <p className="text-sm text-red-600 dark:text-red-400 mt-1">{validationErrors.acceptTerms}</p>
-        )}
-      </div>
-
-      <GoogleSignInButton text="Sign up with Google" />
-
-{/* OR Divider */}
-<div className="relative my-6">
-  <div className="absolute inset-0 flex items-center">
-    <div className="w-full border-t border-neutral-300 dark:border-neutral-700"></div>
-  </div>
-  <div className="relative flex justify-center text-sm">
-    <span className="px-4 bg-white dark:bg-neutral-900 text-neutral-500 dark:text-neutral-400">
-      Or sign up with email
-    </span>
-  </div>
-</div>
       {/* Error Message */}
       {error && (
         <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
@@ -293,6 +245,19 @@ const SignupForm = () => {
       >
         {isLoading ? 'Creating account...' : 'Create Account'}
       </Button>
+
+      <div className="relative my-4">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-neutral-300 dark:border-neutral-700"></div>
+        </div>
+        <div className="relative flex justify-center text-sm">
+          <span className="px-4 bg-white dark:bg-neutral-900 text-neutral-500 dark:text-neutral-400">
+            Or continue with
+          </span>
+        </div>
+      </div>
+
+      <GoogleSignInButton text="Sign up with Google" />
 
       {/* Login Link */}
       <p className="text-center text-sm text-neutral-600 dark:text-neutral-400">
