@@ -86,6 +86,16 @@ const roadmapService = {
     return extractPayload(response);
   },
 
+  resetProgress: async (roadmapId) => {
+    const response = await api.put(`/roadmap/${roadmapId}/reset-progress`);
+    return extractPayload(response);
+  },
+
+  deleteRoadmap: async (roadmapId) => {
+    const response = await api.delete(`/roadmap/${roadmapId}`);
+    return extractPayload(response);
+  },
+
   updatePreference: async ({ roadmapId, hoursPerWeek, budget, learningStyle }) => {
     const response = await api.put(`/roadmap/${roadmapId}/update-preference`, {
       ...(hoursPerWeek !== undefined ? { hoursPerWeek } : {}),

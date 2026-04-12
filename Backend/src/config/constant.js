@@ -46,19 +46,35 @@ export const QUEUE_NAMES = {
 };
 
 export const JOB_CATEGORIES = {
-  SOFTWARE_ENGINEERING: 'Software Engineering',
+  AGRICULTURE: 'Agriculture',
+  CONSTRUCTION: 'Construction',
+  CUSTOMER_SERVICE: 'Customer Service',
   DATA_SCIENCE: 'Data Science',
-  PRODUCT: 'Product',
   DESIGN: 'Design',
+  DEVELOPMENT: 'Development',
+  EDUCATION: 'Education',
+  FINANCE: 'Finance',
+  HR: 'HR',
+  HEALTHCARE: 'Healthcare',
+  HOSPITALITY: 'Hospitality',
+  LEGAL: 'Legal',
+  MANUFACTURING: 'Manufacturing',
   MARKETING: 'Marketing',
-  BUSINESS: 'Business',
+  MEDIA: 'Media',
+  NON_PROFIT: 'Non-profit',
+  PRODUCT_MANAGEMENT: 'Product Management',
+  REAL_ESTATE: 'Real Estate',
+  RETAIL: 'Retail',
+  SALES: 'Sales',
+  SCIENCE: 'Science',
+  TRANSPORTATION: 'Transportation',
 };
 
 export const EXPERIENCE_LEVELS = {
   ENTRY: 'Entry Level',
+  JUNIOR: 'Junior Level',
   MID: 'Mid Level',
   SENIOR: 'Senior Level',
-  LEAD: 'Lead/Principal',
 };
 
 export const GAP_CATEGORIES = {

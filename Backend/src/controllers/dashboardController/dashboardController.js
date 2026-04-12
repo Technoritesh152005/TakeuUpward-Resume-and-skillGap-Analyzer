@@ -17,7 +17,7 @@ export const getDashboardData = asyncHandler(async (req, res) => {
   const [resumes, analyses, roadmap, aiUsage] = await Promise.all([
     resumeModel.find({ user: userId }).sort({ createdAt: -1 }),
     analysisModel.find({ user: userId }).sort({ createdAt: -1 }),
-    roadmapModel.findOne({ user: userId, isActive: true }),
+    roadmapModel.findOne({ user: userId, isActive: true }).sort({ createdAt: -1 }),
     getAiUsageSummary(userId),
   ]);
 
@@ -132,51 +132,50 @@ export const getDashboardData = asyncHandler(async (req, res) => {
   let roadmapPreview = null;
   
   if (roadmap) {
-    const totalItems = roadmap.phases?.reduce(
-      (sum, phase) => sum + (phase.items?.length || 0), 
-      0
-    ) || 0;
-    
-    const completedItems = roadmap.phases?.reduce(
-      (sum, phase) => sum + (phase.items?.filter(item => item.completed).length || 0),
-      0
-    ) || 0;
+    const roadmapItems = [];
+
+    roadmap.phases?.forEach((phase, phaseIndex) => {
+      phase?.weeklyBreakdown?.forEach((week, weekIndex) => {
+        week?.learningItems?.forEach((item, itemIndex) => {
+          roadmapItems.push({
+            id: item?._id || `${phaseIndex}-${weekIndex}-${itemIndex}`,
+            title: item?.title || 'Learning item',
+            completed: Boolean(item?.completed),
+            completedAt: item?.completedAt,
+            estimatedHours: item?.estimatedHours || 0,
+            phase: phase?.title || `Phase ${phase?.phaseNumber || phaseIndex + 1}`,
+            week: week?.week || weekIndex + 1,
+          });
+        });
+      });
+    });
+
+    const totalItems = roadmapItems.length;
+    const completedItems = roadmapItems.filter((item) => item.completed).length;
     
     const progress = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
 
-    // Get upcoming items (not completed)
-    const upcomingItems = [];
-    roadmap.phases?.forEach(phase => {
-      phase.items
-        ?.filter(item => !item.completed)
-        .slice(0, 3)
-        .forEach(item => {
-          upcomingItems.push({
-            id: item._id,
-            title: item.title,
-            phase: phase.name,
-            dueDate: item.dueDate,
-            priority: item.priority || 'medium'
-          });
-        });
-    });
+    const upcomingItems = roadmapItems
+      .filter((item) => !item.completed)
+      .slice(0, 3)
+      .map((item) => ({
+        id: item.id,
+        title: item.title,
+        phase: item.phase,
+        estimatedHours: item.estimatedHours,
+        week: item.week,
+      }));
 
-    // Get recently completed items
-    const recentCompleted = [];
-    roadmap.phases?.forEach(phase => {
-      const completedInPhase = phase.items
-        ?.filter(item => item.completed && item.completedAt)
-        .sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt)) || [];
-      
-      if (completedInPhase.length > 0) {
-        recentCompleted.push({
-          id: completedInPhase[0]._id,
-          title: completedInPhase[0].title,
-          phase: phase.name,
-          completedAt: completedInPhase[0].completedAt
-        });
-      }
-    });
+    const recentCompleted = roadmapItems
+      .filter((item) => item.completed && item.completedAt)
+      .sort((a, b) => new Date(b.completedAt) - new Date(a.completedAt))
+      .slice(0, 2)
+      .map((item) => ({
+        id: item.id,
+        title: item.title,
+        phase: item.phase,
+        completedAt: item.completedAt,
+      }));
 
     roadmapPreview = {
       title: roadmap.title || 'Learning Roadmap',
@@ -184,7 +183,7 @@ export const getDashboardData = asyncHandler(async (req, res) => {
       totalItems,
       completedItems,
       upcomingItems: upcomingItems.slice(0, 3),
-      recentCompleted: recentCompleted.slice(0, 1)
+      recentCompleted,
     };
   }
 

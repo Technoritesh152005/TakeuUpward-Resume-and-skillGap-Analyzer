@@ -12,7 +12,9 @@ import {
     getRoadmapStatus,
     retryRoadmap,
     getProgressOfUser,
-    markItemComplete
+    markItemComplete,
+    resetRoadmapProgress,
+    deleteRoadmap
 }
 from '../controllers/roadmapController/roadmapController.js'
 import {
@@ -54,9 +56,11 @@ router.get('/:id/progress',protectAccess,validateRoadmapId,getProgressOfUser)
 
 // 6. mark item complete
 router.put('/:id/mark-item-complete',protectAccess,validateRoadmapId,validateMarkItemComplete,markItemComplete)
+router.put('/:id/reset-progress',protectAccess,validateRoadmapId,resetRoadmapProgress)
 
 // 7.update roadmap prefernce
 router.put('/:id/update-preference',protectAccess,validateRoadmapId,validateRoadmapPreferencesUpdate,updateReference)
+router.delete('/:id',protectAccess,validateRoadmapId,deleteRoadmap)
 
 
 export default router

@@ -624,6 +624,74 @@ export const markItemComplete = asyncHandler(async (req, res) => {
         new ApiResponse(201, populatedRoadmap || roadmap, 'Item Marked completed'))
 })
 
+export const resetRoadmapProgress = asyncHandler(async (req, res) => {
+    const roadmap = await roadmapModel.findOne({
+        _id: req.params.id,
+        user: req.user._id,
+    })
+
+    if (!roadmap) {
+        throw new ApiError(400, 'No roadmap found')
+    }
+
+    for (const phase of roadmap.phases || []) {
+        for (const week of phase.weeklyBreakdown || []) {
+            for (const item of week.learningItems || []) {
+                item.completed = false
+                item.completedAt = undefined
+            }
+        }
+    }
+
+    for (const project of roadmap.projects || []) {
+        project.completed = false
+        project.completedAt = undefined
+    }
+
+    for (const item of roadmap.certification || []) {
+        item.completed = false
+    }
+
+    if (roadmap?.progress?.milestones?.length) {
+        roadmap.progress.milestones = roadmap.progress.milestones.map((item) => ({
+            ...item.toObject(),
+            completed: false,
+        }))
+    }
+
+    roadmap.progress.completedItems = 0
+    roadmap.progress.overallPercentage = 0
+    roadmap.progress.lastUpdated = new Date()
+
+    await roadmap.save()
+
+    const progress = await progressModel.findOne({
+        user: req.user._id,
+        roadmap: roadmap._id,
+    })
+
+    if (progress) {
+        progress.completedResources = []
+        progress.completedProjects = []
+        progress.certificationsEarned = []
+        progress.currentPhase = 0
+        progress.currentWeek = 0
+        progress.currentStreak = 0
+        progress.lastActivityDate = undefined
+        await progress.save()
+    }
+
+    await clearRoadmapCache(roadmap.analysis, req.user._id)
+
+    const populatedRoadmap = await roadmapModel.findOne({
+        _id: roadmap._id,
+        user: req.user._id
+    }).populate(roadmapDetailPopulate)
+
+    res.status(200).json(
+        new ApiResponse(200, populatedRoadmap || roadmap, 'Roadmap progress reset successfully'))
+})
+
 export const updateReference = asyncHandler(async (req, res) => {
 
     // requirment from user to change preference
@@ -715,3 +783,23 @@ export const getMyRoadmaps = asyncHandler(async (req, res) => {
         )
     );
 });
+
+export const deleteRoadmap = asyncHandler(async (req, res) => {
+    const roadmap = await roadmapModel.findOne({
+        _id: req.params.id,
+        user: req.user._id,
+        isActive: true,
+    })
+
+    if (!roadmap) {
+        throw new ApiError(404, 'Roadmap not found')
+    }
+
+    roadmap.isActive = false
+    await roadmap.save()
+    await clearRoadmapCache(roadmap.analysis, req.user._id)
+
+    res.status(200).json(
+        new ApiResponse(200, { roadmapId: roadmap._id }, 'Roadmap deleted successfully')
+    )
+})
