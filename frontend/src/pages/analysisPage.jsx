@@ -511,7 +511,7 @@ const AnalysisPage = () => {
                                       type="button"
                                       onClick={() => {
                                         setSelectedJobRoleId(role._id);
-                                        setJobRoleSearch(role.title);
+                                        setJobRoleSearch('');
                                         setIsJobRoleDropdownOpen(false);
                                       }}
                                       className={`w-full rounded-2xl border px-4 py-3 text-left transition-all ${

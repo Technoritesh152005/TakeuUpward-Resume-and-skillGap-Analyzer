@@ -305,15 +305,6 @@ const buildSkillArtifacts = (skillGapAnalysisData) => {
     });
 
     const extractedSkills = new Set();
-    normalizedSkillGaps.critical?.forEach((item) => {
-        if (item.skill) extractedSkills.add(item.skill);
-    });
-    normalizedSkillGaps.important?.forEach((item) => {
-        if (item.skill) extractedSkills.add(item.skill);
-    });
-    normalizedSkillGaps.niceToHave?.forEach((item) => {
-        if (item.skill) extractedSkills.add(item.skill);
-    });
     normalizedStrengths.forEach((item) => {
         if (item.skill) extractedSkills.add(item.skill);
     });

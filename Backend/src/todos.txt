@@ -589,3 +589,317 @@ REMAINING TODOS - 2026-04-08
     - keyword coverage
 - goal:
   - move from "good AI resume analyzer" to "career decision-support system users can trust more"
+
+
+========================================
+JOB ROLE DATA EXPANSION - 2026-04-12
+========================================
+
+CURRENT DATASET SNAPSHOT
+
+Total roles currently present: 63
+
+Categories currently present:
+- Development
+- Data Science
+- Healthcare
+- Education
+- Finance
+- Marketing
+- Sales
+- Design
+- Hospitality
+- HR
+- Customer Service
+- Construction
+- Retail
+- Legal
+- Transportation
+- Manufacturing
+- Real Estate
+- Non-profit
+- Media
+- Agriculture
+- Science
+- Product Management
+
+Thin / under-covered categories right now:
+- Product Management (1)
+- Agriculture (1)
+- Science (1)
+- Real Estate (1)
+- Non-profit (1)
+- Construction (2)
+- Customer Service (2)
+- Legal (2)
+- Manufacturing (2)
+- Retail (2)
+- Transportation (2)
+
+
+WHAT SHOULD BE ADDED FIRST
+
+High-priority missing modern roles:
+- Software Engineer
+- Site Reliability Engineer
+- Cloud Engineer
+- Platform Engineer
+- Security Engineer
+- Cybersecurity Analyst
+- Solutions Architect
+- Cloud Architect
+- Android Developer
+- iOS Developer
+- SDET
+- AI Engineer
+- NLP Engineer
+- Computer Vision Engineer
+- Analytics Engineer
+- Business Analyst
+- Project Manager
+- Program Manager
+- Technical Program Manager
+- Scrum Master
+- Product Owner
+
+Business / operations gaps:
+- Operations Manager
+- Operations Analyst
+- Supply Chain Analyst
+- Procurement Specialist
+- Administrative Assistant
+- Executive Assistant
+
+Marketing / growth gaps:
+- Social Media Manager
+- Product Marketing Manager
+- Growth Marketing Manager
+- Performance Marketing Manager
+- Marketing Analyst
+- Email Marketing Specialist
+
+Sales gaps:
+- Sales Development Representative (SDR)
+- Account Manager
+- Sales Manager
+- Sales Operations Analyst
+- Solutions Consultant / Pre-Sales Engineer
+
+Design gaps:
+- UI Designer
+- User Researcher
+- Motion Designer
+- Illustrator
+
+Finance gaps:
+- FP&A Analyst
+- Auditor
+- Bookkeeper
+- Controller
+- Payroll Specialist
+
+HR gaps:
+- Talent Acquisition Specialist
+- People Operations Specialist
+- HR Generalist
+- Learning and Development Specialist
+
+Healthcare gaps:
+- Occupational Therapist
+- Physician Assistant
+- Medical Coder
+- Medical Billing Specialist
+- Radiologic Technologist
+
+Other useful gaps:
+- Instructional Designer
+- School Counselor
+- Compliance Analyst
+- Supply Chain Manager
+- Procurement Manager
+- Process Engineer
+- Mechanical Engineer
+- Electrical Engineer
+
+
+LOWER PRIORITY / NOT NEEDED IMMEDIATELY
+
+Do not expand these first unless broad industry coverage becomes a product goal:
+- more Agriculture roles
+- more Hospitality roles
+- more Retail roles
+- more Transportation roles
+- more Non-profit roles
+- more Real Estate roles
+
+Already reasonably covered, so no urgent duplicates needed:
+- Frontend Developer
+- Backend Developer
+- Full Stack Developer
+- Mobile Developer
+- DevOps Engineer
+- QA Engineer
+- Data Analyst
+- Data Scientist
+- ML Engineer
+- BI Analyst
+- Data Engineer
+- Recruiter
+- HR Manager
+- Digital Marketing Specialist
+- SEO Specialist
+- Brand Manager
+- Graphic Designer
+- UX/UI Designer
+- Product Designer
+- Accountant
+- Financial Analyst
+- Investment Analyst
+- Tax Accountant
+- Sales Representative
+- Account Executive
+- Business Development Manager
+- Product Manager
+
+
+BEST NEXT BATCH TO ADD FIRST
+
+If only adding the next 20-25 roles, prioritize:
+- Software Engineer
+- Cloud Engineer
+- Security Engineer
+- SRE
+- Platform Engineer
+- Android Developer
+- iOS Developer
+- AI Engineer
+- Analytics Engineer
+- Business Analyst
+- Project Manager
+- Program Manager
+- Technical Program Manager
+- Scrum Master
+- Product Owner
+- SDR
+- Account Manager
+- Product Marketing Manager
+- Growth Marketing Manager
+- FP&A Analyst
+- HR Generalist
+- Talent Acquisition Specialist
+- Instructional Designer
+- Mechanical Engineer
+- Electrical Engineer
+
+
+CLAUDE PROMPT FOR GENERATING MORE JOB ROLE DATA
+
+Use this exact prompt with Claude:
+
+I have an existing JavaScript seed file containing job role objects for a resume-analysis platform. I need you to generate NEW job role objects in the EXACT SAME DATA SHAPE and STYLE as my existing dataset.
+
+Important rules:
+- Output only valid JavaScript object entries, not explanations.
+- Do not wrap the output in markdown.
+- Do not repeat roles that already exist.
+- Use realistic, hiring-market-relevant roles.
+- Keep naming conventional and searchable.
+- Keep descriptions concise and practical.
+- Salary ranges should be realistic in USD yearly format.
+- Maintain this exact schema for each role:
+
+{
+  title: 'Role Title',
+  category: 'Category Name',
+  experienceLevel: 'Entry Level' | 'Junior Level' | 'Mid Level' | 'Senior Level',
+  description: 'Short role description.',
+  requiredSkills: {
+    critical: [
+      { title: 'Skill Name', importance: 10 }
+    ],
+    important: [
+      { title: 'Skill Name', importance: 7 }
+    ],
+    niceToHave: [
+      { title: 'Skill Name', importance: 5 }
+    ]
+  },
+  responsibilities: [
+    'Responsibility 1',
+    'Responsibility 2',
+    'Responsibility 3',
+    'Responsibility 4',
+    'Responsibility 5'
+  ],
+  salaryRange: { min: 00000, max: 00000, currency: 'USD', period: 'yearly' },
+  demandLevel: 'medium' | 'high' | 'very-high'
+}
+
+Constraints:
+- Each role must have exactly 4 critical skills, 3 important skills, and 3 nice-to-have skills.
+- Each role must have exactly 5 responsibilities.
+- Importance values must stay:
+  - critical = 10
+  - important = 7
+  - niceToHave = 5
+- Keep category names consistent with current data where possible.
+- For newer missing roles, use sensible categories such as:
+  - Development
+  - Data Science
+  - Finance
+  - Sales
+  - Marketing
+  - HR
+  - Product Management
+  - Design
+  - Construction
+  - Customer Service
+
+Generate roles for these missing titles first:
+- Software Engineer
+- Site Reliability Engineer
+- Cloud Engineer
+- Platform Engineer
+- Security Engineer
+- Cybersecurity Analyst
+- Solutions Architect
+- Cloud Architect
+- Android Developer
+- iOS Developer
+- SDET
+- AI Engineer
+- NLP Engineer
+- Computer Vision Engineer
+- Analytics Engineer
+- Business Analyst
+- Project Manager
+- Program Manager
+- Technical Program Manager
+- Scrum Master
+- Product Owner
+- Operations Manager
+- Operations Analyst
+- Social Media Manager
+- Product Marketing Manager
+- Growth Marketing Manager
+- Performance Marketing Manager
+- SDR
+- Account Manager
+- Sales Manager
+- FP&A Analyst
+- Auditor
+- Bookkeeper
+- Controller
+- Payroll Specialist
+- HR Generalist
+- Talent Acquisition Specialist
+- People Operations Specialist
+- Learning and Development Specialist
+- Instructional Designer
+- User Researcher
+- UI Designer
+- Motion Designer
+- Mechanical Engineer
+- Electrical Engineer
+
+Return the roles in the same code style as a JS seed array so I can paste them directly into my dataset.

@@ -76,9 +76,14 @@ isActive: {
             }]
         },
         salaryRange: {
-            type: Number,
-            min: Number,
-            max: Number,
+            min: {
+                type: Number,
+                default: 0,
+            },
+            max: {
+                type: Number,
+                default: 0,
+            },
             currency: {
                 type: String,
                 default: 'USD'

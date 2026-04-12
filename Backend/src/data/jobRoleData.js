@@ -2206,7 +2206,370 @@ const jobRoles = [
       ],
       salaryRange: { min: 100000, max: 165000, currency: 'USD', period: 'yearly' },
       demandLevel: 'high'
-    }
+    },
+    {
+      title: 'Software Engineer',
+      category: 'Development',
+      experienceLevel: 'Mid Level',
+      description: 'Designs, builds, and maintains scalable software systems and applications across the stack.',
+      requiredSkills: {
+      critical: [
+      { title: 'Data Structures & Algorithms', importance: 10 },
+      { title: 'Object-Oriented Programming', importance: 10 },
+      { title: 'Version Control (Git)', importance: 10 },
+      { title: 'System Design', importance: 10 }
+      ],
+      important: [
+      { title: 'RESTful API Design', importance: 7 },
+      { title: 'Unit & Integration Testing', importance: 7 },
+      { title: 'SQL & Relational Databases', importance: 7 }
+      ],
+      niceToHave: [
+      { title: 'Docker & Containerization', importance: 5 },
+      { title: 'CI/CD Pipelines', importance: 5 },
+      { title: 'Agile/Scrum Methodology', importance: 5 }
+      ]
+      },
+      responsibilities: [
+      'Design, develop, and ship production-quality features across backend and frontend systems.',
+      'Collaborate with product managers and designers to translate requirements into technical solutions.',
+      'Write clean, maintainable code backed by thorough unit and integration tests.',
+      'Participate in code reviews and provide constructive feedback to peers.',
+      'Identify and resolve performance bottlenecks and production issues promptly.'
+      ],
+      salaryRange: { min: 90000, max: 150000, currency: 'USD', period: 'yearly' },
+      demandLevel: 'very-high'
+      },
+      {
+      title: 'Cloud Engineer',
+      category: 'Development',
+      experienceLevel: 'Mid Level',
+      description: 'Builds and manages cloud infrastructure to support reliable, scalable, and cost-efficient services.',
+      requiredSkills: {
+      critical: [
+      { title: 'AWS / Azure / GCP', importance: 10 },
+      { title: 'Infrastructure as Code (Terraform / CloudFormation)', importance: 10 },
+      { title: 'Networking & Security Groups', importance: 10 },
+      { title: 'Linux Administration', importance: 10 }
+      ],
+      important: [
+      { title: 'Docker & Kubernetes', importance: 7 },
+      { title: 'CI/CD Pipelines', importance: 7 },
+      { title: 'Cloud Cost Optimization', importance: 7 }
+      ],
+      niceToHave: [
+      { title: 'Scripting (Python / Bash)', importance: 5 },
+      { title: 'Monitoring & Observability (Datadog / CloudWatch)', importance: 5 },
+      { title: 'Multi-Cloud Architecture', importance: 5 }
+      ]
+      },
+      responsibilities: [
+      'Design, provision, and maintain cloud infrastructure across one or more cloud providers.',
+      'Implement infrastructure as code to ensure reproducible and version-controlled environments.',
+      'Optimize cloud resource usage to control costs without sacrificing reliability.',
+      'Collaborate with development teams to architect cloud-native solutions.',
+      'Monitor infrastructure health and respond to incidents and alerts.'
+      ],
+      salaryRange: { min: 100000, max: 160000, currency: 'USD', period: 'yearly' },
+      demandLevel: 'very-high'
+      },
+      {
+      title: 'Security Engineer',
+      category: 'Development',
+      experienceLevel: 'Mid Level',
+      description: 'Protects systems, networks, and data by identifying vulnerabilities and implementing security controls.',
+      requiredSkills: {
+      critical: [
+      { title: 'Application Security (OWASP)', importance: 10 },
+      { title: 'Network Security & Firewalls', importance: 10 },
+      { title: 'Identity & Access Management', importance: 10 },
+      { title: 'Threat Modeling', importance: 10 }
+      ],
+      important: [
+      { title: 'SIEM & Log Analysis', importance: 7 },
+      { title: 'Penetration Testing', importance: 7 },
+      { title: 'Cloud Security (AWS/Azure/GCP)', importance: 7 }
+      ],
+      niceToHave: [
+      { title: 'Security Certifications (CISSP / CEH)', importance: 5 },
+      { title: 'Scripting for Security Automation', importance: 5 },
+      { title: 'Compliance Frameworks (SOC2 / ISO 27001)', importance: 5 }
+      ]
+      },
+      responsibilities: [
+      'Conduct security assessments, vulnerability scans, and penetration tests across systems.',
+      'Design and implement security controls, policies, and hardening standards.',
+      'Monitor security events and lead incident response and remediation efforts.',
+      'Partner with engineering teams to embed security best practices into the SDLC.',
+      'Maintain compliance with relevant security frameworks and regulatory requirements.'
+      ],
+      salaryRange: { min: 105000, max: 170000, currency: 'USD', period: 'yearly' },
+      demandLevel: 'very-high'
+      },
+      {
+      title: 'Site Reliability Engineer',
+      category: 'Development',
+      experienceLevel: 'Mid Level',
+      description: 'Ensures the reliability, availability, and performance of production systems through engineering and automation.',
+      requiredSkills: {
+      critical: [
+      { title: 'Linux Systems Administration', importance: 10 },
+      { title: 'Kubernetes & Container Orchestration', importance: 10 },
+      { title: 'Monitoring & Observability (Prometheus / Grafana)', importance: 10 },
+      { title: 'Incident Management & On-Call', importance: 10 }
+      ],
+      important: [
+      { title: 'Scripting (Python / Go / Bash)', importance: 7 },
+      { title: 'CI/CD & Deployment Automation', importance: 7 },
+      { title: 'SLOs, SLAs & Error Budgets', importance: 7 }
+      ],
+      niceToHave: [
+      { title: 'Chaos Engineering', importance: 5 },
+      { title: 'Distributed Systems Design', importance: 5 },
+      { title: 'Cloud Provider Expertise', importance: 5 }
+      ]
+      },
+      responsibilities: [
+      'Define and track SLOs, error budgets, and reliability metrics for critical services.',
+      'Build and maintain automation to reduce toil and improve system resilience.',
+      'Lead post-incident reviews and drive actionable follow-ups to prevent recurrence.',
+      'Collaborate with development teams to design systems for high availability and fault tolerance.',
+      'Manage and improve observability tooling including dashboards, alerts, and tracing.'
+      ],
+      salaryRange: { min: 110000, max: 175000, currency: 'USD', period: 'yearly' },
+      demandLevel: 'high'
+      },
+      {
+      title: 'Platform Engineer',
+      category: 'Development',
+      experienceLevel: 'Mid Level',
+      description: 'Builds and maintains internal developer platforms and tooling to accelerate engineering productivity.',
+      requiredSkills: {
+      critical: [
+      { title: 'Kubernetes & Helm', importance: 10 },
+      { title: 'Infrastructure as Code (Terraform)', importance: 10 },
+      { title: 'CI/CD Platform Management', importance: 10 },
+      { title: 'Cloud Infrastructure (AWS / GCP / Azure)', importance: 10 }
+      ],
+      important: [
+      { title: 'Developer Experience (DX) Design', importance: 7 },
+      { title: 'Scripting & Automation (Python / Go)', importance: 7 },
+      { title: 'Service Mesh & Networking', importance: 7 }
+      ],
+      niceToHave: [
+      { title: 'Internal Developer Portals (Backstage)', importance: 5 },
+      { title: 'GitOps (ArgoCD / Flux)', importance: 5 },
+      { title: 'Cost Management & FinOps', importance: 5 }
+      ]
+      },
+      responsibilities: [
+      'Design and operate internal platforms that enable development teams to self-serve infrastructure.',
+      'Standardize CI/CD workflows, deployment patterns, and environment management.',
+      'Build tooling and golden-path templates that reduce engineering friction.',
+      'Ensure platform reliability, security, and scalability as the organization grows.',
+      'Act as an internal consultant to engineering teams on platform capabilities and best practices.'
+      ],
+      salaryRange: { min: 105000, max: 165000, currency: 'USD', period: 'yearly' },
+      demandLevel: 'high'
+      },
+      {
+      title: 'Android Developer',
+      category: 'Development',
+      experienceLevel: 'Mid Level',
+      description: 'Designs and builds native Android applications with a focus on performance, usability, and reliability.',
+      requiredSkills: {
+      critical: [
+      { title: 'Kotlin', importance: 10 },
+      { title: 'Android SDK & Jetpack Libraries', importance: 10 },
+      { title: 'Jetpack Compose', importance: 10 },
+      { title: 'RESTful API Integration', importance: 10 }
+      ],
+      important: [
+      { title: 'MVVM / Clean Architecture', importance: 7 },
+      { title: 'Unit & UI Testing (JUnit / Espresso)', importance: 7 },
+      { title: 'Google Play Store Publishing', importance: 7 }
+      ],
+      niceToHave: [
+      { title: 'Kotlin Coroutines & Flow', importance: 5 },
+      { title: 'Firebase Integration', importance: 5 },
+      { title: 'Accessibility & Localization', importance: 5 }
+      ]
+      },
+      responsibilities: [
+      'Build and maintain feature-rich native Android applications using Kotlin and Jetpack.',
+      'Implement responsive, accessible UI components with Jetpack Compose.',
+      'Integrate RESTful APIs and manage local data with Room or DataStore.',
+      'Write and maintain unit, integration, and UI tests to ensure app stability.',
+      'Optimize app performance, battery usage, and startup time across device targets.'
+      ],
+      salaryRange: { min: 85000, max: 145000, currency: 'USD', period: 'yearly' },
+      demandLevel: 'high'
+      },
+      {
+      title: 'iOS Developer',
+      category: 'Development',
+      experienceLevel: 'Mid Level',
+      description: 'Builds and ships high-quality native iOS applications for iPhone and iPad using Swift and Apple frameworks.',
+      requiredSkills: {
+      critical: [
+      { title: 'Swift', importance: 10 },
+      { title: 'SwiftUI & UIKit', importance: 10 },
+      { title: 'Xcode & Instruments', importance: 10 },
+      { title: 'RESTful API Integration', importance: 10 }
+      ],
+      important: [
+      { title: 'MVVM / Clean Architecture', importance: 7 },
+      { title: 'Core Data / SwiftData', importance: 7 },
+      { title: 'App Store Connect & TestFlight', importance: 7 }
+      ],
+      niceToHave: [
+      { title: 'Combine / Swift Concurrency (async/await)', importance: 5 },
+      { title: 'Push Notifications & Background Tasks', importance: 5 },
+      { title: 'Accessibility (VoiceOver / Dynamic Type)', importance: 5 }
+      ]
+      },
+      responsibilities: [
+      'Develop and maintain native iOS apps following Apple Human Interface Guidelines.',
+      'Build adaptive, accessible UI using SwiftUI and UIKit for iPhone and iPad.',
+      'Integrate backend services via REST APIs and manage local persistence.',
+      'Profile and optimize app performance using Xcode Instruments.',
+      'Manage App Store submissions, release cycles, and TestFlight beta distribution.'
+      ],
+      salaryRange: { min: 90000, max: 150000, currency: 'USD', period: 'yearly' },
+      demandLevel: 'high'
+      },
+      {
+      title: 'AI Engineer',
+      category: 'Data Science',
+      experienceLevel: 'Mid Level',
+      description: 'Develops and deploys AI-powered systems and applications by integrating large language models and machine learning capabilities into production.',
+      requiredSkills: {
+      critical: [
+      { title: 'Python', importance: 10 },
+      { title: 'LLM Integration (OpenAI / Anthropic / HuggingFace)', importance: 10 },
+      { title: 'Prompt Engineering', importance: 10 },
+      { title: 'Machine Learning Fundamentals', importance: 10 }
+      ],
+      important: [
+      { title: 'RAG & Vector Databases (Pinecone / Weaviate)', importance: 7 },
+      { title: 'API Design & Backend Development', importance: 7 },
+      { title: 'Model Evaluation & Benchmarking', importance: 7 }
+      ],
+      niceToHave: [
+      { title: 'Fine-tuning & RLHF', importance: 5 },
+      { title: 'LangChain / LlamaIndex', importance: 5 },
+      { title: 'MLOps & Model Deployment', importance: 5 }
+      ]
+      },
+      responsibilities: [
+      'Design and build AI-powered features and pipelines using LLMs and ML models.',
+      'Engineer effective prompts and retrieval strategies for RAG-based applications.',
+      'Evaluate model outputs for accuracy, safety, and relevance using structured benchmarks.',
+      'Integrate AI capabilities into existing products via well-designed APIs and services.',
+      'Stay current with the rapidly evolving AI landscape and identify applicable advancements.'
+      ],
+      salaryRange: { min: 115000, max: 185000, currency: 'USD', period: 'yearly' },
+      demandLevel: 'very-high'
+      },
+      {
+      title: 'Analytics Engineer',
+      category: 'Data Science',
+      experienceLevel: 'Mid Level',
+      description: 'Transforms raw data into clean, reliable, and analytics-ready datasets that power business intelligence and decision-making.',
+      requiredSkills: {
+      critical: [
+      { title: 'SQL (Advanced)', importance: 10 },
+      { title: 'dbt (Data Build Tool)', importance: 10 },
+      { title: 'Data Warehousing (Snowflake / BigQuery / Redshift)', importance: 10 },
+      { title: 'Data Modeling', importance: 10 }
+      ],
+      important: [
+      { title: 'ETL / ELT Pipeline Development', importance: 7 },
+      { title: 'BI Tools (Looker / Tableau / Mode)', importance: 7 },
+      { title: 'Python for Data Manipulation', importance: 7 }
+      ],
+      niceToHave: [
+      { title: 'Airflow / Orchestration Tools', importance: 5 },
+      { title: 'Data Quality & Testing (Great Expectations)', importance: 5 },
+      { title: 'Dimensional Modeling (Kimball)', importance: 5 }
+      ]
+      },
+      responsibilities: [
+      'Build and maintain dbt models that transform raw warehouse data into clean analytical layers.',
+      'Define and document data models, metrics, and business logic for cross-functional use.',
+      'Partner with data analysts and business stakeholders to understand reporting requirements.',
+      'Implement data quality tests and monitors to ensure pipeline reliability.',
+      'Optimize query performance and warehouse resource usage.'
+      ],
+      salaryRange: { min: 95000, max: 155000, currency: 'USD', period: 'yearly' },
+      demandLevel: 'high'
+      },
+      {
+      title: 'Business Analyst',
+      category: 'Product Management',
+      experienceLevel: 'Mid Level',
+      description: 'Bridges business needs and technical solutions by gathering requirements, analyzing data, and driving process improvements.',
+      requiredSkills: {
+      critical: [
+      { title: 'Requirements Gathering & Documentation', importance: 10 },
+      { title: 'Data Analysis & Reporting (Excel / SQL)', importance: 10 },
+      { title: 'Stakeholder Management', importance: 10 },
+      { title: 'Process Mapping & Workflow Analysis', importance: 10 }
+      ],
+      important: [
+      { title: 'User Story Writing & Acceptance Criteria', importance: 7 },
+      { title: 'BI Tools (Tableau / Power BI)', importance: 7 },
+      { title: 'Agile / Scrum Methodology', importance: 7 }
+      ],
+      niceToHave: [
+      { title: 'JIRA & Confluence', importance: 5 },
+      { title: 'Basic SQL Querying', importance: 5 },
+      { title: 'Change Management', importance: 5 }
+      ]
+      },
+      responsibilities: [
+      'Elicit and document business requirements through interviews, workshops, and observation.',
+      'Translate business needs into clear user stories, process flows, and functional specifications.',
+      'Analyze operational data to identify trends, inefficiencies, and improvement opportunities.',
+      'Serve as the liaison between business stakeholders and development or product teams.',
+      'Support UAT by defining test cases and coordinating stakeholder sign-off.'
+      ],
+      salaryRange: { min: 70000, max: 115000, currency: 'USD', period: 'yearly' },
+      demandLevel: 'high'
+      },
+      {
+      title: 'Project Manager',
+      category: 'Product Management',
+      experienceLevel: 'Mid Level',
+      description: 'Plans, executes, and closes projects on time and within scope by coordinating teams, managing risks, and aligning stakeholders.',
+      requiredSkills: {
+      critical: [
+      { title: 'Project Planning & Scheduling', importance: 10 },
+      { title: 'Risk & Issue Management', importance: 10 },
+      { title: 'Stakeholder Communication', importance: 10 },
+      { title: 'Budget Tracking & Resource Management', importance: 10 }
+      ],
+      important: [
+      { title: 'Agile & Waterfall Methodologies', importance: 7 },
+      { title: 'Project Management Tools (JIRA / Asana / MS Project)', importance: 7 },
+      { title: 'Status Reporting & Executive Presentations', importance: 7 }
+      ],
+      niceToHave: [
+      { title: 'PMP or PRINCE2 Certification', importance: 5 },
+      { title: 'Change Management', importance: 5 },
+      { title: 'Vendor & Contract Management', importance: 5 }
+      ]
+      },
+      responsibilities: [
+      'Define project scope, goals, deliverables, and timelines in collaboration with stakeholders.',
+      'Develop and maintain detailed project plans, tracking progress against milestones.',
+      'Identify, log, and mitigate project risks and issues proactively.',
+      'Facilitate cross-functional team meetings and ensure clear ownership of action items.',
+      'Communicate project status, blockers, and decisions to stakeholders and leadership.'
+      ],
+      salaryRange: { min: 80000, max: 130000, currency: 'USD', period: 'yearly' },
+      demandLevel: 'high'
+      },
   
   ];
   
