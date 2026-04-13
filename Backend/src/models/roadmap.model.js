@@ -22,14 +22,14 @@ const roadmapSchema = mongoose.Schema({
         type: String,
         default: 'Your Roadmap',
     },
-
     // Roadmap structure
     duration: {
         weeks: Number,
         startDate: Date,
         endDate: Date
-
     },
+    // phases is a array of objects where can contain multiple phases
+    // and in each phase there is a weekly breakdown showing what all items u need to covered
     phases: [
 
         {
@@ -86,6 +86,7 @@ const roadmapSchema = mongoose.Schema({
         }
     ],
 
+    // projects suggested by llm models
     projects: [
         {
             title: String,
@@ -129,6 +130,7 @@ const roadmapSchema = mongoose.Schema({
 
     },
 
+    // this progress describes the item marked completed. it is a seperate part for each roadmap
     progress: {
         overallPercentage: {
             type: Number,
@@ -160,6 +162,7 @@ const roadmapSchema = mongoose.Schema({
     },
 
     // shows status of the roamdpa like queue prcoessing , completed , failed
+    // used in queue operations
     status: {
         type: String,
         enum: Object.values(ROADMAP_STATUS),
@@ -177,6 +180,7 @@ const roadmapSchema = mongoose.Schema({
     processingTime: Number,
     error: String,
 
+    // soft delete for roadmap
     isActive: {
         type: Boolean,
         default: true
@@ -192,6 +196,7 @@ const roadmapSchema = mongoose.Schema({
 })
 
 // now when user completed 1 or more items in roadmap u need to update it
+// this tracks through each item and check the total itemsa and how much they r completed
 roadmapSchema.methods.updateProgress = async function () {
     let complete = 0
     let total = 0
@@ -205,7 +210,7 @@ roadmapSchema.methods.updateProgress = async function () {
     }
 
     this.progress.completedItems = complete,
-        this.progress.totalItems = total
+    this.progress.totalItems = total
     this.progress.overallPercentage = Math.round((complete / total) * 100)
 
     this.progress.lastUpdated = new Date();
@@ -218,7 +223,7 @@ roadmapSchema.methods.markItemComplete = async function (phaseIndex, weeklyBreak
     const item = this.phases[phaseIndex].weeklyBreakdown[weeklyBreakdownIndex].learningItems[learningItemIndex]
 
     if (!item) {
-        console.log("Didnt get item")
+       throw new Error('Item Not Found!..')
     }
     if (!item.completed) {
         item.completed = true

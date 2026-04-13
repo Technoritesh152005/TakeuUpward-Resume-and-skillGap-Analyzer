@@ -1,5 +1,6 @@
 import mongoose from 'mongoose'
 
+// this is about the token created for forgot password  
 const tokenSchema = mongoose.Schema(
     {
         user:
@@ -9,6 +10,7 @@ const tokenSchema = mongoose.Schema(
             required: true,
             index: true,
         },
+        // in forgot pass we hash the random generated token and furrther compare the hash user input with this hash token
         tokenHash:{
             type:String,
             required:true,

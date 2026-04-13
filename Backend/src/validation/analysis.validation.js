@@ -2,6 +2,7 @@ import Joi from 'joi';
 import mongoose from 'mongoose';
 import ApiError from '../utils/apiError.js';
 
+// validation to check whether analysis id is valid
 const objectId = () =>
   Joi.string().custom((value, helpers) => {
     if (!mongoose.Types.ObjectId.isValid(value)) {
@@ -17,6 +18,7 @@ const analysisIdParamsSchema = Joi.object({
   }),
 });
 
+// during creating analysis these r the validation
 const createAnalysisSchema = Joi.object({
   resumeId: objectId().required().messages({
     'any.invalid': 'Invalid resume id format',
@@ -35,6 +37,7 @@ const createAnalysisSchema = Joi.object({
   }).optional(),
 });
 
+// at at time u can get max 100 analysis
 const getAnalysisSchema = Joi.object({
   page: Joi.number().integer().min(1).default(1),
   limit: Joi.number().integer().min(1).max(100).default(10),
@@ -86,6 +89,7 @@ const regenerateAnalysisSchema = Joi.object({
 });
 
 const validateCreatingAnalysis = (req, res, next) => {
+  // we pass the data to these middleware and they check with their validation function
   const { error, value } = createAnalysisSchema.validate(req.body, { abortEarly: true, stripUnknown: true });
   if (error) {
     throw new ApiError(400, error.details[0].message);
@@ -149,3 +153,13 @@ export {
   validateGetAnalysis,
   validateRegenerateAnalysis,
 };
+
+// req.body for post or update
+// req.query to get or filter
+// req.params for the resource identifier in url
+
+// express.json what does is whenever data comes from client it is a middleware which puts the data in 
+// req.body = {
+// ''''''
+// }
+// but here in validation some changes r happend some default value r added so we put it manually

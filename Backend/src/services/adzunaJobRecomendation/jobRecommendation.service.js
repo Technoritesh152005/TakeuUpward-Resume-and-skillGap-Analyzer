@@ -1,6 +1,7 @@
 import adzunaService from './adzuna.service.js'
 
 class RecommendJobs {
+    // normalize the string value and remove all aaltu faltu data
     normalizeText(value) {
         return String(value || '')
             .toLowerCase()
@@ -31,6 +32,7 @@ class RecommendJobs {
         return fallback
     }
 
+    // it takes the location detail explicitly from some saved data if not provided 
     takeLocationDetails(analysis = {}) {
         return (
             analysis?.resume?.parsedData?.contactInfo?.location ||
@@ -40,6 +42,7 @@ class RecommendJobs {
         )
     }
 
+    // pulls useful candidate evidence from analysis 
     buildEvidenceProfile(analysis = {}) {
         const strengths = Array.isArray(analysis?.candidateStrength) ? analysis.candidateStrength : []
         const extractedSkills = Array.isArray(analysis?.extractedSkills) ? analysis.extractedSkills : []
@@ -80,6 +83,7 @@ class RecommendJobs {
             .slice(0, 3)
     }
 
+    // it checks if analysis locationa and candidate location match
     hasLocationAlignment(job = {}, candidateLocation = '') {
         const normalizedCandidateLocation = this.normalizeText(candidateLocation)
         const normalizedJobLocation = this.normalizeText(job?.location)
@@ -101,6 +105,7 @@ class RecommendJobs {
             || normalizedDescription.includes('work from home')
     }
 
+    // here u try to find job roles from both analysis job role and closest winnable roles
     buildJobRoleSearchPlan(analysis = {}) {
         const targetRole = analysis?.jobRole
         const closestRole = analysis?.closestWinnableRole
@@ -118,6 +123,7 @@ class RecommendJobs {
             const closestRoleId = String(closestRole?.roleId || '')
             const targetRoleId = String(targetRole?._id || '')
 
+            // try not to push search job roles which may be duplicate. try to provide unique job search role
             if (!closestRoleId || closestRoleId !== targetRoleId) {
                 roles.push({
                     type: 'closest_winnable_role',
@@ -138,6 +144,7 @@ class RecommendJobs {
         return label || 'stretch_role'
     }
 
+    // har ek job ka reason banayegda
     buildReasons(job = {}, analysis = {}, sourceType) {
         const reasons = []
         const readinessLabel = analysis?.applicationReadiness?.label
@@ -234,6 +241,7 @@ class RecommendJobs {
         }
     }
 
+    // we create here a unique identifier for each job.so if we see that key in our set then we dont add that job again
     removeDuplicateJobs(jobs = []) {
         const seen = new Set()
         const jobArray = []
@@ -243,7 +251,6 @@ class RecommendJobs {
             if (!key || seen.has(key)) {
                 continue
             }
-
             seen.add(key)
             jobArray.push(job)
         }
@@ -251,6 +258,7 @@ class RecommendJobs {
         return jobArray
     }
 
+    // this is the main function logic which tries to recommend jobs. u need to provide analysis anyhow
     async getRecommendationsForAnalysis(analysis, options = {}) {
         if (!analysis) {
             throw new Error('Analysis is required to recommend jobs')
@@ -260,13 +268,16 @@ class RecommendJobs {
         const pageSize = options.pageSize || 8
         const rolesToSearch = this.buildJobRoleSearchPlan(analysis)
 
+        // if u dont have any job roles that needed to be searched then return empty so that frontend dont crash
         if (!rolesToSearch.length) {
             return {
                 basedOn: [],
                 jobs: [],
             }
         }
-
+        // promise.all works process in parallel
+        // search each job in paralled
+        // promise.all return an array
         const searchResults = await Promise.all(
             rolesToSearch.map(async (role) => {
                 const result = await adzunaService.searchJobs({
@@ -276,17 +287,26 @@ class RecommendJobs {
                     pageSize,
                 })
 
+                // once u got the data return the job role for which job u have
+                // adzuna return jobs object
                 return {
                     role,
+                    // then in each job u add the sourceroletype
                     jobs: result.jobs.map((job) => ({ ...job, sourceRoleType: role.type })),
                 }
             })
         )
 
         const dedupedJobs = this.removeDuplicateJobs(
+            // take all jobs and put all jobs in one array onlu
+            // map always return nested loops and flatmap return one big flat loop only with object inside 
+            // .map() loops over array
+            // Each element is an object
+            // You access object properties inside it
             searchResults.flatMap((result) => result.jobs)
         )
 
+        // now deduped jobs look like this [job1 , job2 , job3 , job4]
         const rankedJobs = dedupedJobs
             .map((job) => {
                 const scoring = this.scoreJob(job, analysis, job.sourceRoleType)

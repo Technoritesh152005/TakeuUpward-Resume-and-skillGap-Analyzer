@@ -14,7 +14,7 @@ const validateObjectId = (value, helpers) => {
 
 // we need to validate resume before going to controller that title and content is given
 // it is additional
-
+// always remember we wrap the joi object with a middleware
 const validateResumeBeforeUpload = (req, res, next) => {
 
     const schema = joi.object(
@@ -104,39 +104,9 @@ const validateResumeId = (req, res, next) => {
     next();
 };
 
-const validateResumeUpdate = (req, res, next) => {
-
-    // to validate take req.body from user and make atleast one compulsory
-    const schema = joi.object(
-        {
-            titile: joi.string()
-                .optional()
-                .max(12)
-                .trim(),
-
-            notes: joi.string()
-                .trim()
-                .max(500)
-                .optional(),
 
 
-        }
-    )
-    console.log(req.body)
-    const { error } = schema.validate(req.body)
-
-    if (error) {
-        throw new ApiError(400, error.details[0].message)
-    }
-
-    if(Object.keys(req.body).length === 0){
-        throw new ApiError(401,'Please provide atleast 1 field to update')
-    }
-
-    next()
-}
-
-export { validateResumeBeforeUpload, validateGetResumeQuery, validateObjectId, validateResumeId, validateResumeUpdate }
+export { validateResumeBeforeUpload, validateGetResumeQuery, validateObjectId, validateResumeId }
 
 
 

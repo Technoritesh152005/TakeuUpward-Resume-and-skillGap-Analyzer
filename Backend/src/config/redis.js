@@ -7,6 +7,7 @@ const redisClient = createClient(
         url:'redis://localhost:6379'
     }
 )
+// .on is a listen event emitter
 
 redisClient.on('error',(err)=>logger.error('Redis Error: ',err))
 

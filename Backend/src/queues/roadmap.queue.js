@@ -18,6 +18,7 @@ const roadmapQueue = new Queue(QUEUE_NAMES.ROADMAP_GENERATION, {
 
 // adding job in queueu
 const enqueueRoadmapGeneration = async ({ roadmapId, analysisId, userId }) => {
+    // while equeuing the jobs u need to pass the job name and also data in object form
     return roadmapQueue.add(
         'generate-roadmap',
         {

@@ -1,5 +1,6 @@
 import mongoose from 'mongoose'
 
+// this is the progress track of the user
 const progressSchema = new mongoose.Schema(
     {
         user: {
@@ -15,6 +16,7 @@ const progressSchema = new mongoose.Schema(
             index: true,
         },
         // in progress a progreess of user is basically from what skills he acquired
+
         skillsAcquired: [
             {
                 type: String,
@@ -30,6 +32,7 @@ const progressSchema = new mongoose.Schema(
             }
         ],
 
+        // this shows track of what resource he completed or learned
         completedResources: [
             {
                 resource: {
@@ -115,13 +118,16 @@ progressSchema.methods.updateStreak = function () {
     // if user has last activity date convert it to midnight
     const lastActivityDate = this.lastActivityDate ? new Date(this.lastActivityDate).setHours(0, 0, 0, 0) : null
 
+    // if u dont have lastactivity date means ur new and ur current streak will be 1
     if (!lastActivityDate) {
         this.currentStreak = 1
     } else {
         const daydiff = (today - lastActivityDate) / (1000 * 60 * 60 * 24)
         if (daydiff === 1) {
             this.currentStreak = this.currentStreak + 1
-        } else if (daydiff > 1) {
+        } 
+        // now here if user was active today and last active was two days ago means day diff >=1 so streak = 1
+        else if (daydiff > 1) {
             this.currentStreak = 1
         }
     }

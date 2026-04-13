@@ -26,8 +26,7 @@ if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
 }
 
 passport.use(
-  new GoogleStrategy(
-    {
+  new GoogleStrategy( {
       clientID: process.env.GOOGLE_CLIENT_ID,
       // callback tells where google will send user after login
       callbackURL:
@@ -36,14 +35,15 @@ passport.use(
       // scope determines what we need from google-
       // profile means we need name , googleid , picture
       scope: ['profile', 'email'],
-    },
+     },
+   
     // callback fxn
     // done is a fxn to pass result
     // this all is send from google
     async(accessToken , refreshToken , profile , done)=>{
 
         try{
-            console.log('hi')
+            
             const email = profile.emails[0].value
             const name = profile.displayName;
             const googleId = profile.id;

@@ -19,11 +19,11 @@ const jobRoleSchema = mongoose.Schema(
             lowercase: true,
         },
         // Add this field to your jobRoleSchema
-isActive: {
-    type: Boolean,
-    default: true,
-    index: true
-},
+        isActive: {
+            type: Boolean,
+            default: true,
+            index: true
+        },
         category: {
             type: String,
             required: true,
@@ -39,9 +39,10 @@ isActive: {
         description: {
             type: String,
             required: true,
-            max: [1000, "Please make it below 500 characters"]
+            max: [500, "Please make it below 500 characters"]
         },
         responsibilities: [String],
+        // required skills for this job role
         requiredSkills: {
 
             critical: [{
@@ -154,6 +155,8 @@ jobRoleSchema.pre('save', function (next) {
 //     {c,iimp}
 // ]
 // ]
+
+// this is a funcion which gets all the skill of a particular job role as requested
 jobRoleSchema.methods.getAllRequiredSkill = function(){
     const skills=[]
     const critical = this.requiredSkills?.critical || {}
@@ -165,19 +168,21 @@ jobRoleSchema.methods.getAllRequiredSkill = function(){
         skills.push({...s , category:'critical'})
     }
     for(let s of important){
-        // woh item ko pehla aur dekh ki woh category critical hai kya
+        // woh item ko pehla aur dekh ki woh category important hai kya
         skills.push({...s , category:'important'})
     }
     for(let s of niceToHave){
-        // woh item ko pehla aur dekh ki woh category critical hai kya
+        // woh item ko pehla aur dekh ki woh category niceToHave hai kya
         skills.push({...s , category:'niceToHave'})
     }
 
     return skills
+    // it is an array of multiple objects-> mostly 3
     
 }
 // schema . methods works on single document
 // statics works on whole model
+// findsimilarroles is based on the category
 jobRoleSchema.statics.findSimilarRoles = async function(category , limit =5, experienceLevel){
     return this.find({
         category,
@@ -190,6 +195,8 @@ const jobRoleModel = mongoose.model('jobRoleModel', jobRoleSchema);
 
 export default jobRoleModel;
 export { jobRoleModel };
+
+
     // 🔥 Imagine This Situation
 
 // You have:

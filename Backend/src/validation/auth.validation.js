@@ -34,27 +34,19 @@ const validateSignUp = (req, res, next) => {
         password: joi.
             string()
             .required()
-            .min(6)
+            .min(8)
             .max(12)
             .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
             .messages(
                 {
                     'password.empty': 'Password cannot be empty',
-                    'password.min': 'Password should be min 6 characters',
+                    'password.min': 'Password should be min 8 characters',
                     'password.max': 'Password cannot exceed more than 12 characters',
                     'string.pattern.base': 'Password must contain at least one uppercase letter, one lowercase letter, and one number',
                 }
             ),
 
-        phone: joi.string()
-            .pattern(/^[6-9]\d{9}$/)
-            
-            .messages(
-                {
-                    'phone.empty': 'Phone number cannot be emppty. please provide it will be safe',
-                    'phone.pattern.base': 'Please enter a valid 10 digit Indian mobile number'
-                }
-            ),
+       
 
         location: joi
             .string()
@@ -75,6 +67,7 @@ const validateSignUp = (req, res, next) => {
         throw new ApiError(401, errormsg.join(', '))
     }
 
+    
     next()
 }
 
@@ -113,34 +106,34 @@ const validateLogin = (req, res, next) => {
 /**
  * Validate password change request
  */
-const validatePasswordChange = (req, res, next) => {
-    const schema = joi.object({
-        currentPassword: joi.string()
-            .required()
-            .messages({
-                'string.empty': 'Current password is required',
-            }),
+// const validatePasswordChange = (req, res, next) => {
+//     const schema = joi.object({
+//         currentPassword: joi.string()
+//             .required()
+//             .messages({
+//                 'string.empty': 'Current password is required',
+//             }),
 
-        newPassword: joi.string()
-            .min(8)
-            .max(128)
-            .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-            .required()
-            .messages({
-                'string.empty': 'New password is required',
-                'string.min': 'New password must be at least 8 characters',
-                'string.pattern.base': 'Password must contain at least one uppercase letter, one lowercase letter, and one number',
-            }),
-    });
+//         newPassword: joi.string()
+//             .min(8)
+//             .max(128)
+//             .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+//             .required()
+//             .messages({
+//                 'string.empty': 'New password is required',
+//                 'string.min': 'New password must be at least 8 characters',
+//                 'string.pattern.base': 'Password must contain at least one uppercase letter, one lowercase letter, and one number',
+//             }),
+//     });
 
-    const { error } = schema.validate(req.body);
+//     const { error } = schema.validate(req.body);
 
-    if (error) {
-        throw new ApiError(400, error.details[0].message);
-    }
+//     if (error) {
+//         throw new ApiError(400, error.details[0].message);
+//     }
 
-    next();
-};
+//     next();
+// };
 
 /**
  * Validate update profile request
@@ -153,13 +146,7 @@ const validateUpdateProfile = (req, res, next) => {
             .max(50)
             .optional(),
 
-        phone: joi.string()
-            .pattern(/^[6-9]\d{9}$/)
-            .optional()
-            .messages({
-                'string.pattern.base': 'Please provide a valid 10-digit Indian phone number',
-            }),
-
+      
         location: joi.string()
             .trim()
             .max(100)
@@ -251,4 +238,4 @@ const validateUpdateNotifications = (req, res, next) => {
     next();
 };
 
-export { validateLogin, validatePasswordChange, validateSignUp, validateUpdateProfile, validateUpdateNotifications }
+export { validateLogin, validateSignUp, validateUpdateProfile, validateUpdateNotifications }

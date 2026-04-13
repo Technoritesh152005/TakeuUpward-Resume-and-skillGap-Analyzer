@@ -22,6 +22,7 @@ const analysisSchema = mongoose.Schema(
             required: true,
             index: true,
         },
+        // number of ur analysis matches with ur job role
         matchScore: {
             type: Number,
             required: true,
@@ -48,14 +49,14 @@ const analysisSchema = mongoose.Schema(
             }
         },
 
-        // ✅ NEW: Extracted skills for dashboard stats
+        // Extracted skills for dashboard stats
         extractedSkills: {
             type: [String],
             default: [],
             index: true
         },
 
-        // ✅ NEW: Skill breakdown for dashboard charts
+        //  Skill breakdown for dashboard charts
         skillBreakdown: [{
             skillName: {
                 type: String,
@@ -234,6 +235,7 @@ const analysisSchema = mongoose.Schema(
        applicationReadiness:{
         label:{
             type:String,
+            // stretch roles means try more or try to do with diff roles
             enum:['apply_now','apply_after_resume_fixes','apply_after_skill_upgrade','stretch_role']
         },
         readinessScore:Number,

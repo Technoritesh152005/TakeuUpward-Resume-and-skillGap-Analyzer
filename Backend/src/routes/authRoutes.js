@@ -13,7 +13,7 @@ import { login } from '../controllers/authControllers/login.authControllers.js'
 import { changePassword, forgotPassword, getCurrentUser, resetPassword} from '../controllers/authControllers/changePassword.js'
 import { protectAccess } from '../middleware/authMiddleware.js'
 import { refreshToken } from '../controllers/authControllers/refreshAccessToken.Controller.js'
-import {validateSignUp,validateLogin, validatePasswordChange} from '../validation/auth.validation.js'
+import {validateSignUp,validateLogin} from '../validation/auth.validation.js'
 
 
 /**
@@ -49,12 +49,6 @@ router.post('/forgot-password',forgotPassword)
 
 router.post('/reset-password',resetPassword)
 
-/**
- * @route   PUT /api/v1/auth/change-password
- * @desc    Change user password
- * @access  Private
- */
-router.post('/change-password',protectAccess,validatePasswordChange,changePassword)
 
 /**
  * @route   GET /api/v1/auth/me

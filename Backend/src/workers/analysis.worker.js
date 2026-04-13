@@ -12,6 +12,7 @@ const startAnalysisWorker = () => {
     // contines listen job based on these job-name
     // and starts logic
     const worker = new Worker(
+        // listen all the event on these job name and start worker based on these jobs
         QUEUE_NAMES.ANALYSIS_GENERATION,
 
         async (job) => {
@@ -21,7 +22,7 @@ const startAnalysisWorker = () => {
         {
             connection: bullMqConnection,
             // process 2 jobs at  atime
-            concurrency: 2,
+            concurrency: 3,
         }
     )
 
