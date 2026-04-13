@@ -19,6 +19,7 @@ const FALLBACK_GEMINI_KEYS = [
 
 const RETRYABLE_STATUS_CODES = ['429', '500', '502', '503', '504'];
 
+// checkts whether the error status code is one of the above following
 const isRetryableGeminiError = (error) => {
   const message = String(error?.message || '');
   return RETRYABLE_STATUS_CODES.some((code) => message.includes(`[${code}`)) ||

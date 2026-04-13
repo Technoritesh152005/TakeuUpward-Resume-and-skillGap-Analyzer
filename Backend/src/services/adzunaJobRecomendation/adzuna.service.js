@@ -1,4 +1,6 @@
 class AdzunaService {
+
+    // always when we use the adzuna service set this paramters
     constructor() {
         this.baseUrl = 'https://api.adzuna.com/v1/api/jobs'
         this.appId = process.env.ADZUNA_APP_ID
@@ -10,10 +12,12 @@ class AdzunaService {
         return Boolean(this.appId && this.apiKey && this.country)
     }
 
+    // to fetch live jobs from adzuna we create a search url in which it will have api key and the parameters to search
     buildSearchUrl({ roleTitle, location, page = 1, pageSize = 10 }) {
         const normalizedPage = Math.max(1, Number(page) || 1)
         const normalizedPageSize = Math.max(1, Math.min(20, Number(pageSize) || 10))
 
+        // this urlsearchparams is used to read and add and modify params
         const params = new URLSearchParams({
             app_id: this.appId,
             app_key: this.apiKey,
@@ -21,6 +25,8 @@ class AdzunaService {
             what: String(roleTitle || '').trim(),
             'content-type': 'application/json',
         })
+        // it creates like this dummuy url
+        // app_id=abc123&app_key=xyz789&results_per_page=10&what=software+engineer&content-type=application%2Fjson
 
         if (location) {
             params.set('where', String(location).trim())
@@ -29,6 +35,7 @@ class AdzunaService {
         return `${this.baseUrl}/${this.country}/search/${normalizedPage}?${params.toString()}`
     }
 
+    // the each job it gets from the adzuna is maked in this schema to retuern
     normalizeJob(job = {}) {
         return {
             source: 'adzuna',
@@ -47,6 +54,7 @@ class AdzunaService {
         }
     }
 
+    // function to fetch jobs from adzuna
     async searchJobs({ roleTitle, location, page = 1, pageSize = 10 }) {
         if (!this.isConfigured()) {
             throw new Error('Adzuna is not configured. Missing APP ID or API key.')
@@ -56,7 +64,9 @@ class AdzunaService {
             throw new Error('Role title is required for Adzuna search.')
         }
 
+        // /Build the url and start to fetch
         const url = this.buildSearchUrl({ roleTitle, location, page, pageSize })
+        // always tell the provider to provide in json form
         const response = await fetch(url, {
             headers: {
                 Accept: 'application/json',
@@ -68,9 +78,10 @@ class AdzunaService {
             const safeUrl = url
                 .replace(`app_id=${this.appId}`, 'app_id=***')
                 .replace(`app_key=${this.apiKey}`, 'app_key=***')
+                // while error show user the url but hide the app and api id
             throw new Error(`Adzuna search failed with status ${response.status} for ${safeUrl}: ${errorText}`)
         }
-
+        // http send in the form of tect in json so we need to make in js object
         const payload = await response.json()
         const results = Array.isArray(payload?.results) ? payload.results : []
 

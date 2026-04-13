@@ -2,14 +2,10 @@ import mongoose from 'mongoose'
 import mongoosePaginate from 'mongoose-paginate-v2';
 import { RESOURCE_TYPES } from '../config/constant.js'
 
+// it is the schema for resource which will be provided during roadmap creation
 const resourceSchema = new mongoose.Schema(
     {
-        // 1
-        user: {
-            type: mongoose.Types.ObjectId,
-            ref: 'userModel',
-            index: true,
-        },
+       
         title: {
             type: String,
             required: true,
@@ -126,6 +122,7 @@ resourceSchema.index({ title: 'text', description: 'text' });
 resourceSchema.plugin(mongoosePaginate);
 
 // method to find best resources according to skill and difficulty
+// u need to pass the related skill and based on the skill it will find the resources
 resourceSchema.statics.findBestResources = async function (skill,difficulty,options={}){
 
     const query = {

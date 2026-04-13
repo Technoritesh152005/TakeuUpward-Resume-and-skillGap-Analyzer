@@ -6,6 +6,7 @@ import bcrypt from "bcrypt"
 const DEFAULT_DAILY_AI_LIMIT = 4
 const DEFAULT_AI_USAGE_TIMEZONE = 'Asia/Kolkata'
 
+// function to show the limit of ai uasge
 const getCurrentAiUsageDay = () => {
     return new Intl.DateTimeFormat('en-CA', {
         timeZone: DEFAULT_AI_USAGE_TIMEZONE,
@@ -15,24 +16,8 @@ const getCurrentAiUsageDay = () => {
     }).format(new Date())
 }
 
-const notificationPreferenceSchema = new mongoose.Schema(
-    {
-        email: {
-            type: Boolean,
-            default: true,
-        },
-        roadMapUpdates: {
-            type: Boolean,
-            default: true,
-        },
-        weeklyProgess: {
-            type: Boolean,
-            default: true
-        }
-    },
-    { _id: false }
-)
 
+// maintained during the analysis creation or roadmap
 const learningPreferenceSchema = new mongoose.Schema(
     {
         hoursPerWeek: {
@@ -50,11 +35,7 @@ const learningPreferenceSchema = new mongoose.Schema(
             type: String,
             enum: ["mixed", "auditory", "visual", "reading", "kinesthetic"],
             default: "mixed",
-        },
-        notification: {
-            type: notificationPreferenceSchema,
-            default: () => ({})
-        },
+        }
     },
     { _id: false }
 )
@@ -111,6 +92,7 @@ const aiUsageSchema = new mongoose.Schema(
             default: getCurrentAiUsageDay,
         },
     },
+    // this is to show that no id need to create for this schema
     { _id: false }
 )
 
@@ -171,12 +153,6 @@ const userSchema = mongoose.Schema(
             enum: ['local', 'google'],
             default: 'local',
           },
-          
-        phone: {
-            type: String,
-            trim: true,
-            maxLength: [15, "Phone number must be 15 or less than 15 characters"]
-        },
         location: {
             type: String
         },
@@ -192,6 +168,7 @@ const userSchema = mongoose.Schema(
             type: careerPreferenceSchema,
             default: () => ({})
         },
+        // ai usage is a object or thing which calls aiUsageSchema to tkae fields regarding it
         aiUsage: {
             type: aiUsageSchema,
             default: () => ({})
@@ -222,6 +199,7 @@ userSchema.index({ createdAt: -1 })
 // helps not to call db everytime by db.findbyid(id).populate("resume")
 
 // resumes is name of virtual field
+// virtual means link the user document with this.it is used when we need to populate
 userSchema.virtual("resumes", {
     ref: "Resume",
     // use the _id of user
@@ -256,7 +234,9 @@ userSchema.virtual('preferences')
         if (!this.isModified('password')) {
             return next()
         }
-    
+        
+        // calculate hash only when password is modified
+        
         const salt = await bcrypt.genSalt(10)
         this.password =  await bcrypt.hash(this.password, salt)
     
@@ -270,12 +250,14 @@ userSchema.virtual('preferences')
 
 
 // .methods means add a custom methods to document
+// in compare method we hash the new password and check their hash value
 userSchema.methods.comparePassword = async function (eneteredPassword) {
     return await bcrypt.compare(eneteredPassword,this.password)
 }
 
 // now u need to create jwt access and refresh tokens
 // But jwt.sign() is synchronous, so async makes the function return a Promise.
+// jwt.sign() is synchronous by default
 userSchema.methods.generateAccessToken =  function () {
 
     return jwt.sign(

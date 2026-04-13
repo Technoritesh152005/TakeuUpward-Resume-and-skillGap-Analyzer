@@ -1,6 +1,7 @@
 import mongoose from 'mongoose'
 import mongoosePaginate from "mongoose-paginate-v2";
 
+// schema for resume docs field
 const resumeSchema = mongoose.Schema(
     {
 
@@ -38,6 +39,7 @@ const resumeSchema = mongoose.Schema(
         },
 
         // now whenever user uploads resumem we extract the necessary field and put them in our fields
+        // this parsed data r from llm model
         parsedData:{
             // each user dont have multiple personal details but eduaction can be multiple so we put them in array
 
@@ -120,6 +122,7 @@ const resumeSchema = mongoose.Schema(
             enum:['pending','completed','processing','failed'],
             default:'pending',
             },
+            // error generated during parsing
             processError:String,
             // all the text of the ocr based text extraction are stored here
             ocrText: {
