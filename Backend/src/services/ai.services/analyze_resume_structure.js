@@ -3,13 +3,16 @@ import { generateContentWithFallback } from '../../config/gemini.js';
 
 class AnalyzeResumeStructure {
   // take the first balanced JSON object/array block only
+  // it takes all data which r in nested form also
   extractJsonBlock(content) {
+    // it looks for {
     const startIndex = content.search(/[\[{]/);
     if (startIndex === -1) {
       return content.trim();
     }
 
     const opening = content[startIndex];
+    // if { then closing is }
     const closing = opening === '{' ? '}' : ']';
     let depth = 0;
     let inString = false;
@@ -143,6 +146,7 @@ class AnalyzeResumeStructure {
     throw lastError;
   }
 
+  // this is a fallback if the parser fails
   async repairJsonWithGemini(invalidJson) {
     const repairPrompt = `
 You are a JSON repair tool.
@@ -167,11 +171,13 @@ ${invalidJson}
   }
 
   // all in one block
+  // it both does normalization and extract json block
   async parseStructuredJson(rawContent) {
     const normalized = this.normalizeJsonString(rawContent);
     const extracted = this.extractJsonBlock(normalized);
 
     try {
+      // It is used to safely convert a string into a JSON object without crashing the app
       return this.tryParseJson(extracted);
     } catch (firstError) {
       logger.warn(`Primary JSON parse failed, attempting Gemini repair: ${firstError.message}`);
