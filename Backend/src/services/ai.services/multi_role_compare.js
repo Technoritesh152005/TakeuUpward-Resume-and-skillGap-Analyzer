@@ -1,4 +1,4 @@
-import { getModel } from '../../config/gemini.js'
+import { generateContentWithFallback } from '../../config/gemini.js'
 import logger from '../../utils/logs.js'
 
 const MAX_PROJECTS = 4;
@@ -34,15 +34,121 @@ const extractJsonObject = (data) => {
     return data.slice(start, end + 1)
 }
 
+const extractJsonBlock = (content) => {
+    const source = String(content ?? '')
+    const startIndex = source.search(/[\[{]/)
+
+    if (startIndex === -1) {
+        return source.trim()
+    }
+
+    const opening = source[startIndex]
+    const closing = opening === '{' ? '}' : ']'
+    let depth = 0
+    let inString = false
+    let escaped = false
+
+    for (let index = startIndex; index < source.length; index += 1) {
+        const char = source[index]
+
+        if (inString) {
+            if (escaped) {
+                escaped = false
+                continue
+            }
+
+            if (char === '\\') {
+                escaped = true
+                continue
+            }
+
+            if (char === '"') {
+                inString = false
+            }
+            continue
+        }
+
+        if (char === '"') {
+            inString = true
+            continue
+        }
+
+        if (char === opening) {
+            depth += 1
+        } else if (char === closing) {
+            depth -= 1
+            if (depth === 0) {
+                return source.slice(startIndex, index + 1).trim()
+            }
+        }
+    }
+
+    return source.slice(startIndex).trim()
+}
+
 const normalizeJson = (content) => {
     if (!content) return content;
 
     return content
+        .replace(/^\uFEFF/, '')
+        .replace(/```json\n?/gi, '')
+        .replace(/```\n?/g, '')
+        .replace(/[\u201C\u201D]/g, '"')
+        .replace(/[\u2018\u2019]/g, "'")
         .replace(/,\s*([}\]])/g, '$1')
         .replace(/([\{\[,]\s*)([A-Za-z_][A-Za-z0-9_]*)(\s*:)/g, '$1"$2"$3')
         .replace(/:\s*'([^']*)'/g, ': "$1"')
         .replace(/\r/g, '');
 };
+
+const escapeControlCharactersInStrings = (content) => {
+    let escapedContent = ''
+    let inString = false
+    let escaped = false
+
+    for (const char of String(content ?? '')) {
+        if (inString) {
+            if (escaped) {
+                escapedContent += char
+                escaped = false
+                continue
+            }
+
+            if (char === '\\') {
+                escapedContent += char
+                escaped = true
+                continue
+            }
+
+            if (char === '"') {
+                escapedContent += char
+                inString = false
+                continue
+            }
+
+            if (char === '\n') {
+                escapedContent += '\\n'
+                continue
+            }
+
+            if (char === '\r') {
+                escapedContent += '\\r'
+                continue
+            }
+
+            if (char === '\t') {
+                escapedContent += '\\t'
+                continue
+            }
+        } else if (char === '"') {
+            inString = true
+        }
+
+        escapedContent += char
+    }
+
+    return escapedContent
+}
 
 const toNumber = (data, fallback) => {
     if (typeof data === 'number' && Number.isFinite(data)) return data
@@ -148,10 +254,14 @@ class MultiRoleCompareAnalysis {
     }
 
     parseResponse(content) {
+        const normalized = normalizeJson(content)
+        const extracted = extractJsonBlock(normalized)
         const attempts = [
             content,
             extractJsonObject(content),
-            normalizeJson(content),
+            normalized,
+            extracted,
+            escapeControlCharactersInStrings(extracted),
             normalizeJson(extractJsonObject(content))
 
         ].filter(Boolean)
@@ -168,7 +278,9 @@ class MultiRoleCompareAnalysis {
         throw new Error(`Invalid JSON response from multi-role compare model: ${lastError?.message || 'unknown parse error'}`);
     }
 
+    // here in normalize response u basically do is check the number of job role response
     normalizeResponse(rawResponse, jobRoles) {
+        // comparision will have job role id of all comapred jobs
         const comparisons = Array.isArray(rawResponse?.comparisons)
             ? rawResponse.comparisons.map(normalizeComparison).filter((item) => item.jobRoleId)
             : [];
@@ -177,6 +289,7 @@ class MultiRoleCompareAnalysis {
             throw new Error('Multi-role compare response did not include valid comparisons');
         }
 
+        // now take valid role ids means how many user did job selected
         const validRoleIds = new Set(jobRoles.map((jobRole) => String(jobRole._id)));
         const filteredComparisons = comparisons.filter((item) => validRoleIds.has(item.jobRoleId));
 
@@ -248,18 +361,12 @@ Return JSON in exactly this shape:
 }
         `
 
-        const model = getModel()
-        const result = await model.generateContent(prompt)
-        console.log('this is the result from ai', result)
+        const result = await generateContentWithFallback(prompt)
+        
         const response = await result.response
         const rawText = response.text()
-
-        const cleaned = rawText
-            .replace(/```json\n?/g, '')
-            .replace(/```\n?/g, '')
-            .trim();
-
-        const parsed = this.parseResponse(cleaned)
+        logger.info(`Multi-role compare raw response preview: ${String(rawText || '').replace(/\s+/g, ' ').trim().slice(0, 300)}`)
+        const parsed = this.parseResponse(rawText)
         const normalized = this.normalizeResponse(parsed, jobRoles)
         logger.info(`Multi-role comparison completed for ${jobRoles.length} roles`);
         return normalized;

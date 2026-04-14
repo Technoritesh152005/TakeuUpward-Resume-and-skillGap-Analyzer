@@ -380,6 +380,7 @@ ${invalidJson}
         }
     }
 
+    // overview of resume data to pass to llm
     buildCompactResumeSummary(resumeData = {}) {
         const skills = resumeData?.skills || {};
         const experience = Array.isArray(resumeData?.experience) ? resumeData.experience : [];
@@ -422,6 +423,7 @@ ${invalidJson}
         };
     }
 
+    // compact summary of job role
     buildCompactRoleSummary(jobRole = {}) {
         return {
             title: this.toString(jobRole?.title),
@@ -436,8 +438,11 @@ ${invalidJson}
         };
     }
 
+    // this builds fallback ats data according to the schema fields
     buildFallbackAtsScore(resumeData, jobRole) {
+        // we extract the candidate skill from resume data
         const candidateSkills = extractCandidateSkillSet(resumeData);
+        // take all the required skills for the job
         const requiredSkills = [
             ...(jobRole?.requiredSkills?.critical || []),
             ...(jobRole?.requiredSkills?.important || []),
@@ -448,8 +453,10 @@ ${invalidJson}
             .map((item) => item?.title || item?.skill)
             .filter(Boolean);
 
+            // put all the matcged skills and missing skills from filtering the extracted skills from resume and required skill from job roles
         const matched = requiredSkillNames.filter((skill) => matchRoleSkill(candidateSkills, skill));
         const missing = requiredSkillNames.filter((skill) => !matchRoleSkill(candidateSkills, skill));
+        // keyword score is calc based on matchskills length / 
         const keywordScore = requiredSkillNames.length > 0
             ? Math.round((matched.length / requiredSkillNames.length) * 100)
             : 0;
@@ -494,8 +501,10 @@ ${invalidJson}
         };
     }
 
+    // This is the main function to generate ats score
     async getAtsScore(resumeData, jobRole) {
         try {
+            // we provide only short overview of resume and job role
             const compactResume = this.buildCompactResumeSummary(resumeData);
             const compactRole = this.buildCompactRoleSummary(jobRole);
 
@@ -592,7 +601,10 @@ Return ONLY the JSON object, no markdown formatting.
             const response = await result.response;
             const rawText = response.text();
 
+            // we do generate both fallback data and parsed data cz data from ai may be it not present or unexpected shape missign format
+            // so if it gave improper format we can atleast provide our fallback data to that fields
             const fallbackData = this.buildFallbackAtsScore(resumeData, jobRole);
+            // proper parsed data in js object
             const parsedData = await this.parseAtsResponse(rawText);
             const properData = this.normalizeAtsPayload(parsedData, fallbackData);
 
@@ -602,6 +614,7 @@ Return ONLY the JSON object, no markdown formatting.
 
             logger.info('ATS score generated successfully with Gemini');
             return properData;
+            
         } catch (error) {
             logger.error(`ATS score generation failed: ${error.message}`);
             throw new Error(`Failed to generate ATS score: ${error.message}`);
