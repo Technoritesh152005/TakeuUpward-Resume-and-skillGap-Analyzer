@@ -3,6 +3,7 @@ import ApiResponse from '../../utils/apiResponse.js';
 import { resumeModel } from '../../models/resume.model.js';
 import { analysisModel } from '../../models/analysis.model.js';
 import { roadmapModel } from '../../models/roadmap.model.js';
+import progressModel from '../../models/progress.model.js';
 import { getAiUsageSummary } from '../../services/aiQuota.service.js';
 
 /**
@@ -20,6 +21,10 @@ export const getDashboardData = asyncHandler(async (req, res) => {
     roadmapModel.findOne({ user: userId, isActive: true }).sort({ createdAt: -1 }),
     getAiUsageSummary(userId),
   ]);
+
+  const progressRecord = roadmap
+    ? await progressModel.findOne({ user: userId, roadmap: roadmap._id }).sort({ updatedAt: -1 })
+    : await progressModel.findOne({ user: userId }).sort({ updatedAt: -1 });
 
   // Stats calculation
   const stats = {
@@ -187,6 +192,19 @@ export const getDashboardData = asyncHandler(async (req, res) => {
     };
   }
 
+  const userProgress = progressRecord
+    ? {
+        currentStreak: progressRecord.currentStreak || 0,
+        longestStreak: progressRecord.longestStreak || 0,
+        completedResources: progressRecord.completedResources?.length || 0,
+        totalTimeSpent: progressRecord.totalTimeSpent || 0,
+        currentPhase: progressRecord.currentPhase || 0,
+        currentWeek: progressRecord.currentWeek || 0,
+        activeWeeksLogged: progressRecord.weeklyTimeLog?.length || 0,
+        lastActivityDate: progressRecord.lastActivityDate || null,
+      }
+    : null;
+
   // SEND RESPONSE
   res.status(200).json(
     new ApiResponse(200, {
@@ -196,7 +214,8 @@ export const getDashboardData = asyncHandler(async (req, res) => {
       skillProgress,
       skillGapsSummary,
       analysisHistory,
-      roadmap: roadmapPreview
+      roadmap: roadmapPreview,
+      userProgress,
     }, 'Dashboard data fetched successfully')
   );
 });

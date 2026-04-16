@@ -192,7 +192,7 @@ const RoadmapDetailPage = () => {
       toast.success('Item marked completed');
     } catch (error) {
       console.error(error);
-      toast.error('Failed to mark the item as completed');
+      toast.error(error?.response?.data?.message || 'Failed to mark the item as completed');
     } finally {
       setCompletingKey('');
     }

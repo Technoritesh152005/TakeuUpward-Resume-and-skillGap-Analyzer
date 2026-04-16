@@ -200,6 +200,7 @@ const roadmapSchema = mongoose.Schema({
 roadmapSchema.methods.updateProgress = async function () {
     let complete = 0
     let total = 0
+    this.progress = this.progress || {}
     for (let phase of this.phases) {
         for (let week of phase.weeklyBreakdown) {
             for (let items of week.learningItems) {
@@ -211,7 +212,7 @@ roadmapSchema.methods.updateProgress = async function () {
 
     this.progress.completedItems = complete,
     this.progress.totalItems = total
-    this.progress.overallPercentage = Math.round((complete / total) * 100)
+    this.progress.overallPercentage = total > 0 ? Math.round((complete / total) * 100) : 0
 
     this.progress.lastUpdated = new Date();
     return this.save()

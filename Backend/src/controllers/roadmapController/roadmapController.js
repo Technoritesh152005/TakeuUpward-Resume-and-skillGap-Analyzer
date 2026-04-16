@@ -10,6 +10,7 @@ import redisClient from '../../config/redis.js'
 import { refundAiUsage } from '../../services/aiQuota.service.js'
 import { enqueueRoadmapGeneration } from '../../queues/roadmap.queue.js'
 import { ROADMAP_PROCESSING_STAGE, ROADMAP_STATUS } from '../../config/constant.js'
+import { recordLearningItemCompletion, resetProgressTracking } from '../../services/progress.service.js'
 
 const RESOURCE_TYPE_FALLBACKS = {
     course: ['course', 'tutorial', 'documentation', 'article', 'video'],
@@ -507,9 +508,9 @@ export const getRoadmapStatus = asyncHandler(async (req, res) => {
 
 export const retryRoadmap = asyncHandler(async (req, res) => {
 
-    const roadmap = roadmapModel.findOne({
+    const roadmap = await roadmapModel.findOne({
         _id: req.params.id,
-        user: req.user.id,
+        user: req.user._id,
         isActive: true,
     }).select('_id analysis status processingStage error user queuedAt processingStartedAt completedAt processingTime')
 
@@ -538,7 +539,7 @@ export const retryRoadmap = asyncHandler(async (req, res) => {
         await enqueueRoadmapGeneration({
             roadmapId: roadmap._id,
             analysisId: roadmap.analysis,
-            userid: req.user._id
+            userId: req.user._id
         })
 
         return res.status(202)
@@ -548,14 +549,13 @@ export const retryRoadmap = asyncHandler(async (req, res) => {
             req.aiUsage = await refundAiUsage(req.user._id)
             req.aiQuotaReserved = false
         }
-        throw new Error('Error occured while queuing the roadmap', error.message)
+        roadmap.status = ROADMAP_STATUS.FAILED
+        roadmap.processingStage = ROADMAP_PROCESSING_STAGE.FAILED
+        roadmap.error = error.message
+        await roadmap.save()
+        await clearRoadmapCache(roadmap.analysis, req.user._id)
+        throw error
     }
-
-    roadmap.status = ROADMAP_STATUS.FAILED
-    roadmap.processingStage = ROADMAP_PROCESSING_STAGE.FAILED
-    roadmap.error = error.message
-    await roadmap.save()
-    await clearRoadmapCache(roadmap.analysis, req.user._id)
 })
 
 export const markItemComplete = asyncHandler(async (req, res) => {
@@ -583,36 +583,28 @@ export const markItemComplete = asyncHandler(async (req, res) => {
 
     const item = roadmap.phases[phaseIndex].weeklyBreakdown[weekIndex].learningItems[itemIndex]
 
+    if (item.completed) {
+        const populatedRoadmap = await roadmapModel.findOne({
+            _id: roadmap._id,
+            user: req.user._id
+        }).populate(roadmapDetailPopulate)
+
+        return res.status(200).json(
+            new ApiResponse(200, populatedRoadmap || roadmap, 'Item already marked completed'))
+    }
+
     item.completedAt = new Date()
     item.completed = true
 
     // update user progress
     await roadmap.save();
 
-    const progress = await progressModel.findOne({
-        user: req.user._id,
-        roadmap: roadmap._id
-    })
-    if (!progress) {
-        throw new ApiError(400, 'No progress found of the user')
-    }
-    // if progress present update tje mark completeion or maintain streak
-    if (progress) {
-        progress.lastActivityDate = new Date()
-        await progress.updateStreak()
-
-        // add to progress learned resource that what did he learned and resource used
-        console.log(item.resource)
-        if (item.resource) {
-            progress.completedResources.push({
-                resource: item.resource,
-                completedAt: new Date()
-            })
-        }
-        await progress.save()
-    }
-
     await roadmap.updateProgress()
+    await recordLearningItemCompletion({
+        roadmap,
+        userId: req.user._id,
+        item,
+    })
     await clearRoadmapCache(roadmap.analysis, req.user._id)
 
     const populatedRoadmap = await roadmapModel.findOne({
@@ -665,21 +657,10 @@ export const resetRoadmapProgress = asyncHandler(async (req, res) => {
 
     await roadmap.save()
 
-    const progress = await progressModel.findOne({
-        user: req.user._id,
-        roadmap: roadmap._id,
+    await resetProgressTracking({
+        roadmap,
+        userId: req.user._id,
     })
-
-    if (progress) {
-        progress.completedResources = []
-        progress.completedProjects = []
-        progress.certificationsEarned = []
-        progress.currentPhase = 0
-        progress.currentWeek = 0
-        progress.currentStreak = 0
-        progress.lastActivityDate = undefined
-        await progress.save()
-    }
 
     await clearRoadmapCache(roadmap.analysis, req.user._id)
 
