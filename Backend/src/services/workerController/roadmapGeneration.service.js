@@ -1,5 +1,4 @@
 import analysisModel from '../../models/analysis.model.js'
-import progressModel from '../../models/progress.model.js'
 import resourceModel from '../../models/resources.model.js'
 import roadmapModel from '../../models/roadmap.model.js'
 import performRoadmapInstance from '../ai.services/roadmap_planner.js'
@@ -8,6 +7,7 @@ import { logMetric } from '../../utils/metrics.js'
 import redisClient from '../../config/redis.js'
 import { refundAiUsage } from '../aiQuota.service.js'
 import { ROADMAP_PROCESSING_STAGE, ROADMAP_STATUS } from '../../config/constant.js'
+import { ensureProgressRecord, syncProgressPosition } from '../progress.service.js'
 
 const RESOURCE_TYPE_FALLBACKS = {
     course: ['course', 'tutorial', 'documentation', 'article', 'video'],
@@ -392,22 +392,12 @@ export const processRoadmapGenerationJob = async ({ analysisId, userId, roadmapI
                     status: roadmap.status,
                 })
 
-	            await progressModel.findOneAndUpdate(
-                {
-                    user: userId,
-                    roadmap: roadmap._id
-                },
-                {
-                    $setOnInsert: {
-                        user: userId,
-                        roadmap: roadmap._id
-                    }
-                },
-                {
-                    upsert: true,
-                    new: true
-                }
-            )
+            const progress = await ensureProgressRecord({
+                userId,
+                roadmapId: roadmap._id,
+            })
+            await syncProgressPosition({ roadmap, progress })
+            await progress.save()
 
             await clearRoadmapCache(analysisId, userId)
             logger.info(`Roadmap generated successfully for user: ${userId}`)

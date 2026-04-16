@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { FileText, Target, TrendingUp, BookOpen, Crown, Zap, ShieldCheck } from 'lucide-react';
+import { format } from 'date-fns';
 import DashboardLayout from '../components/layout/DashboardLayout.jsx'
 import WelcomeBanner from '../components/dashboard/WelcomeBanner.jsx'
 import StatsCard from '../components/dashboard/StatsCard.jsx';
@@ -112,6 +113,14 @@ const DashboardPage = () => {
           />
         </section>
 
+        <section className="animate-in fade-in slide-in-from-top-8 duration-1000 delay-250">
+          <UserProgressPanel
+            userProgress={dashboardData?.userProgress}
+            roadmap={dashboardData?.roadmap}
+            loading={loading}
+          />
+        </section>
+
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300">
           <div className="xl:col-span-8 flex flex-col gap-6">
             <SkillProgressGraph
@@ -204,5 +213,64 @@ const DashboardPage = () => {
     </DashboardLayout>
   );
 };
+
+const UserProgressPanel = ({ userProgress, roadmap, loading }) => {
+  if (loading) {
+    return <div className="h-52 animate-pulse rounded-[32px] border border-white/8 bg-white/4 backdrop-blur-xl" />;
+  }
+
+  const roadmapTitle = roadmap?.title || 'Latest active roadmap';
+  const learningFocus = userProgress?.currentPhase
+    ? `Phase ${userProgress.currentPhase} / Week ${userProgress?.currentWeek || 0}`
+    : 'Not started';
+
+  return (
+    <section className="bg-white/4 backdrop-blur-xl rounded-[32px] p-7 border border-white/8 shadow-2xl">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div>
+          <h3 className="text-sm font-black text-white uppercase tracking-[0.2em]">User Progress</h3>
+          <p className="mt-2 text-sm text-neutral-400">
+            Progress for your latest active roadmap. Hours are estimated from completed learning items.
+          </p>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <span className="rounded-full border border-primary-500/20 bg-primary-500/10 px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-primary-300">
+              Latest Active Roadmap
+            </span>
+            <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-[11px] font-semibold text-neutral-200">
+              {roadmapTitle}
+            </span>
+          </div>
+        </div>
+        <div className="rounded-2xl border border-white/8 bg-white/5 px-4 py-3">
+          <p className="text-[10px] font-black uppercase tracking-widest text-neutral-500">Last Activity</p>
+          <p className="mt-2 text-sm font-semibold text-white">
+            {userProgress?.lastActivityDate ? format(new Date(userProgress.lastActivityDate), 'dd MMM yyyy') : 'No activity yet'}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <ProgressMetric label="Current Streak" value={userProgress?.currentStreak || 0} accent="text-amber-400" />
+        <ProgressMetric label="Best Streak" value={userProgress?.longestStreak || 0} accent="text-primary-400" />
+        <ProgressMetric label="Resources Done" value={userProgress?.completedResources || 0} accent="text-success-400" />
+        <ProgressMetric label="Estimated Hours" value={userProgress?.totalTimeSpent || 0} accent="text-cyan-400" />
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <ProgressMetric label="Current Phase" value={userProgress?.currentPhase || 0} accent="text-white" />
+        <ProgressMetric label="Current Week" value={userProgress?.currentWeek || 0} accent="text-amber-300" />
+        <ProgressMetric label="Active Weeks" value={userProgress?.activeWeeksLogged || 0} accent="text-emerald-400" />
+        <ProgressMetric label="Learning Focus" value={learningFocus} accent="text-primary-300" />
+      </div>
+    </section>
+  );
+};
+
+const ProgressMetric = ({ label, value, accent }) => (
+  <div className="rounded-[24px] border border-white/8 bg-white/5 p-5">
+    <p className="text-[10px] font-black uppercase tracking-widest text-neutral-500">{label}</p>
+    <p className={`mt-3 text-3xl font-black tracking-tight ${accent}`}>{value}</p>
+  </div>
+);
 
 export default DashboardPage;

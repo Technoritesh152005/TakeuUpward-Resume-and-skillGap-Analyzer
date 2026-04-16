@@ -19,7 +19,6 @@ const progressSchema = new mongoose.Schema(
 
         skillsAcquired: [
             {
-                type: String,
                 skill: String,
                 acquiredAt: Date,
                 proficiencyLevel: {
