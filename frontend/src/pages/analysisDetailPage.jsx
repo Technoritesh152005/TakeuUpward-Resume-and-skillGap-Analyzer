@@ -89,6 +89,22 @@ const asNumber = (value, fallback = 0) => {
   return Number.isFinite(parsed) ? parsed : fallback
 }
 
+const getAnalysisStatusPollMs = (status, processingStage) => {
+  if (status !== 'queued' && status !== 'processing' && status !== 'finalizing') {
+    return null
+  }
+
+  if (processingStage === 'queued' || status === 'queued') {
+    return 6000
+  }
+
+  if (processingStage === 'finalizing' || status === 'finalizing') {
+    return 4000
+  }
+
+  return 3000
+}
+
 const normalizeAnalysisDetail = (payload) => {
   const clean = payload || {}
   const atsScore = clean?.atsScore || {}
@@ -170,6 +186,7 @@ const AnalysisDetailPage = ()=>{
   const [jobsLoading, setJobsLoading] = useState(false)
   const isAiLimitReached = (aiUsage?.usesRemaining ?? 0) === 0
   const isAnalysisRunning = ['queued', 'processing', 'finalizing'].includes(analysis?.status)
+  const isAnalysisDeleteBlocked = ['processing', 'finalizing'].includes(analysis?.status)
 
   // whenever there is a change in id in params call these means someone want analysis detail
   useEffect(()=>{
@@ -189,12 +206,18 @@ const AnalysisDetailPage = ()=>{
     if (!id) return undefined
     if (!['queued', 'processing', 'finalizing'].includes(analysis?.status)) return undefined
 
-    const interval = window.setInterval(() => {
+    const pollMs = getAnalysisStatusPollMs(analysis?.status, analysis?.processingStage)
+    if (!pollMs) return undefined
+
+    const runPoll = () => {
+      if (document.hidden) return
       fetchAnalysisStatus()
-    }, 2000)
+    }
+
+    const interval = window.setInterval(runPoll, pollMs)
 
     return () => window.clearInterval(interval)
-  }, [id, analysis?.status])
+  }, [id, analysis?.status, analysis?.processingStage])
 
   const fetchAnalysis = async({ silent = false } = {})=>{
 
@@ -415,7 +438,7 @@ const AnalysisDetailPage = ()=>{
 
             <button
               onClick={handleDeleteAnalysis}
-              disabled={deleting || isAnalysisRunning}
+              disabled={deleting || isAnalysisDeleteBlocked}
               className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-500/20 bg-red-500/5 px-5 py-3 text-sm font-semibold text-red-400 transition hover:bg-red-500/10"
             >
               <Trash2 className="h-4 w-4" />
@@ -427,8 +450,8 @@ const AnalysisDetailPage = ()=>{
           {isAiLimitReached ? (
             <p className="mt-4 text-xs font-medium text-red-500 dark:text-red-400">Daily AI credits exhausted. Resets at 12:00 AM IST.</p>
           ) : null}
-          {isAnalysisRunning ? (
-            <p className="mt-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">Delete is disabled while analysis is running.</p>
+          {isAnalysisDeleteBlocked ? (
+            <p className="mt-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">Delete is disabled while analysis is actively processing.</p>
           ) : null}
 
 	        {analysis?.status === 'completed' ? (

@@ -95,7 +95,11 @@ const SignupForm = () => {
       toast.success('Account created successfully! 🎉');
       navigate('/dashboard');
     } catch (err) {
-      toast.error(err.message || 'Signup failed. Please try again.');
+      toast.error(
+        err?.message ||
+        err?.error ||
+        'Signup failed. Please try again.'
+      );
     }
   };
 

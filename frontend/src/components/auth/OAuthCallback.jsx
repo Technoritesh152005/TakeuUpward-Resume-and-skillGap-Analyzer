@@ -13,8 +13,6 @@ const OAuthCallback = () => {
 //   every time a login success components loads this runs
   useEffect(() => {
     const processOAuthCallback = async () => {
-      const accessToken = searchParams.get('accessToken');
-      const refreshToken = searchParams.get('refreshToken');
       const error = searchParams.get('error');
 
       // Handle error
@@ -24,21 +22,8 @@ const OAuthCallback = () => {
         return;
       }
 
-      // Handle missing tokens
-      if (!accessToken || !refreshToken) {
-        toast.error('Authentication failed. Please try again.');
-        navigate('/login');
-        return;
-      }
-
       try {
-        // Store tokens
-        localStorage.setItem('accessToken', accessToken);
-        localStorage.setItem('refreshToken', refreshToken);
-
-        // Fetch user data (optional, but use ApiResponse shape)
         const response = await authService.getCurrentUser();
-        console.log(response);
         const userData = response.data?.data ?? response.data;
 
         // Update auth store
@@ -52,10 +37,6 @@ const OAuthCallback = () => {
       } catch (err) {
         console.error('OAuth callback error:', err);
         toast.error('Failed to complete sign-in. Please try again.');
-
-        // Clear invalid tokens
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
 
         navigate('/login', { replace: true });
       }

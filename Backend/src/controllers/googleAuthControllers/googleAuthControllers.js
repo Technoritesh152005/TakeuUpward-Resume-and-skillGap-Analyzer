@@ -1,6 +1,7 @@
 import asyncHandler from '../../utils/asyncHandler.js'
 import ApiResponse from '../../utils/apiResponse.js'
 import ApiError from '../../utils/apiError.js';
+import { setAuthCookies } from '../../utils/authCookies.js';
 
 // @desc    Initiate Google OAuth
 // @route   GET /api/auth/google
@@ -26,21 +27,13 @@ export const googleAuthCallback = asyncHandler(async (req, res) => {
 
 const { user, accessToken, refreshToken } = req.user || {};
 
-// (optional, for debugging)
-console.log('Google auth user:', user);
-console.log('Google tokens:', { accessToken, refreshToken });
-
     // Get frontend URL from env (use CLIENT_URL for local Vite dev)
-    const frontendUrl = process.env.CLIENT_URL || process.env.FRONTEND_URL || 
-    console.log(frontendUrl)
+    const frontendUrl = process.env.CLIENT_URL || process.env.FRONTEND_URL || 'http://localhost:3000'
+    setAuthCookies(res, { accessToken, refreshToken })
     // Redirect to frontend with tokens
-    res.redirect(
-      `${frontendUrl}/auth/callback?` +
-      `accessToken=${accessToken}&` +
-      `refreshToken=${refreshToken}`
-    );
+    res.redirect(`${frontendUrl}/auth/callback`);
   } catch (error) {
-    const frontendUrl = process.env.CLIENT_URL || process.env.FRONTEND_URL || 
+    const frontendUrl = process.env.CLIENT_URL || process.env.FRONTEND_URL || 'http://localhost:3000'
     res.redirect(`${frontendUrl}/login?error=google_auth_failed`);
   }
 });
