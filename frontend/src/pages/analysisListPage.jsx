@@ -100,13 +100,14 @@ const AnalysisListPage = ()=>{
   }, [])
 
   useEffect(() => {
-    if (!analyses.some((item) => ['queued', 'processing'].includes(item?.status))) {
+    if (!analyses.some((item) => ['queued', 'processing', 'finalizing'].includes(item?.status))) {
       return undefined
     }
 
     const interval = window.setInterval(() => {
+      if (document.hidden) return
       fetchAnalysis({ silent: true })
-    }, 5000)
+    }, 10000)
 
     return () => window.clearInterval(interval)
   }, [analyses])

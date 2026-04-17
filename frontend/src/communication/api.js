@@ -62,13 +62,6 @@ const isTokenRelated401 = (error) => {
 api.interceptors.request.use(
     // config has all details of the request
     (config) => {
-        
-        // before sending every req check whether token is present and sent in header
-        const token = localStorage.getItem('accessToken')
-
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`
-        }
         return config
     }, (errors) => {
         return Promise.reject(errors)
@@ -94,32 +87,14 @@ api.interceptors.response.use(
       isTokenRelated401(error) &&
       !originalRequest._retry
     ) {
-      const refreshToken = localStorage.getItem('refreshToken')
-      if (!refreshToken) {
-        return Promise.reject(error)
-      }
-
       originalRequest._retry = true
 
       try {
-        const response = await axios.post(
+        await axios.post(
           `${API_BASE_URL}/auth/refresh-token`,
-          { refreshToken },
+          {},
           { withCredentials: true }
         )
-
-        const accessToken = response?.data?.data?.accessToken
-        const nextRefreshToken = response?.data?.data?.refreshToken
-        if (!accessToken) {
-          return Promise.reject(error)
-        }
-
-        localStorage.setItem('accessToken', accessToken)
-        if (nextRefreshToken) {
-          localStorage.setItem('refreshToken', nextRefreshToken)
-        }
-        originalRequest.headers = originalRequest.headers || {}
-        originalRequest.headers.Authorization = `Bearer ${accessToken}`
 
         return api(originalRequest)
       } catch (refreshError) {
@@ -136,8 +111,6 @@ api.interceptors.response.use(
           refreshMessage.includes('expired') ||
           refreshError?.response?.status === 401
         ) {
-          localStorage.removeItem('accessToken')
-          localStorage.removeItem('refreshToken')
           window.location.href = '/login'
         }
 

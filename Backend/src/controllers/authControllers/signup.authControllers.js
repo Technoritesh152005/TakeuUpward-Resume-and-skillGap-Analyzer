@@ -4,6 +4,7 @@ import {userModel} from "../../models/user.model.js"
 import logger from "../../utils/logs.js"
 import {refreshTokenModel} from "../../models/refreshToken.js"
 import {ApiResponse} from '../../utils/apiResponse.js'
+import { setAuthCookies } from "../../utils/authCookies.js"
 
 export const signup = asyncHandler(async (req, res) => {
 
@@ -59,13 +60,12 @@ export const signup = asyncHandler(async (req, res) => {
     }
 
     logger.info(`New User registered: ${user.email}`)
+    setAuthCookies(res, { accessToken, refreshToken })
 
     res.status(201)
         .json(new ApiResponse(201,
             {
                 user: user,
-                accessToken,
-                refreshToken
             }
             , 'New user registered Successfully'
         ))

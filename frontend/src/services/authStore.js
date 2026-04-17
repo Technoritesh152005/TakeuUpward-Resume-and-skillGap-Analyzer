@@ -3,6 +3,15 @@
 import { create } from 'zustand'
 import authService from './authService.js'
 
+const getAuthErrorMessage = (error, fallback) => {
+    return (
+        error?.message ||
+        error?.error ||
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        fallback
+    )
+}
 
 const useAuthStore = create((set, get) => ({
 
@@ -35,7 +44,7 @@ const useAuthStore = create((set, get) => ({
                     user: null,
                     isAuthenticated: false,
                     isLoading: false,
-                    error: error.message || 'Failed Login'
+                    error: getAuthErrorMessage(error, 'Failed Login')
                 }
             )
             throw error
@@ -64,7 +73,7 @@ const useAuthStore = create((set, get) => ({
                     user: null,
                     isAuthenticated: false,
                     isLoading: false,
-                    error: error.message || 'Signup Failed'
+                    error: getAuthErrorMessage(error, 'Signup Failed')
                 }
             )
             throw error;
@@ -107,12 +116,6 @@ const useAuthStore = create((set, get) => ({
 
   // Load user from token (check if already logged in)
   loadUser: async () => {
-    // Check if token exists
-    if (!authService.isAuthenticated()) {
-      set({ isAuthenticated: false, user: null, isLoading: false, hasCheckedAuth: true });
-      return;
-    }
-
     set({ isLoading: true });
     try {
       const response = await authService.getCurrentUser();

@@ -12,7 +12,7 @@ import logger from '../../utils/logs.js'
 import RoadmapAnalysis from '../../services/ai.services/roadmap_planner.js'
 import multiRoleCompareService from '../../services/ai.services/multi_role_compare.js'
 import { refundAiUsage, reserveAiUsage } from '../../services/aiQuota.service.js'
-import { enqueueAnalysisGeneration } from '../../queues/analysis.queue.js'
+import { enqueueAnalysisGeneration, removeQueuedAnalysisJob } from '../../queues/analysis.queue.js'
 import { ANALYSIS_PROCESSING_STAGE, ANALYSIS_STATUS } from '../../config/constant.js'
 import jobRecommendationService from '../../services/adzunaJobRecomendation/jobRecommendation.service.js'
 
@@ -355,6 +355,10 @@ export const deleteAnalysis = asyncHandler(async (req, res) => {
     )
     if (!analaysis) {
         throw new ApiError(400, 'No analysis Model Found')
+    }
+
+    if (analaysis.status === ANALYSIS_STATUS.QUEUED) {
+        await removeQueuedAnalysisJob(analaysis._id)
     }
 
     analaysis.isActive = false

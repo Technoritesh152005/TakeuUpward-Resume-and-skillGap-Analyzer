@@ -3,10 +3,11 @@ import {ApiError} from "../../utils/apiError.js"
 import logger from "../../utils/logs.js"
 import {refreshTokenModel} from "../../models/refreshToken.js"
 import { ApiResponse } from "../../utils/apiResponse.js"
+import { getCookieValue, setAuthCookies, REFRESH_TOKEN_COOKIE } from "../../utils/authCookies.js"
 
 export const refreshToken = asyncHandler(async(req,res,next)=>{
 
-    const {refreshToken} = req.body;
+    const refreshToken = req.body?.refreshToken || getCookieValue(req, REFRESH_TOKEN_COOKIE)
 
     if(!refreshToken){
         throw new ApiError(401,'No Refresh Token Found')
@@ -56,10 +57,13 @@ export const refreshToken = asyncHandler(async(req,res,next)=>{
         throw new ApiError(401,'New refresh Token has not been created')
     }
     logger.info(`New refresh Token has been created for this email: ${user.email}`)
+    setAuthCookies(res, {
+        accessToken: newaccessToken,
+        refreshToken: newrefreshToken,
+    })
 
     res.status(200)
     .json(new ApiResponse(200, {
-        refreshToken: newrefreshToken,
-        accessToken: newaccessToken
+        refreshed: true
     }, 'New refresh token has been generated successfully'))
 })

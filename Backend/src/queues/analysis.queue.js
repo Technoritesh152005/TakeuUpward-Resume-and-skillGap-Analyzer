@@ -21,16 +21,29 @@ const analysisQueue = new Queue(QUEUE_NAMES.ANALYSIS_GENERATION , {
 
 // first id will be generated and passed to queue
 const enqueueAnalysisGeneration = async({analysisId , resumeId , jobRoleId,userId}) =>{
+    const normalizedAnalysisId = String(analysisId)
+    const jobId = `analysis-${normalizedAnalysisId}`
+    const existingJob = await analysisQueue.getJob(jobId)
+
+    // BullMQ keeps failed/completed jobs for debugging. Remove the stale terminal job
+    // so retrying the same analysis id can enqueue a fresh job again.
+    if (existingJob) {
+        const existingState = await existingJob.getState()
+
+        if (['failed', 'completed'].includes(existingState)) {
+            await existingJob.remove()
+        }
+    }
 
     // /put the data into queue
     return analysisQueue.add('generate-analysis',
         {
-        analysisId:String(analysisId),
+        analysisId:normalizedAnalysisId,
         resumeId:String(resumeId),
         jobRoleId:String(jobRoleId),
         userId:String(userId)
     },{
-        jobId:`analysis-${String(analysisId)}`
+        jobId
     }
 )
 }
@@ -38,4 +51,22 @@ const enqueueAnalysisGeneration = async({analysisId , resumeId , jobRoleId,userI
 export {
     analysisQueue,
     enqueueAnalysisGeneration
+}
+
+export const removeQueuedAnalysisJob = async (analysisId) => {
+    const jobId = `analysis-${String(analysisId)}`
+    const existingJob = await analysisQueue.getJob(jobId)
+
+    if (!existingJob) {
+        return false
+    }
+
+    const jobState = await existingJob.getState()
+
+    if (['waiting', 'delayed', 'prioritized'].includes(jobState)) {
+        await existingJob.remove()
+        return true
+    }
+
+    return false
 }

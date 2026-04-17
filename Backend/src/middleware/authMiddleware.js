@@ -3,6 +3,7 @@ import { userModel } from '../models/user.model.js';
 import { ApiError } from '../utils/apiError.js';
 import jwt from 'jsonwebtoken';
 import logger from '../utils/logs.js';
+import { ACCESS_TOKEN_COOKIE, getCookieValue } from '../utils/authCookies.js';
 
 // async Handler will take a function
 const protectAccess = asyncHandler(async (req, res, next) => {
@@ -15,6 +16,9 @@ const protectAccess = asyncHandler(async (req, res, next) => {
         // split the token in array like ['bearer', 'vvfergevasrv']  pick the first index one
         token = req.headers.authorization.split(' ')[1]
 
+    }
+    if (!token) {
+        token = getCookieValue(req, ACCESS_TOKEN_COOKIE)
     }
     if (!token) {
         throw new ApiError(401, 'Token is not present. Unauthenticated user')
@@ -70,6 +74,10 @@ const optionalAuth = asyncHandler(async (req, res, next) => {
         req.headers.authorization.startsWith('Bearer')
     ) {
         token = req.headers.authorization.split(' ')[1];
+    }
+
+    if (!token) {
+        token = getCookieValue(req, ACCESS_TOKEN_COOKIE)
     }
 
     if (token) {

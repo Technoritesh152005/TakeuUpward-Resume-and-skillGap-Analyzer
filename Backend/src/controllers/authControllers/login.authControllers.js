@@ -4,6 +4,7 @@ import {userModel} from "../../models/user.model.js"
 import logger from "../../utils/logs.js"
 import {refreshTokenModel} from "../../models/refreshToken.js"
 import {ApiResponse} from '../../utils/apiResponse.js'
+import { setAuthCookies } from "../../utils/authCookies.js"
 
 export const login = asyncHandler(async(req,res,next)=>{
 
@@ -13,9 +14,17 @@ export const login = asyncHandler(async(req,res,next)=>{
 
     const {email,password} = req.body;
     const normalizedEmail = String(email || '').trim().toLowerCase()
+
+    if (!normalizedEmail) {
+        throw new ApiError(400, 'Email is required')
+    }
+
+    if (!password) {
+        throw new ApiError(400, 'Password is required')
+    }
+
     // findone req an object
     const user = await userModel.findOne({email: normalizedEmail}).select('+password')
-    console.log(user)
 
     if(!user){
         throw new ApiError(404, 'No account found. Please sign up.')
@@ -23,6 +32,15 @@ export const login = asyncHandler(async(req,res,next)=>{
     if(!user.isActive){
         throw new ApiError(401,'Your account has been deactivated.Please contact "khilariritesh61@gmail.com" ')
     }
+
+    if (user.authProvider === 'google' && !user.password) {
+        throw new ApiError(400, 'This account uses Google sign-in. Please continue with Google or set a password first.')
+    }
+
+    if (!user.password) {
+        throw new ApiError(400, 'Password login is not available for this account.')
+    }
+
     const correctPassword = await user.comparePassword(password)
 
     if(!correctPassword){
@@ -53,12 +71,12 @@ export const login = asyncHandler(async(req,res,next)=>{
 
     const userresponse = user.toObject()
     delete userresponse.password
-    console.log(userresponse)
     logger.info(`User has been succesfully login of email ${user.email}`)
+    setAuthCookies(res, { accessToken, refreshToken })
     res.status(200).json(
         new ApiResponse(
           200,
-          { user: userresponse, accessToken, refreshToken },  // data
+          { user: userresponse },  // data
           'User has been successfully login'                  // message
         )
       );

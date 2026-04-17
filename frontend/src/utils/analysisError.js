@@ -3,8 +3,15 @@ export const getSafeAnalysisError = (error) => {
   if (!raw) return 'The analysis worker could not finish this request.';
 
   const normalized = raw.toLowerCase();
-  if (normalized.includes('quota') || normalized.includes('rate limit')) {
-    return 'Analysis could not finish because the AI provider was temporarily unavailable.';
+  const retryDelayMatch = raw.match(/retry after\s+(\d+)s/i);
+
+  if (normalized.includes('quota') || normalized.includes('rate limit') || normalized.includes('(429)')) {
+    return retryDelayMatch
+      ? `Analysis could not finish because the AI provider hit a quota or rate limit. Retry after ${retryDelayMatch[1]}s.`
+      : 'Analysis could not finish because the AI provider hit a quota or rate limit.';
+  }
+  if (normalized.includes('service unavailable') || normalized.includes('(503)')) {
+    return 'Analysis could not finish because the primary AI model was temporarily unavailable.';
   }
   if (normalized.includes('timeout')) {
     return 'Analysis generation timed out before the worker could finish.';

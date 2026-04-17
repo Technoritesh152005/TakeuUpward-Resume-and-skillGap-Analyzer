@@ -6,12 +6,6 @@ class AuthService {
 
         try {
             const response = await api.post('/auth/signup', userData)
-            // when did signup we need to store access and refresh token
-            if (response.data.data.accessToken) {
-                localStorage.setItem('accessToken', response.data.data.accessToken)
-                localStorage.setItem('refreshToken', response.data.data.refreshToken)
-            }
-
             return response
         } catch (err) {
             console.log(err)
@@ -23,12 +17,6 @@ class AuthService {
 
         try {
             const response = await api.post('/auth/login', credentials)
-
-            if (response.data.data.accessToken) {
-                localStorage.setItem('accessToken', response.data.data.accessToken);
-                localStorage.setItem('refreshToken', response.data.data.refreshToken);
-            }
-
             return response
         } catch (error) {
             throw error.response?.data || error
@@ -39,11 +27,6 @@ class AuthService {
             await api.post('/auth/logout')
         }catch(error){
             console.error('Logout error: ',error)
-        }finally{
-            // antyhow this will run cause frontend must clear the tokens any how, 
-            // this will remove user from frontend anyhow
-            localStorage.removeItem('accessToken')
-            localStorage.removeItem('refreshToken')
         }
     }
 
@@ -98,16 +81,15 @@ class AuthService {
    }
 
     isAuthenticated(){
-        // !! return truw or false
-        return !!localStorage.getItem('accessToken')
+        return false
     }
 
     getAccessToken (){
-        return localStorage.getItem('accessToken')
+        return null
     }
 
     getRefreshToken(){
-        return localStorage.getItem('refreshToken')
+        return null
     }
 }
 
