@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import userModel from '../models/user.model.js';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import refreshTokenModel from '../models/refreshToken.js';
+import logger from '../utils/logs.js';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -18,7 +19,7 @@ dotenv.config({ path: path.join(__dirname, '../../.env') });
 
 // Basic env validation to avoid cryptic crashes
 if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-  console.error('Google OAuth env missing:', {
+  logger.error('Google OAuth env missing', {
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET ? '***set***' : undefined,
   });

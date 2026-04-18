@@ -39,7 +39,6 @@ export const getAllJobRoles = asyncHandler(async (req, res) => {
         sort: sort,
         select: '-requiredSkills.critical.description -requiredSkills.important.description',
     })
-    console.log('Iam here at getalljobroles in controller',jobRoles)
     if (!jobRoles || !Array.isArray(jobRoles.docs) || jobRoles.docs.length === 0) {
         throw new ApiError(401, 'No Job roles found')
     }
@@ -76,7 +75,6 @@ export const getJobRolesFromId = asyncHandler(async (req, res, next) => {
 
     await redisClient.setEx(cacheKey, 500, JSON.stringify(getSingleJobRole))
 
-    console.log('heu i am here at jobController',getSimilarJobRoles)
     res.status(200)
         .json(new ApiResponse(200, getSingleJobRole, 'Job role fetched successfully for this ID'))
 })

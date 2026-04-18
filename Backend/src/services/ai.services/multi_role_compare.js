@@ -310,8 +310,6 @@ class MultiRoleCompareAnalysis {
         const compactResume = this.buildResumeSummary(resumeParsedData)
         // compact roles is an array of objects
         const compactRoles = jobRoles.map((jobRole) => this.buildRoleSummary(jobRole))
-        console.log('See this compact resume', compactResume)
-        console.log('see also this compact jobroles', compactRoles)
 
         const prompt =
             `

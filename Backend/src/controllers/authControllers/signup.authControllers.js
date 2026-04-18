@@ -9,8 +9,6 @@ import { setAuthCookies } from "../../utils/authCookies.js"
 export const signup = asyncHandler(async (req, res) => {
 
     const { email, password,  location, name } = req.body
-
-    console.log(req.body)
     if (!email) {
         throw new ApiError(400, "Email Not Provided. Please provide email to signup")
     }

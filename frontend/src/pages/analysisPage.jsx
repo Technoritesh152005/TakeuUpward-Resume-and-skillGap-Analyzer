@@ -214,7 +214,6 @@ const AnalysisPage = () => {
         setSelectedJobRoleId(rolesRes[0]._id);
       }
     } catch (error) {
-      console.error(error);
       toast.error('Failed to load analysis data');
     } finally {
       setLoadingBase(false);
@@ -229,7 +228,6 @@ const AnalysisPage = () => {
         setAnalysisOverview({ ...emptyOverview, ...clean });
       }
     } catch (error) {
-      console.error(error);
       toast.error('Failed to load analysis');
     }
   };
@@ -267,7 +265,6 @@ const AnalysisPage = () => {
         navigate(`/analysis/${clean._id}`);
       }
     } catch (error) {
-      console.error(error);
       toast.error(error?.response?.data?.message || 'Something went wrong');
     } finally {
       const elapsed = Date.now() - startedAt;
@@ -314,7 +311,6 @@ const AnalysisPage = () => {
       if (clean?.aiUsage) setAiUsage(clean.aiUsage);
       toast.success('Comparison finished');
     } catch (error) {
-      console.error(error);
       toast.error(error?.response?.data?.message || 'Comparison failed');
     } finally {
       setComparing(false);

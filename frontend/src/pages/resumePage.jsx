@@ -23,10 +23,9 @@ const resumePage = ()=> {
         try{
             setLoading(true)
             const response = await resumeService.getMyResume(page, 9)
-            setResume(response.data?.docs || [])
-            setTotalPage(response.data?.totalPages || 1)
+            setResume(response?.docs || [])
+            setTotalPage(response?.totalPages || 1)
         }catch(error){
-            console.error('Failed to fetch resumes:', error);
             toast.error('Failed to load resumes');
         }finally{
             setLoading(false)
@@ -36,14 +35,13 @@ const resumePage = ()=> {
     const handleDelete = async (id) => {
         try{
             setLoading(true)
-            const data = await resumeService.deleteResume(id)
+            await resumeService.deleteResume(id)
             toast.success('Resume deleted successfully')
             setDeleteConfirm(null)
             // aftee deleting fetch the new resume list
             fetchResume()
             await fetchResume()
         }catch(error){
-            console.error('Failed to delete resume:', error);
       toast.error('Failed to delete resume');
         }finally{
             setLoading(false)

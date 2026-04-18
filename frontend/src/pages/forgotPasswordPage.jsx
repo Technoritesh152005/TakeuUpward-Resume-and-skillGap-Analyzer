@@ -24,7 +24,6 @@ const ForgotPasswordPage = () => {
     toast.success('If the account exists, a password reset link has been sent to the email.')
   }
   catch(error){
-    console.error(error)
     toast.error(error?.message || 'Failed to sent reset link')
   }
   finally{

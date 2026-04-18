@@ -7,13 +7,19 @@ all function which will be performing in resume controllers
 */
 import asyncHandler from '../../utils/asyncHandler.js'
 import ApiError from '../../utils/apiError.js'
-import userModel from '../../models/user.model.js'
 import resumeModel from '../../models/resume.model.js'
 import logger from '../../utils/logs.js'
 import resumeParserInstance, { normalizeResumeDateFields } from '../../services/parser/resume.parser.js'
 import redisClient from '../../config/redis.js'
 import ApiResponse from '../../utils/apiResponse.js'
 import resumeStructureInstance from '../../services/ai.services/analyze_resume_structure.js';
+import path from 'path'
+import fs from 'fs/promises'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+const resumeUploadDirectory = path.resolve(__dirname, '../../../uploads/resume')
 
 // ...
 
@@ -36,58 +42,111 @@ export const uploadResume = asyncHandler(async (req, res, next) => {
     if (!req.file) {
         throw new ApiError(400, 'Please upload your resume')
     }
-    const { buffer, mimetype, originalname, size } = req.file
+    const { mimetype, originalname, size, path: uploadedFilePath, filename } = req.file
+
+    if (!uploadedFilePath || !filename) {
+        throw new ApiError(500, 'Uploaded file was not persisted correctly')
+    }
+
+    let buffer
+
+    try {
+        buffer = await fs.readFile(uploadedFilePath)
+    } catch (error) {
+        logger.error(`Failed to read uploaded resume from disk: ${uploadedFilePath}`)
+        throw new ApiError(500, 'Failed to read uploaded resume')
+    }
 
     logger.info('Processing uploading of file')
-    const {
-        parsedData,
-        wordCount,
-        rawText,
-        pageCount,
-        ocrText,
-        ocrUsed,
-        ocrStatus,
-        textExtractionSource,
-    } = await resumeParserInstance.parseResume(buffer, mimetype)
-    if (!parsedData) {
-        throw new ApiError(401, 'Faced difficulty to parse data from resume')
+    try {
+        const {
+            parsedData,
+            wordCount,
+            rawText,
+            pageCount,
+            ocrText,
+            ocrUsed,
+            ocrStatus,
+            textExtractionSource,
+        } = await resumeParserInstance.parseResume(buffer, mimetype)
+        if (!parsedData) {
+            throw new ApiError(401, 'Faced difficulty to parse data from resume')
+        }
+
+        const resume = new resumeModel({
+            user: req.user._id,
+            fileName: filename,
+            originalFileName: originalname,
+            fileUrl: 'pending',
+            fileSize: String(size),
+            mimeType: mimetype,
+            storageType: 'local',
+            processingStatus: 'completed',
+            rawText,
+            ocrText,
+            ocrUsed,
+            ocrStatus,
+            textExtractionSource,
+            wordCount,
+            pageCount,
+            parsedData: {
+                ...parsedData,
+            },
+        })
+
+        resume.fileUrl = `/api/${process.env.API_VERSION || 'v1'}/resumes/${resume._id}/file`
+        await resume.save()
+
+        logger.info(`Resume uploaded successfully .... for email: ${req.user.email}`)
+
+        // once a new resume is uploaded deleted the old cache
+        await clearResumeUserCaches(req.user._id)
+        await clearResumeDetailCache(resume._id, req.user._id)
+
+        res.status(200)
+            .json(new ApiResponse(201, resume, 'Resume uploaded Succesfully'))
+    } catch (error) {
+        try {
+            await fs.unlink(uploadedFilePath)
+        } catch (unlinkError) {
+            logger.warn(`Failed to clean up uploaded file after error: ${uploadedFilePath}`)
+        }
+
+        throw error
     }
+})
 
-    const storedFileName = `${Date.now()}-${originalname}`
-
-    const resume = await resumeModel.create({
+export const getResumeFile = asyncHandler(async (req, res) => {
+    const resume = await resumeModel.findOne({
+        _id: req.params.id,
         user: req.user._id,
-        fileName: storedFileName,
-        originalFileName: originalname,
-        fileUrl: `/uploads/resumes/${storedFileName}`,
-        fileSize: String(size),
-        mimeType: mimetype,
-        storagetType: 'local',
-        processingStatus: 'completed',
-        rawText,
-        ocrText,
-        ocrUsed,
-        ocrStatus,
-        textExtractionSource,
-        wordCount,
-        pageCount,
-        parsedData: {
-            ...parsedData,
-        },
-    })
+        isActive: true,
+    }).select('fileName originalFileName mimeType storageType')
 
     if (!resume) {
-        throw new ApiError(401, 'Failed to upload resume')
+        throw new ApiError(404, 'Resume not found')
     }
 
-    logger.info(`Resume uploaded successfully .... for email: ${req.user.email}`)
+    if (resume.storageType !== 'local') {
+        throw new ApiError(400, 'Only local resume files are supported')
+    }
 
-    // once a new resume is uploaded deleted the old cache
-    await clearResumeUserCaches(req.user._id)
-    await clearResumeDetailCache(resume._id, req.user._id)
+    const filePath = path.join(resumeUploadDirectory, resume.fileName)
 
-    res.status(200)
-        .json(new ApiResponse(201, resume, 'Resume uploaded Succesfully'))
+    try {
+        await fs.access(filePath)
+    } catch {
+        logger.warn(`Resume file missing on disk for resume ${resume._id}`)
+        throw new ApiError(404, 'Resume file is not available')
+    }
+
+    res.setHeader('Content-Type', resume.mimeType || 'application/octet-stream')
+    res.setHeader(
+        'Content-Disposition',
+        `inline; filename="${encodeURIComponent(resume.originalFileName || resume.fileName)}"`
+    )
+
+    return res.sendFile(filePath)
 })
 
 export const getMyResume = asyncHandler(async (req, res, next) => {
@@ -95,7 +154,6 @@ export const getMyResume = asyncHandler(async (req, res, next) => {
     // to get my resume u must have user
     // get all resume of user first and first verify
     // const resume = await resumeModel.find({user:req.user._id})
-    // console.log(resume)
     // if(!resume || resume.length ==0){
     //     throw new ApiError(400,'No resume found')
     // }

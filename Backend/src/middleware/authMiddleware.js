@@ -47,8 +47,6 @@ const protectAccess = asyncHandler(async (req, res, next) => {
 
         req.user = user;
 
-        user.lastLogin = new Date()
-
         next()
     } catch (err) {
 
@@ -128,7 +126,11 @@ const checkOwnership = (anyModel, anyId = 'id') => {
             throw new ApiError(401, "Resource not found")
         }
 
-        if (resource.user._id !== req.user._id) {
+        const resourceOwnerId =
+            resource.user?._id?.toString?.() ?? resource.user?.toString?.()
+        const currentUserId = req.user?._id?.toString?.()
+
+        if (!resourceOwnerId || resourceOwnerId !== currentUserId) {
             throw new ApiError(403, 'You do not have access to this resource')
         }
 

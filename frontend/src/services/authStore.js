@@ -28,7 +28,6 @@ const useAuthStore = create((set, get) => ({
         try {
             // response will be only send when everything is good
             const response = await authService.login(credentials)
-            console.log(response)
             set(
                 {
                     isLoading: false,

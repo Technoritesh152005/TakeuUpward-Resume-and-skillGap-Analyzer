@@ -26,7 +26,6 @@ const analysisService = {
       jobRoleId,
       ...(preference ? { preference } : {}),
     });
-    console.log('im at analysis create',response)
     return extractPayload(response);
   },
 

@@ -60,10 +60,6 @@ const seedResources = async () => {
     }
 
     const total = await resourceModel.countDocuments();
-    console.log(`Resources processed: ${normalizedResources.length}`);
-    console.log(`Inserted: ${inserted}`);
-    console.log(`Updated: ${updated}`);
-    console.log(`Total resources in database: ${total}`);
   } finally {
     await mongoose.disconnect();
   }
@@ -71,10 +67,8 @@ const seedResources = async () => {
 
 seedResources()
   .then(() => {
-    console.log('Resource seeding completed successfully.');
     process.exit(0);
   })
   .catch((error) => {
-    console.error('Resource seeding failed:', error.message);
     process.exit(1);
   });

@@ -100,7 +100,6 @@ const roadmapListPage = () => {
       });
       setRoadmap(Array.isArray(response?.docs) ? response.docs : []);
     } catch (error) {
-      console.error(error);
       toast.error('failed to load roadmap');
     } finally {
       if (!silent) {
@@ -121,7 +120,6 @@ const roadmapListPage = () => {
       setRoadmap((current) => current.filter((item) => item._id !== roadmapId));
       toast.success('Roadmap deleted');
     } catch (error) {
-      console.error(error);
       toast.error('Failed to delete roadmap');
     } finally {
       setDeletingId('');

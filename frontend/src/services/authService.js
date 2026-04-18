@@ -8,7 +8,6 @@ class AuthService {
             const response = await api.post('/auth/signup', userData)
             return response
         } catch (err) {
-            console.log(err)
             throw err.response?.data || err
         }
     }
@@ -26,7 +25,7 @@ class AuthService {
         try{
             await api.post('/auth/logout')
         }catch(error){
-            console.error('Logout error: ',error)
+            throw error.response?.data || error
         }
     }
 

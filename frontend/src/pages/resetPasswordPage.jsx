@@ -39,7 +39,6 @@ const ResetPasswordPage = () => {
       toast.success('You Have successfully changed your password. Please ab side meh aja')
       navigate('/login',{replace:true})
     }catch(error){
-      console.error(error)
       toast.error(error?.message||'Something went wrong. maybe failed to reset password ')
     }finally{
       setLoading(false)

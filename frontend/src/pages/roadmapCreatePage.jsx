@@ -104,7 +104,6 @@ const RoadmapCreatePage = () => {
       const response = await dashboardService.getDashboardData();
       setAiUsage(response?.data?.aiUsage || null);
     } catch (error) {
-      console.error(error);
     }
   };
 
@@ -120,7 +119,6 @@ const RoadmapCreatePage = () => {
       const docs = Array.isArray(response?.docs) ? response.docs : [];
       setAnalyses(docs);
     } catch (error) {
-      console.error(error);
       toast.error('Failed to load analyses for roadmap creation');
     } finally {
       setLoading(false);
@@ -212,11 +210,9 @@ const RoadmapCreatePage = () => {
           navigate(`/roadmap/${existingRoadmap?._id}`);
           return;
         } catch (lookupError) {
-          console.error(lookupError);
         }
       }
 
-      console.error(error);
       toast.error(message);
     } finally {
       setCreating(false);

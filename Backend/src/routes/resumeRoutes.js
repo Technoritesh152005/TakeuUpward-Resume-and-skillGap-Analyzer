@@ -8,7 +8,7 @@
 import express from 'express';
 import { protectAccess } from '../middleware/authMiddleware.js';
 const router = express.Router();
-import {uploadResumeOnRam, validateBeforeUpload} from '../middleware/multerMiddleware.js'
+import { uploadResumeOnDiskMiddleware, validateBeforeUpload } from '../middleware/multerMiddleware.js'
 import {
     validateGetResumeQuery,
     validateResumeBeforeUpload,
@@ -20,14 +20,15 @@ import {
     getMyResume,
     getResumeSkill,
     deleteResume,
-    reparseResume
+    reparseResume,
+    getResumeFile
 } from '../controllers/resumeControllers/AllResumeControllers.js'
 
 // route to upload resume
 router.post(
     '/upload',
     protectAccess,
-    uploadResumeOnRam,
+    uploadResumeOnDiskMiddleware,
     validateBeforeUpload,
     validateResumeBeforeUpload,
     uploadResume
@@ -38,6 +39,9 @@ router.get('/',protectAccess,validateGetResumeQuery,getMyResume)
 
 // get resume bt id
 router.get('/:id',protectAccess, validateResumeId ,  getResumeById)
+
+// get the uploaded resume file through an ownership-checked route
+router.get('/:id/file', protectAccess, validateResumeId, getResumeFile)
 
 // get resume skills summary
 router.get('/:id/summary-skills', protectAccess, validateResumeId, getResumeSkill)

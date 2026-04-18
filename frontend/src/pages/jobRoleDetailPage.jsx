@@ -72,11 +72,9 @@ const fetchDetailJobRole = async()=>{
       })
       setSimilarJobRoles(Array.isArray(similar)? similar : similar?.docs || [] )
     }catch(error){
-      console.error(error)
       toast.error('Failed to load similar job roles',error)
     }
   }catch(error){
-    console.error(error)
     toast.error('Failed to laod detailed view of JobRole')
   }finally{
     setLoading(false)
