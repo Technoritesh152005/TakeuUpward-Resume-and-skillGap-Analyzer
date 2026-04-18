@@ -42,7 +42,6 @@ const normalizeJobRole = (role) => ({
         const inserted = await jobRoleModel.insertMany(normalizedRoles)
         logger.info(`Succesfully inserted ${inserted.length} job roles`)
 
-        console.log('Grouping job roles by category')
        const categories = await jobRoleModel.aggregate([
             // groups all the jobrole in samecategory and count their count
         { $group:{ _id:'$category' , count : { $sum: 1}}},
@@ -50,7 +49,6 @@ const normalizeJobRole = (role) => ({
         {$sort:{count:-1}}
         ])
         categories.forEach((cat) => {
-            console.log(`   ${cat._id}: ${cat.count} roles`);
           });
          
         return inserted

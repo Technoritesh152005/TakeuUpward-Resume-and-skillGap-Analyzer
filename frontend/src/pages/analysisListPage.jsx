@@ -125,7 +125,6 @@ const AnalysisListPage = ()=>{
       setAnalyses(Array.isArray(response?.docs) ? response.docs : [])
       setHasLoadedOnce(true)
     } catch (error) {
-      console.error(error)
       toast.error('Failed to load analysis')
     } finally {
       if (!silent) {
@@ -139,7 +138,6 @@ const AnalysisListPage = ()=>{
       const response = await dashboardService.getDashboardData()
       setAiUsage(response?.data?.aiUsage || null)
     } catch (error) {
-      console.error(error)
     }
   }
 
@@ -154,7 +152,6 @@ const AnalysisListPage = ()=>{
       setAnalyses((current) => current.filter((item) => item?._id !== analysisId))
       toast.success('Analysis deleted successfully')
     } catch (error) {
-      console.error(error)
       toast.error('Failed to delete analysis')
     } finally {
       setDeletingId('')
@@ -179,7 +176,6 @@ const AnalysisListPage = ()=>{
       setAnalyses((current) => current.map((item) => item?._id === analysisId ? { ...item, ...updatedAnalysis } : item))
       toast.success(updatedAnalysis?.status === 'queued' ? 'Analysis retry queued successfully' : 'Analysis regenerated successfully')
     } catch (error) {
-      console.error(error)
       toast.error(error?.response?.data?.message || 'Failed to regenerate analysis')
     } finally {
       setRegeneratingId('')

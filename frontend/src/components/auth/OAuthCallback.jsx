@@ -35,7 +35,6 @@ const OAuthCallback = () => {
         // Redirect to dashboard
         navigate('/dashboard', { replace: true });
       } catch (err) {
-        console.error('OAuth callback error:', err);
         toast.error('Failed to complete sign-in. Please try again.');
 
         navigate('/login', { replace: true });

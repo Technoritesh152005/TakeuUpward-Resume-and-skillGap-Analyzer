@@ -1,5 +1,14 @@
 import api from '../communication/api.js'
 
+const extractPayload = (response) => {
+    const raw = response?.data
+    if (!raw) return null
+
+    if (raw?.data !== undefined) return raw.data
+    if (raw?.result !== undefined) return raw.result
+    return raw
+}
+
 const resumeService = {
 
     uploadResume:async(formData)=>{
@@ -8,34 +17,32 @@ const resumeService = {
                 'Content-Type': 'multipart/form-data',
             }
         })
-        console.log(response)
-        return response.data
+        return extractPayload(response)
     },
 
     getMyResume:async(page = 1 , limit = 10)=>{
         const response = await api.get(`/resumes?page=${page}&limit=${limit}`)
-        return response.data;
+        return extractPayload(response);
     },
 
     getResumeById:async(id)=>{
         const response = await api.get(`/resumes/${id}`)
-        return response.data
+        return extractPayload(response)
     },
 
     getResumeSkills:async(id)=>{
         const response = await api.get(`/resumes/${id}/summary-skills`)
-        return response.data
+        return extractPayload(response)
     },
 
     deleteResume:async(id)=>{
         const response = await api.delete(`/resumes/${id}`)
-        console.log('hey im at delet',response)
-        return response.data
+        return extractPayload(response)
     },
 
     reparseResume: async (id) => {
         const response = await api.put(`/resumes/${id}/resume-reparse`)
-        return response.data
+        return extractPayload(response)
     },
 }
 export default resumeService

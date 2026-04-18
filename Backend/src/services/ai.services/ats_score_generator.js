@@ -1,6 +1,6 @@
 import { generateContentWithFallback } from '../../config/gemini.js';
 import logger from '../../utils/logs.js';
-import { extractCandidateSkillSet, matchRoleSkill, expandSkillVariants } from './fallbackSkillMatcher.js';
+import { extractCandidateSkillSet, matchRoleSkill, getRoleSkillList } from './fallbackSkillMatcher.js';
 
 class AtsScoreGenerator {
     // buildOverview - basically shows debug error
@@ -438,31 +438,40 @@ ${invalidJson}
         };
     }
 
-    // this builds fallback ats data according to the schema fields
-    buildFallbackAtsScore(resumeData, jobRole) {
-        // we extract the candidate skill from resume data
+    buildDeterministicKeywordSection(resumeData, jobRole) {
         const candidateSkills = extractCandidateSkillSet(resumeData);
-        // take all the required skills for the job
-        const requiredSkills = [
-            ...(jobRole?.requiredSkills?.critical || []),
-            ...(jobRole?.requiredSkills?.important || []),
-            ...(jobRole?.requiredSkills?.niceToHave || []),
-        ];
+        const requiredSkillNames = getRoleSkillList(jobRole);
+        const matched = [];
+        const missing = [];
 
-        const requiredSkillNames = requiredSkills
-            .map((item) => item?.title || item?.skill)
-            .filter(Boolean);
+        requiredSkillNames.forEach((skill) => {
+            if (matchRoleSkill(candidateSkills, skill)) {
+                matched.push(skill);
+                return;
+            }
 
-            // put all the matcged skills and missing skills from filtering the extracted skills from resume and required skill from job roles
-        const matched = requiredSkillNames.filter((skill) => matchRoleSkill(candidateSkills, skill));
-        const missing = requiredSkillNames.filter((skill) => !matchRoleSkill(candidateSkills, skill));
-        // keyword score is calc based on matchskills length / 
+            missing.push(skill);
+        });
+
         const keywordScore = requiredSkillNames.length > 0
             ? Math.round((matched.length / requiredSkillNames.length) * 100)
             : 0;
-        const recommended = Array.from(new Set(
-            missing.flatMap((skill) => expandSkillVariants(skill)).slice(0, 10)
-        )).slice(0, 6);
+
+        return {
+            score: keywordScore,
+            matched,
+            missing,
+            suggestions: missing
+                .slice(0, 3)
+                .map((skill) => `Add ${skill} only where your resume shows real experience with it`),
+            recommended: missing.slice(0, 6),
+        };
+    }
+
+    // this builds fallback ats data according to the schema fields
+    buildFallbackAtsScore(resumeData, jobRole) {
+        const keywordSection = this.buildDeterministicKeywordSection(resumeData, jobRole);
+        const { score: keywordScore, matched, missing, suggestions, recommended } = keywordSection;
 
         const overallScore = Math.max(0, Math.min(100, Math.round((keywordScore * 0.55) + 35)));
 
@@ -478,7 +487,7 @@ ${invalidJson}
                     score: keywordScore,
                     matched,
                     missing,
-                    suggestions: missing.slice(0, 3).map((skill) => `Add ${skill} where it truthfully applies in your resume`),
+                    suggestions,
                     recommended,
                 },
                 structure: {
@@ -607,6 +616,26 @@ Return ONLY the JSON object, no markdown formatting.
             // proper parsed data in js object
             const parsedData = await this.parseAtsResponse(rawText);
             const properData = this.normalizeAtsPayload(parsedData, fallbackData);
+            const deterministicKeywords = this.buildDeterministicKeywordSection(resumeData, jobRole);
+
+            properData.breakdown.keywords = deterministicKeywords;
+            properData.overallScore = this.toScore(
+                Math.round(
+                    (
+                        properData.breakdown.formatting.score +
+                        properData.breakdown.keywords.score +
+                        properData.breakdown.structure.score +
+                        properData.breakdown.content.score
+                    ) / 4
+                ),
+                fallbackData.overallScore
+            );
+            properData.topPriorities = Array.from(new Set([
+                ...deterministicKeywords.missing
+                    .slice(0, 2)
+                    .map((skill) => `Add resume evidence for ${skill}`),
+                ...this.toStringArray(properData.topPriorities),
+            ])).slice(0, 3);
 
             if (!properData || properData.overallScore === undefined || properData.overallScore === null) {
                 throw new Error('Invalid ATS score response from AI');

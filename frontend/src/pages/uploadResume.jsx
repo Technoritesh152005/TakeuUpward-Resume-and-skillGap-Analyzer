@@ -92,14 +92,13 @@ const Uploadresume = () => {
 
       const response = await resumeService.uploadResume(formData);
       setUploadingProgress(100);
-      setUploadedResume(response.data);
+      setUploadedResume(response);
       toast.success('Resume successfully uploaded and parsed');
 
       setTimeout(() => {
         navigate('/resumes');
       }, 2000);
     } catch (error) {
-      console.error('Upload error:', error);
       setError(error.response?.data?.message || 'Failed to upload resume');
       toast.error('Upload failed. Please try again.');
       setUploadingProgress(0);

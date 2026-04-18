@@ -25,7 +25,6 @@ const sendEmail = async ({ to, subject, html }) => {
     })
 
     const payload = await response.json()
-    console.log(payload,'Im here at payload seeing resend payload')
 
     if (!response.ok) {
         const errorMessage = payload?.message || payload?.error?.message || 'Failed to send email'

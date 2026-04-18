@@ -17,7 +17,6 @@ const seedJobRoles = async () => {
 
   try {
     const inserted = await jobseed();
-    console.log(`Job roles seeded successfully: ${inserted.length}`);
   } finally {
     await mongoose.disconnect();
   }
@@ -25,10 +24,8 @@ const seedJobRoles = async () => {
 
 seedJobRoles()
   .then(() => {
-    console.log('Job role seeding completed successfully.');
     process.exit(0);
   })
   .catch((error) => {
-    console.error('Job role seeding failed:', error.message);
     process.exit(1);
   });

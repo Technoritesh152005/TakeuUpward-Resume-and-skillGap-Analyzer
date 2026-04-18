@@ -24,6 +24,10 @@ const normalizeValue = (value = '') => String(value)
     .replace(/\s+/g, ' ')
     .trim();
 
+const toDisplayValue = (value = '') => String(value)
+    .replace(/\s+/g, ' ')
+    .trim();
+
 const pushVariant = (set, value) => {
     const normalized = normalizeValue(value);
     if (normalized) {
@@ -85,6 +89,21 @@ const collectArrayValues = (items, collector) => {
     });
 };
 
+const collectStructuredSkillValues = (items, collector) => {
+    if (!Array.isArray(items)) return;
+
+    items.forEach((item) => {
+        if (typeof item === 'string') {
+            collector(item);
+            return;
+        }
+
+        collector(item?.title);
+        collector(item?.skill);
+        collector(item?.name);
+    });
+};
+
 const extractCandidateSkillSet = (resumeData = {}) => {
     const skillSet = new Set();
     const addValue = (value) => {
@@ -126,13 +145,79 @@ const extractCandidateSkillSet = (resumeData = {}) => {
     return skillSet;
 };
 
+const extractStructuredResumeSkills = (resumeData = {}) => {
+    const skillSet = new Set();
+    const addValue = (value) => {
+        const displayValue = toDisplayValue(value);
+        if (displayValue) {
+            skillSet.add(displayValue);
+        }
+    };
+
+    collectStructuredSkillValues(resumeData?.skills?.technical, addValue);
+    collectStructuredSkillValues(resumeData?.skills?.tools, addValue);
+    collectStructuredSkillValues(resumeData?.skills?.frameworks, addValue);
+    collectStructuredSkillValues(resumeData?.skills?.language, addValue);
+    collectStructuredSkillValues(resumeData?.skills?.languages, addValue);
+    collectStructuredSkillValues(resumeData?.skills?.database, addValue);
+    collectStructuredSkillValues(resumeData?.skills?.databases, addValue);
+    collectStructuredSkillValues(resumeData?.skills?.others, addValue);
+
+    (resumeData?.experience || []).forEach((item) => {
+        collectStructuredSkillValues(item?.technologies, addValue);
+        collectStructuredSkillValues(item?.skillsUsed, addValue);
+    });
+
+    (resumeData?.project || resumeData?.projects || []).forEach((item) => {
+        collectStructuredSkillValues(item?.technologies, addValue);
+    });
+
+    return Array.from(skillSet);
+};
+
+const getRoleSkillList = (jobRole = {}) => {
+    const orderedSkills = [];
+    const seen = new Set();
+    const addSkill = (value) => {
+        const displayValue = toDisplayValue(value);
+        const normalized = normalizeValue(displayValue);
+
+        if (!displayValue || seen.has(normalized)) {
+            return;
+        }
+
+        seen.add(normalized);
+        orderedSkills.push(displayValue);
+    };
+
+    [
+        ...(jobRole?.requiredSkills?.critical || []),
+        ...(jobRole?.requiredSkills?.important || []),
+        ...(jobRole?.requiredSkills?.niceToHave || []),
+    ].forEach((item) => {
+        addSkill(item?.title || item?.skill || item?.name);
+    });
+
+    return orderedSkills;
+};
+
 const matchRoleSkill = (candidateSkillSet, rawSkill) => {
     const variants = expandSkillVariants(rawSkill);
     return variants.some((variant) => candidateSkillSet.has(variant));
 };
 
+const skillsOverlap = (leftSkill, rightSkill) => {
+    const leftVariants = expandSkillVariants(leftSkill);
+    const rightVariants = new Set(expandSkillVariants(rightSkill));
+
+    return leftVariants.some((variant) => rightVariants.has(variant));
+};
+
 export {
     expandSkillVariants,
     extractCandidateSkillSet,
+    extractStructuredResumeSkills,
+    getRoleSkillList,
     matchRoleSkill,
+    skillsOverlap,
 };

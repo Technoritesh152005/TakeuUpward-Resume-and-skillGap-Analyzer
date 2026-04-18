@@ -1,15 +1,11 @@
 import asyncHandler from '../../utils/asyncHandler.js'
 import analysisModel from "../../models/analysis.model.js"
-import roadmapModel from '../../models/roadmap.model.js'
-import performRoadmapInstance from '../../services/ai.services/roadmap_planner.js'
 import resumeModel from "../../models/resume.model.js"
 import jobRoleModel from "../../models/jobrole.model.js"
-import skillgapanalysis from "../../services/ai.services/skill_gap_analysis.js"
 import ApiResponse from '../../utils/apiResponse.js'
 import redisClient from '../../config/redis.js'
 import ApiError from '../../utils/apiError.js'
 import logger from '../../utils/logs.js'
-import RoadmapAnalysis from '../../services/ai.services/roadmap_planner.js'
 import multiRoleCompareService from '../../services/ai.services/multi_role_compare.js'
 import { refundAiUsage, reserveAiUsage } from '../../services/aiQuota.service.js'
 import { enqueueAnalysisGeneration, removeQueuedAnalysisJob } from '../../queues/analysis.queue.js'
@@ -26,45 +22,6 @@ const clearAnalysisCache = async (userId, analysisId = null) => {
     if (analysisId) {
         await redisClient.del(`analysis:${normalizedUserId}:${analysisId}`);
     }
-};
-
-// as ai return some difficulty and in our schema it is defined these enums. so we convert it
-const normalizeDifficulty = (value) => {
-    const raw = String(value || '').trim().toLowerCase();
-
-    if (!raw) return 'beginner';
-    if (raw === 'easy') return 'beginner';
-    if (raw === 'medium') return 'intermediate';
-    if (raw === 'hard') return 'advanced';
-    if (['beginner', 'intermediate', 'advanced'].includes(raw)) return raw;
-
-    return 'beginner';
-};
-
-const normalizeReadinessLevel = (value) => {
-    const raw = String(value || '').trim().toLowerCase();
-
-    if (!raw) return 'not-ready';
-    if (raw.includes('over')) return 'overqualified';
-    if (raw.includes('nearly') || raw.includes('moderately') || raw.includes('almost')) {
-        return 'nearly-ready';
-    }
-    if (raw === 'ready' || raw.includes('job ready')) return 'ready';
-    if (raw.includes('not')) return 'not-ready';
-
-    return 'not-ready';
-};
-
-const normalizeProficiency = (value) => {
-    const raw = String(value || '').trim().toLowerCase();
-
-    if (!raw) return 'beginner';
-    if (['beginner', 'novice', 'basic'].includes(raw)) return 'beginner';
-    if (['intermediate', 'medium'].includes(raw)) return 'intermediate';
-    if (['advanced', 'proficient', 'proficiency'].includes(raw)) return 'advanced';
-    if (['expert', 'fluent', 'native'].includes(raw)) return 'expert';
-
-    return 'beginner';
 };
 
 const buildComparisonFromSavedAnalysis = (analysis) => ({
@@ -521,45 +478,48 @@ export const regenerateAnalysis = asyncHandler(async (req, res) => {
       throw new ApiError(404, 'Analysis not found');
     }
 
-    if (analysis.status === ANALYSIS_STATUS.FAILED) {
-      analysis.status = ANALYSIS_STATUS.QUEUED;
-      analysis.processingStage = ANALYSIS_PROCESSING_STAGE.QUEUED;
-      analysis.error = undefined;
-      analysis.queuedAt = new Date();
-      analysis.processingStartedAt = undefined;
-      analysis.completedAt = undefined;
-      analysis.processingTime = undefined;
+    if ([ANALYSIS_STATUS.QUEUED, ANALYSIS_STATUS.PROCESSING].includes(analysis.status)) {
+      throw new ApiError(409, 'Analysis is already running');
+    }
 
+    analysis.status = ANALYSIS_STATUS.QUEUED;
+    analysis.processingStage = ANALYSIS_PROCESSING_STAGE.QUEUED;
+    analysis.error = undefined;
+    analysis.queuedAt = new Date();
+    analysis.processingStartedAt = undefined;
+    analysis.completedAt = undefined;
+    analysis.processingTime = undefined;
+    analysis.version = Number(analysis.version || 1) + 1;
+
+    await analysis.save();
+    await clearAnalysisCache(req.user._id, analysis._id);
+
+    try {
+      await enqueueAnalysisGeneration({
+        analysisId: analysis._id,
+        resumeId: analysis.resume?._id || analysis.resume,
+        jobRoleId: analysis.jobRole?._id || analysis.jobRole,
+        userId: req.user._id,
+      });
+
+      return res.status(202).json(
+        new ApiResponse(202, { analysis, aiUsage: req.aiUsage }, 'Analysis regeneration queued successfully')
+      );
+    } catch (error) {
+      if (req.aiQuotaReserved) {
+        req.aiUsage = await refundAiUsage(req.user._id);
+        req.aiQuotaReserved = false;
+      }
+
+      analysis.status = ANALYSIS_STATUS.FAILED;
+      analysis.processingStage = ANALYSIS_PROCESSING_STAGE.FAILED;
+      analysis.error = error.message;
       await analysis.save();
       await clearAnalysisCache(req.user._id, analysis._id);
 
-      try {
-        await enqueueAnalysisGeneration({
-          analysisId: analysis._id,
-          resumeId: analysis.resume?._id || analysis.resume,
-          jobRoleId: analysis.jobRole?._id || analysis.jobRole,
-          userId: req.user._id,
-        });
-
-        return res.status(202).json(
-          new ApiResponse(202, { analysis, aiUsage: req.aiUsage }, 'Analysis retry queued successfully')
-        );
-      } catch (error) {
-        if (req.aiQuotaReserved) {
-          req.aiUsage = await refundAiUsage(req.user._id);
-          req.aiQuotaReserved = false;
-        }
-
-        analysis.status = ANALYSIS_STATUS.FAILED;
-        analysis.processingStage = ANALYSIS_PROCESSING_STAGE.FAILED;
-        analysis.error = error.message;
-        await analysis.save();
-        await clearAnalysisCache(req.user._id, analysis._id);
-
-        throw error;
-      }
+      throw error;
     }
-  
+    /*
     logger.info(`Regenerating analysis: ${analysis._id}`);
   
     // Re-run gap analysis
@@ -634,4 +594,5 @@ export const regenerateAnalysis = asyncHandler(async (req, res) => {
 
       throw error;
     }
+    */
   });

@@ -1,6 +1,6 @@
 import { generateContentWithFallback } from '../../config/gemini.js';
 import logger from '../../utils/logs.js';
-import { extractCandidateSkillSet, matchRoleSkill } from './fallbackSkillMatcher.js';
+import { extractCandidateSkillSet, matchRoleSkill, expandSkillVariants, skillsOverlap } from './fallbackSkillMatcher.js';
 
 class SkillGapAnalysis {
     buildDebugPreview(value, limit = 600) {
@@ -298,6 +298,56 @@ class SkillGapAnalysis {
         }).filter((item) => item.skill);
     }
 
+    findMatchingSkillItem(items, skillName) {
+        const source = Array.isArray(items) ? items : [];
+        return source.find((item) => skillsOverlap(
+            item?.skill || item?.title || item?.name,
+            skillName
+        )) || null;
+    }
+
+    reasonMentionsSkill(reason, skillName) {
+        const safeReason = this.toString(reason).toLowerCase();
+        if (!safeReason) return false;
+
+        return expandSkillVariants(skillName)
+            .filter((variant) => variant.length >= 3)
+            .some((variant) => safeReason.includes(String(variant).toLowerCase()));
+    }
+
+    mergeGapItem(aiItem, fallbackItem) {
+        const safeFallback = fallbackItem && typeof fallbackItem === 'object' ? fallbackItem : {};
+        const safeAi = aiItem && typeof aiItem === 'object' ? aiItem : {};
+        const aiReason = this.toString(safeAi.reason || safeAi.description);
+        const fallbackReason = this.toString(safeFallback.reason);
+
+        return {
+            skill: this.toString(safeFallback.skill || safeAi.skill || safeAi.title),
+            importance: Number(safeFallback.importance ?? safeAi.importance ?? 5),
+            reason: this.reasonMentionsSkill(aiReason, safeFallback.skill)
+                ? aiReason
+                : fallbackReason,
+            learningTime: this.toString(safeAi.learningTime || safeFallback.learningTime || '2-6 weeks'),
+            difficulty: this.toString(safeAi.difficulty || safeFallback.difficulty || 'intermediate'),
+            prerequisites: Array.isArray(safeAi.prerequisites) && safeAi.prerequisites.length
+                ? safeAi.prerequisites.filter(Boolean)
+                : (safeFallback.prerequisites || []),
+        };
+    }
+
+    mergeStrengthItem(aiItem, fallbackItem) {
+        const safeFallback = fallbackItem && typeof fallbackItem === 'object' ? fallbackItem : {};
+        const safeAi = aiItem && typeof aiItem === 'object' ? aiItem : {};
+
+        return {
+            skill: this.toString(safeFallback.skill || safeAi.skill || safeAi.title),
+            proficiency: this.toString(safeAi.proficiency || safeFallback.proficiency || 'intermediate'),
+            relevance: this.toString(safeAi.relevance || safeFallback.relevance),
+            uniqueAdvantage: this.toString(safeAi.uniqueAdvantage || safeFallback.uniqueAdvantage),
+            importance: Number(safeFallback.importance ?? safeAi.importance ?? 5),
+        };
+    }
+
     normalizeSkillGapPayload(rawData, fallbackData) {
         const source = rawData && typeof rawData === 'object' ? rawData : {};
         const fallback = fallbackData && typeof fallbackData === 'object'
@@ -315,14 +365,21 @@ class SkillGapAnalysis {
             ? source.skillGaps
             : {};
         const fallbackSkillGaps = fallback.skillGaps || {};
+        const normalizedSourceGaps = {
+            critical: this.normalizeGapArray(sourceSkillGaps.critical, []),
+            important: this.normalizeGapArray(sourceSkillGaps.important, []),
+            niceToHave: this.normalizeGapArray(sourceSkillGaps.niceToHave, []),
+        };
+        const allAiGapItems = [
+            ...normalizedSourceGaps.critical,
+            ...normalizedSourceGaps.important,
+            ...normalizedSourceGaps.niceToHave,
+        ];
+        const normalizedSourceStrengths = this.normalizeStrengths(source.strengths, []);
 
         return {
             overallAssessment: {
-                matchPercentage: Number(
-                    sourceAssessment.matchPercentage ??
-                    fallbackAssessment.matchPercentage ??
-                    0
-                ),
+                matchPercentage: Number(fallbackAssessment.matchPercentage ?? 0),
                 readinessLevel: this.toString(
                     sourceAssessment.readinessLevel ||
                     fallbackAssessment.readinessLevel ||
@@ -342,11 +399,26 @@ class SkillGapAnalysis {
                 summary: this.toString(sourceAssessment.summary || fallbackAssessment.summary),
             },
             skillGaps: {
-                critical: this.normalizeGapArray(sourceSkillGaps.critical, fallbackSkillGaps.critical),
-                important: this.normalizeGapArray(sourceSkillGaps.important, fallbackSkillGaps.important),
-                niceToHave: this.normalizeGapArray(sourceSkillGaps.niceToHave, fallbackSkillGaps.niceToHave),
+                critical: this.normalizeGapArray(fallbackSkillGaps.critical, []).map((item) => this.mergeGapItem(
+                    this.findMatchingSkillItem(normalizedSourceGaps.critical, item.skill) ||
+                    this.findMatchingSkillItem(allAiGapItems, item.skill),
+                    item
+                )),
+                important: this.normalizeGapArray(fallbackSkillGaps.important, []).map((item) => this.mergeGapItem(
+                    this.findMatchingSkillItem(normalizedSourceGaps.important, item.skill) ||
+                    this.findMatchingSkillItem(allAiGapItems, item.skill),
+                    item
+                )),
+                niceToHave: this.normalizeGapArray(fallbackSkillGaps.niceToHave, []).map((item) => this.mergeGapItem(
+                    this.findMatchingSkillItem(normalizedSourceGaps.niceToHave, item.skill) ||
+                    this.findMatchingSkillItem(allAiGapItems, item.skill),
+                    item
+                )),
             },
-            strengths: this.normalizeStrengths(source.strengths, fallback.strengths),
+            strengths: this.normalizeStrengths(fallback.strengths, []).map((item) => this.mergeStrengthItem(
+                this.findMatchingSkillItem(normalizedSourceStrengths, item.skill),
+                item
+            )),
             transferableSkills: this.normalizeTransferableSkills(
                 source.transferableSkills,
                 fallback.transferableSkills
@@ -488,7 +560,7 @@ Return ONLY the JSON object, no markdown formatting.
 
             const fallbackData = this.buildFallbackAnalysis(resumeData, jobRole);
             const parsedData = await this.parseJsonResponse(rawText, resumeData, jobRole);
-            const structuredData = this.normalizeSkillGapPayload(parsedData, fallbackData);
+            const structuredData = this.normalizeSkillGapPayload(parsedData, fallbackData, resumeData, jobRole);
 
             if (!structuredData || !structuredData.overallAssessment) {
                 throw new Error('Invalid response from AI');

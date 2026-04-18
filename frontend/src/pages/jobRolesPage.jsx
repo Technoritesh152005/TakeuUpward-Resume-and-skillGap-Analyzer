@@ -49,7 +49,6 @@ const fetchJobRoles = async ()=>{
    setJobRoles(Array.isArray(jobRoesResponse?.docs) ? jobRoesResponse.docs : [])
    setCategories(Array.isArray(jobRoleCategories) ? jobRoleCategories : [])
   }catch(error){
-    console.error(error)
     toast.error('Failed to load job roles')
   }finally{
     setLoading(false)

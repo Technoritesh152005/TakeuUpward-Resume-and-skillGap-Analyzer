@@ -4,17 +4,8 @@ import helmet from 'helmet';
 import mongoSanitize from 'express-mongo-sanitize';
 import compression from 'compression';
 import morgan from 'morgan';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
 import passport from './config/passport.js'
 import googleAuthRoutes from './routes/googleAuthRoutes.js'
-
-
-
-// ES6 module __dirname fix
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 // Import middleware
 import {
@@ -80,8 +71,6 @@ if (process.env.NODE_ENV === 'development') {
   );
 }
 app.use(passport.initialize());
-// Serve static files (uploads folder)
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Health check endpoint
 app.get('/health', (req, res) => {

@@ -17,7 +17,6 @@ import { startRoadmapWorker } from './workers/roadmap.worker.js';
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (err) => {
-  console.error(err)
   logger.error('UNCAUGHT EXCEPTION! 💥 Shutting down...');
   logger.error(`Error: ${err.name} - ${err.message}`);
   logger.error(err.stack);
@@ -44,7 +43,6 @@ await startServer();
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err) => {
-  console.error(err)
   logger.error('UNHANDLED REJECTION! 💥 Shutting down...');
   logger.error(`Error: ${err.name} - ${err.message}`);
   logger.error(err.stack);

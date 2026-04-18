@@ -55,13 +55,12 @@ const ResumeDetailPage = () => {
       setLoading(true);
       setLoadError(null);
       const payload = await resumeService.getResumeById(id);
-      const doc = payload?.data ?? null;
+      const doc = payload ?? null;
       if (!doc || typeof doc !== 'object') {
         throw new Error('Invalid resume payload');
       }
       setResume(doc);
     } catch (error) {
-      console.error('Failed to fetch resume:', error);
       setResume(null);
       setLoadError('fetch_failed');
       toast.error('Failed to load resume');
@@ -77,7 +76,6 @@ const ResumeDetailPage = () => {
       toast.success('Resume reparsed successfully!');
       fetchResume();
     } catch (error) {
-      console.error('Failed to reparse:', error);
       toast.error('Failed to reparse resume');
     } finally {
       setReparsing(false);
@@ -87,14 +85,10 @@ const ResumeDetailPage = () => {
   const handleDelete = async () => {
     if (window.confirm('Are you sure you want to delete this resume?')) {
       try {
-        const data = await resumeService.deleteResume(id);
-        if(data.data.success === true){
-          toast.success('Resume deleted successfully');
+        await resumeService.deleteResume(id);
+        toast.success('Resume deleted successfully');
         navigate('/resumes');
-        }
-        
       } catch (error) {
-        console.error('Failed to delete:', error);
         toast.error('Failed to delete resume');
       }
     }

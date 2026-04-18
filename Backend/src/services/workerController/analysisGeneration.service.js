@@ -10,6 +10,7 @@ import { refundAiUsage } from '../aiQuota.service.js'
 import { ANALYSIS_PROCESSING_STAGE, ANALYSIS_STATUS } from '../../config/constant.js'
 import readinessEngineService from '../readinessEngine.service.js'
 import closestWinnableRoleService from '../closestWinnableRole.service.js'
+import { extractStructuredResumeSkills } from '../ai.services/fallbackSkillMatcher.js'
 
 const ANALYSIS_JOB_TIMEOUT_MS = 120000;
 
@@ -269,7 +270,7 @@ const buildMatchBreakdown = (jobRole, skillGapAnalysisData) => {
     }
 }
 
-const buildSkillArtifacts = (skillGapAnalysisData) => {
+const buildSkillArtifacts = (skillGapAnalysisData, resumeData) => {
     const normalizedSkillGaps = {
         critical: (skillGapAnalysisData.skillGaps?.critical || []).map((item) => ({
             ...item,
@@ -304,10 +305,7 @@ const buildSkillArtifacts = (skillGapAnalysisData) => {
         };
     });
 
-    const extractedSkills = new Set();
-    normalizedStrengths.forEach((item) => {
-        if (item.skill) extractedSkills.add(item.skill);
-    });
+    const extractedSkills = extractStructuredResumeSkills(resumeData);
 
     const levelMap = {
         beginner: 30,
@@ -445,7 +443,7 @@ export const processAnalysisGenerationJob = async ({ analysisId, userId, resumeI
             normalizedStrengths,
             extractedSkills,
             skillBreakdown,
-        } = buildSkillArtifacts(skillGapAnalysisData)
+        } = buildSkillArtifacts(skillGapAnalysisData, resume.parsedData)
 
         analysis.skillGaps = normalizedSkillGaps
         analysis.extractedSkills = extractedSkills

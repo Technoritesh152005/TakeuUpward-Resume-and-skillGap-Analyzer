@@ -136,7 +136,6 @@ const RoadmapDetailPage = () => {
       const clean = response?.data || response;
       setRoadmap({ ...emptyRoadmap, ...clean });
     } catch (error) {
-      console.error(error);
       toast.error('Failed to fetch your roadmap');
     } finally {
       if (!silent) setLoading(false);
@@ -148,7 +147,6 @@ const RoadmapDetailPage = () => {
       const response = await dashboardService.getDashboardData();
       setAiUsage(response?.data?.aiUsage || null);
     } catch (error) {
-      console.error(error);
     }
   };
 
@@ -172,7 +170,6 @@ const RoadmapDetailPage = () => {
         fetchRoadmap({ silent: true });
       }
     } catch (error) {
-      console.error(error);
     }
   };
 
@@ -191,7 +188,6 @@ const RoadmapDetailPage = () => {
       setRoadmap({ ...emptyRoadmap, ...clean });
       toast.success('Item marked completed');
     } catch (error) {
-      console.error(error);
       toast.error(error?.response?.data?.message || 'Failed to mark the item as completed');
     } finally {
       setCompletingKey('');
@@ -213,7 +209,6 @@ const RoadmapDetailPage = () => {
       setRoadmap({ ...emptyRoadmap, ...clean });
       toast.success('Roadmap progress reset');
     } catch (error) {
-      console.error(error);
       toast.error('Failed to reset roadmap progress');
     } finally {
       setResetting(false);
@@ -234,7 +229,6 @@ const RoadmapDetailPage = () => {
       if (response?.aiUsage) setAiUsage(response.aiUsage);
       toast.success('Roadmap retry queued successfully');
     } catch (error) {
-      console.error(error);
       toast.error(error?.response?.data?.message || 'Failed to retry roadmap');
     } finally {
       setRetrying(false);

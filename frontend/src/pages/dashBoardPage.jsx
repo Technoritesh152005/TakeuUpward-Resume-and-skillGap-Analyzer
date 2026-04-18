@@ -28,7 +28,6 @@ const DashboardPage = () => {
       const response = await dashboardService.getDashboardData();
       setDashboardData(response?.data || null);
     } catch (err) {
-      console.error('Failed to fetch dashboard data:', err);
       setError(err.message || 'Failed to load dashboard');
       toast.error('Failed to load dashboard data');
     } finally {

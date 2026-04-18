@@ -247,7 +247,6 @@ const AnalysisDetailPage = ()=>{
         }
       }
     }catch(error){
-      console.error(error)
       toast.error('failed to fetch your analysis detail.. Sorry for Inconveince. also sorry for spelling mistake')
     }finally{
       if (!silent) {
@@ -276,7 +275,6 @@ const AnalysisDetailPage = ()=>{
         fetchAnalysis({ silent: true })
       }
     } catch (error) {
-      console.error(error)
     }
   }
 
@@ -285,7 +283,6 @@ const AnalysisDetailPage = ()=>{
       const response = await dashboardService.getDashboardData()
       setAiUsage(response?.data?.aiUsage || null)
     } catch (error) {
-      console.error(error)
     }
   }
 
@@ -299,7 +296,6 @@ const AnalysisDetailPage = ()=>{
         basedOn: Array.isArray(clean?.basedOn) ? clean.basedOn : [],
       })
     } catch (error) {
-      console.error(error)
       setRecommendedJobs([])
       setJobRecommendationMeta({ basedOn: [] })
     } finally {
@@ -338,7 +334,6 @@ const AnalysisDetailPage = ()=>{
       toast.success('Analysis deleted successfully')
       navigate('/analysis')
     }catch(error){
-      console.error(error)
       toast.error('Failed to delete analysis')
     }finally{
       setDeleting(false)
@@ -359,7 +354,6 @@ const AnalysisDetailPage = ()=>{
       if (payload?.aiUsage) setAiUsage(payload.aiUsage)
       toast.success(clean?.status === 'queued' ? 'Analysis retry queued successfully' : 'Analysis regenerated successfully')
     } catch (error) {
-      console.error(error)
       toast.error(error?.response?.data?.message || 'Failed to regenerate analysis')
     } finally {
       setRegenerating(false)
@@ -450,10 +444,6 @@ const AnalysisDetailPage = ()=>{
           {isAiLimitReached ? (
             <p className="mt-4 text-xs font-medium text-red-500 dark:text-red-400">Daily AI credits exhausted. Resets at 12:00 AM IST.</p>
           ) : null}
-          {isAnalysisDeleteBlocked ? (
-            <p className="mt-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">Delete is disabled while analysis is actively processing.</p>
-          ) : null}
-
 	        {analysis?.status === 'completed' ? (
           <div className="mt-5 border-t border-neutral-200 pt-5 dark:border-neutral-700">
             <button
@@ -598,7 +588,7 @@ const AnalysisDetailPage = ()=>{
                 <Panel
                   title="Extracted Resume Skills"
                   icon={Cpu}
-                  description="Skills detected from your resume and used while generating this analysis."
+                  description="Structured skills saved from your resume and used while generating this analysis."
                 >
                   <AtsTagSection
                     title="Detected Skills"
@@ -817,6 +807,31 @@ const AnalysisProcessingState = ({ analysis }) => {
   const elapsedLabel = elapsedSeconds < 60
     ? `${elapsedSeconds}s`
     : `${Math.floor(elapsedSeconds / 60)}m ${String(elapsedSeconds % 60).padStart(2, '0')}s`
+
+  const statusGuidance = {
+    queued: {
+      title: 'Waiting In Queue',
+      description: 'Your analysis request is saved and waiting for the next available worker.',
+      detail: 'You can leave this page and come back later. The analysis will continue in the background.',
+    },
+    processing: {
+      title: 'Analysis In Progress',
+      description: 'The worker is matching your resume against the selected role and generating fit insights.',
+      detail: 'Scores, ATS signals, and recommendations will appear once processing is finished.',
+    },
+    finalizing: {
+      title: 'Final Results Are Being Saved',
+      description: 'The analysis is almost done and the final response is being prepared.',
+      detail: 'This step usually finishes shortly after the main analysis completes.',
+    },
+    completed: {
+      title: 'Analysis Ready',
+      description: 'Your results are available now.',
+      detail: 'Open the sections below to review strengths, gaps, and ATS guidance.',
+    },
+  }
+
+  const activeGuidance = statusGuidance[currentStage] || statusGuidance.queued
 
   return (
     <section className="grid grid-cols-1 gap-8 xl:grid-cols-[1.4fr_0.8fr]">

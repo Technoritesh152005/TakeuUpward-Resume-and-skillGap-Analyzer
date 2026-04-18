@@ -34,7 +34,6 @@ const jobRoleService = {
     try {
       return await loadFromEndpoint('/job-roles');
     } catch (error) {
-      console.warn('Falling back to trending job roles after full catalog load failed', error);
       return loadFromEndpoint('/job-roles/trending-job-roles');
     }
   },
