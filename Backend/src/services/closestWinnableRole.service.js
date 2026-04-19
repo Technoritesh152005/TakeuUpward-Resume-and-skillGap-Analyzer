@@ -44,6 +44,11 @@ class ClosestWinnableRoleService {
             important: 0,
             niceToHave: 0,
         };
+        const missingSkills = {
+            critical: [],
+            important: [],
+            niceToHave: [],
+        };
 
         let weightedScore = 0;
         let maxScore = 0;
@@ -61,6 +66,7 @@ class ClosestWinnableRoleService {
                     weightedScore += weight;
                 } else {
                     gaps[bucket] += 1;
+                    missingSkills[bucket].push(title);
                 }
             }
         }
@@ -73,6 +79,7 @@ class ClosestWinnableRoleService {
             fitScore,
             matched,
             gaps,
+            missingSkills,
         };
     }
 
@@ -151,6 +158,8 @@ class ClosestWinnableRoleService {
                     winnableScore,
                     matched: roleFit.matched,
                     gaps: roleFit.gaps,
+                    missingCriticalSkills: roleFit.missingSkills.critical,
+                    missingImportantSkills: roleFit.missingSkills.important,
                     reasons: this.buildReasons(role, roleFit),
                     nextAction: this.buildNextAction(roleFit),
                 };

@@ -56,13 +56,13 @@ export const login = asyncHandler(async(req,res,next)=>{
 
     const rtsaved = await refreshTokenModel.create({
         token:refreshToken,
-        createdBy:req.ip,
+        createdByIp:req.ip,
         user:user._id,
         expiresAt:new Date(Date.now()+7 * 24 * 60 * 60 * 1000)
 
     })
     if(!rtsaved){
-        throw new ApiError(401,'Faced difficulty to store Tokens in database')
+        throw new ApiError(500,'Faced difficulty to store Tokens in database')
     }
 
     // after sometime see diff bwn new Date and Date.now()

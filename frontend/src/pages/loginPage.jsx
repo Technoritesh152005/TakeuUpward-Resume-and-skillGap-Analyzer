@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
-import { Eye, EyeOff, AlertCircle, Sparkles, Loader2 } from "lucide-react";
+import { Eye, EyeOff, AlertCircle, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
 import useAuthStore from "../services/authStore.js";
 import GoogleSignInButton from "../components/common components/googleSignInButton.jsx";
+import brandLogo from "../assets/Gemini_Generated_Image_hi4jb6hi4jb6hi4j.png";
 
 /* ─── Aurora background ────────────────────────────────────────────────────
    Four colored orbs that slowly drift & scale independently, blending
@@ -268,14 +269,13 @@ const LoginPage = () => {
   const [form, setForm] = useState({
     email: "",
     password: "",
-    rememberMe: false,
   });
   const [showPass, setShowPass] = useState(false);
   const [valErr, setValErr] = useState({});
 
   const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setForm((p) => ({ ...p, [name]: type === "checkbox" ? checked : value }));
+    const { name, value } = e.target;
+    setForm((p) => ({ ...p, [name]: value }));
     if (valErr[name]) setValErr((p) => ({ ...p, [name]: "" }));
   };
 
@@ -292,10 +292,11 @@ const LoginPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isLoading) return;
     if (!validate()) return;
     try {
       await login({ email: form.email, password: form.password });
-      toast.success("Welcome back! 🎉");
+      toast.success("Welcome back!", { id: "login-success" });
       const from = location?.state?.from?.pathname || "/dashboard";
       navigate(from, { replace: true });
     } catch (err) {
@@ -350,22 +351,18 @@ const LoginPage = () => {
             marginBottom: "34px",
           }}
         >
-          <div
+          <img
+            src={brandLogo}
+            alt="TakeuUpward logo"
             style={{
               width: "38px",
               height: "38px",
               borderRadius: "11px",
               flexShrink: 0,
-              background:
-                "linear-gradient(135deg, #7c3aed 0%, #d946ef 50%, #06b6d4 100%)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              boxShadow: "0 0 20px rgba(124,58,237,0.4)",
+              objectFit: "cover",
+              boxShadow: "0 0 20px rgba(124,58,237,0.25)",
             }}
-          >
-            <Sparkles size={16} color="#fff" />
-          </div>
+          />
           <span
             style={{
               fontSize: "20px",
@@ -455,40 +452,15 @@ const LoginPage = () => {
             }
           />
 
-          {/* remember + forgot */}
+          {/* forgot */}
           <div
             style={{
               display: "flex",
               alignItems: "center",
-              justifyContent: "space-between",
+              justifyContent: "flex-end",
               padding: "2px 0",
             }}
           >
-            <label
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                cursor: "pointer",
-              }}
-            >
-              <input
-                type="checkbox"
-                name="rememberMe"
-                checked={form.rememberMe}
-                onChange={handleChange}
-                disabled={isLoading}
-                style={{
-                  accentColor: "#7c3aed",
-                  width: "14px",
-                  height: "14px",
-                  cursor: "pointer",
-                }}
-              />
-              <span style={{ fontSize: "13px", color: "#475569" }}>
-                Remember me
-              </span>
-            </label>
             <Link
               to="/forgot-password"
               style={{

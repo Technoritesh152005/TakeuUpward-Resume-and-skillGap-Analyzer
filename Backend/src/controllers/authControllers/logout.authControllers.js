@@ -14,7 +14,7 @@ export const logout = asyncHandler(async (req, res, next) => {
 
         const updation = await refreshTokenModel.findOneAndUpdate(
             { token: refreshToken, user: req.user._id, revokedAt: null },
-            { revokedBy: req.ip, revokedAt: new Date() }
+            { revokedByIp: req.ip, revokedAt: new Date() }
         )
         if (!updation) {
             throw new ApiError(400, 'Failed to update refreshToken Logout')

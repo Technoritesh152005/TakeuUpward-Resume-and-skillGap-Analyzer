@@ -264,6 +264,8 @@ const analysisSchema = mongoose.Schema(
             important: Number,
             niceToHave: Number,
         },
+        missingCriticalSkills: [String],
+        missingImportantSkills: [String],
         reasons: [String],
         nextAction: String,
        },

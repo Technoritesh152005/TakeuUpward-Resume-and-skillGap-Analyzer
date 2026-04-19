@@ -1,7 +1,6 @@
 import express from 'express';
 const router = express.Router();
 import {
-    googleAuth,
   googleAuthCallback,
   googleAuthFailure,
 } from '../controllers/googleAuthControllers/googleAuthControllers.js'
@@ -35,12 +34,16 @@ router.get(
 
 router.get(
     '/google/callback',
-    // middleware runs takes data from google and runs our strategy fxn
-    // we call fone() passports sets req.user and in googleauthcallback we get the data 
-    passport.authenticate('google',{
-        failureRedirect: '/api/auth/google/failure',
-    session: false,
-    }),
+    (req, res, next) => {
+        passport.authenticate('google', { session: false }, (err, user) => {
+            if (err || !user) {
+                return googleAuthFailure(req, res, next)
+            }
+
+            req.user = user
+            return next()
+        })(req, res, next)
+    },
     googleAuthCallback
 )
 

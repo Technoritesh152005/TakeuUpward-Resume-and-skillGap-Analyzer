@@ -39,21 +39,18 @@ const memoryStorage = multer.memoryStorage()
 const fileFilter = (req, file, cb) => {
 
     const allowedTypes = [
-
         'application/pdf',
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
-        'application/msword', // .doc
-        'text/plain', // .txt
     ]
-  const allowedExtension = ['.pdf', '.docx', '.doc', '.txt'];
-  const extname = path.extname(file.originalname);
+  const allowedExtension = ['.pdf', '.docx'];
+  const extname = path.extname(file.originalname).toLowerCase();
   if (allowedTypes.includes(file.mimetype) && allowedExtension.includes(extname)) {
     cb(null, true);
   } else {
     cb(
       new ApiError(
         400,
-        'This invalid file format doesnt help to upload. please provide pdf , docx , doc , txt file'
+        'Only PDF and DOCX files are supported.'
       ),
       false
     );
@@ -88,14 +85,14 @@ const handleUploadResumeError = (uploadFunction) => {
         if (err.code === 'LIMIT_FILE_SIZE') {
           return next(
             new ApiError(
-              401,
+              400,
               `File too large . Max size is ${process.env.MAX_FILE_SIZE || '10MB'}`
             )
           );
         }
         if (err.code === 'LIMIT_UNEXPECTED_FILE') {
           return next(
-            new ApiError(401, 'Unexpected field name. Use "resume" as field name ')
+            new ApiError(400, 'Unexpected field name. Use "resume" as field name ')
           );
         }
 
@@ -107,7 +104,7 @@ const handleUploadResumeError = (uploadFunction) => {
       }
 
       if (!req.file) {
-        return next(new ApiError(401, 'Please provide file'));
+        return next(new ApiError(400, 'Please provide file'));
       }
 
       logger.info(`File uploaded: ${req.file.originalname}`, {

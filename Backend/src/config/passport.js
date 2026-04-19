@@ -45,12 +45,16 @@ passport.use(
 
         try{
             
-            const email = profile.emails[0].value
+            const email = String(profile.emails[0]?.value || '').trim().toLowerCase()
             const name = profile.displayName;
             const googleId = profile.id;
             const profilePicture = profile.photos[0]?.value
 
-            let user = await userModel.findOne({email})
+            if (!email) {
+                throw new Error('Google profile did not include a valid email')
+            }
+
+            let user = await userModel.findOne({ email })
 
             if(user){
                 // user exists; ensure Google linkage and activate account

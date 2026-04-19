@@ -19,16 +19,18 @@ const Uploadresume = () => {
   const allowedTypes = [
     'application/pdf',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/msword',
   ];
   const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
   const validateFile = (file) => {
-    if (!allowedTypes.includes(file.type)) {
-      return 'Please upload a PDF or Word document (.pdf, .doc, .docx)';
+    const fileExtension = file?.name?.split('.').pop()?.toLowerCase();
+    const supportedExtensions = ['pdf', 'docx'];
+
+    if (!allowedTypes.includes(file.type) || !supportedExtensions.includes(fileExtension)) {
+      return 'Only PDF and DOCX files are supported.';
     }
     if (file.size > MAX_FILE_SIZE) {
-      return 'Please file size must be less than 5MB';
+      return 'File size must be less than 5MB.';
     }
     return null;
   };
@@ -99,8 +101,9 @@ const Uploadresume = () => {
         navigate('/resumes');
       }, 2000);
     } catch (error) {
-      setError(error.response?.data?.message || 'Failed to upload resume');
-      toast.error('Upload failed. Please try again.');
+      const uploadError = error?.response?.data?.message || 'Failed to upload resume.';
+      setError(uploadError);
+      toast.error(uploadError);
       setUploadingProgress(0);
     } finally {
       if (progressInterval) {

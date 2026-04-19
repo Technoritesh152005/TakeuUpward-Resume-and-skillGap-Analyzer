@@ -123,7 +123,7 @@ const checkOwnership = (anyModel, anyId = 'id') => {
         const resource = await anyModel.findById(id)
 
         if (!resource) {
-            throw new ApiError(401, "Resource not found")
+            throw new ApiError(404, "Resource not found")
         }
 
         const resourceOwnerId =

@@ -8,7 +8,7 @@ const Footer = () => {
   const footerLinks = {
     product: [
       { name: 'Features', href: '#features' },
-      { name: 'How It Works', href: '#how-it-works' },
+      { name: 'How It Works', href: '#workflow' },
       { name: 'Job Roles', href: '/job-roles' },
     ],
     resources: [
@@ -34,7 +34,7 @@ const Footer = () => {
                 <FileText className="w-6 h-6 text-white" />
               </div>
               <span className="text-xl font-bold text-white">
-                TakeU<span className="text-primary-500">Upward</span>
+                Takeu<span className="text-primary-500">Upward</span>
               </span>
             </div>
             <p className="text-neutral-400 mb-4 max-w-sm">
@@ -108,10 +108,10 @@ const Footer = () => {
         <div className="pt-8 border-t border-neutral-800 dark:border-neutral-900">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-neutral-400 text-sm">
-              © {currentYear} TakeUUpward. All rights reserved and will be reserved forward.
+              © {currentYear} TakeuUpward. All rights reserved and will be reserved forward.
             </p>
             <p className="text-neutral-400 text-sm">
-              Made with ❤️ by{' '}
+              Made by{' '}
               <a
                 href="https://riteshkhilari.in"
                 target="_blank"

@@ -36,7 +36,7 @@ const validateResumeBeforeUpload = (req, res, next) => {
     const { error } = schema.validate(req.body)
 
     if (error) {
-        throw new ApiError(401, error.details[0].message)
+        throw new ApiError(400, error.details[0].message)
     }
 
     next()
@@ -83,7 +83,7 @@ const validateGetResumeQuery = (req, res, next) => {
     const { error, value } = schema.validate(req.query, { stripUnknown: true })
 
     if (error) {
-        throw new ApiError(401, error.details[0].message)
+        throw new ApiError(400, error.details[0].message)
     }
 
     req.query = value

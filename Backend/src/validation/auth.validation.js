@@ -64,7 +64,7 @@ const validateSignUp = (req, res, next) => {
     if (error) {
         const errormsg = error.details.map((err) => err.message)
         //['invalid email format, 'phone number is less']
-        throw new ApiError(401, errormsg.join(', '))
+        throw new ApiError(400, errormsg.join(', '))
     }
 
     

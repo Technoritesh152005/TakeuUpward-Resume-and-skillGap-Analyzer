@@ -38,11 +38,11 @@ export const refreshToken = asyncHandler(async(req,res,next)=>{
    const updateOldToken =  await refreshTokenModel.findByIdAndUpdate(token._id,{
         replacedByToken:newrefreshToken,
         revokedAt:new Date(),
-        revokedBy:req.ip
+        revokedByIp:req.ip
     })
 
     if(!updateOldToken){
-        throw new ApiError(401, `Old token could not be revoked before refresh for IP: ${req.ip}`)
+        throw new ApiError(500, `Old token could not be revoked before refresh for IP: ${req.ip}`)
     }
 
     const finalrefreshToken = await refreshTokenModel.create({
@@ -54,7 +54,7 @@ export const refreshToken = asyncHandler(async(req,res,next)=>{
 
     if(!finalrefreshToken){
         
-        throw new ApiError(401,'New refresh Token has not been created')
+        throw new ApiError(500,'New refresh Token has not been created')
     }
     logger.info(`New refresh Token has been created for this email: ${user.email}`)
     setAuthCookies(res, {

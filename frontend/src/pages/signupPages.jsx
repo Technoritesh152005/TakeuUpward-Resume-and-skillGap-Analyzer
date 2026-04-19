@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
-import { FileText } from 'lucide-react';
 import SignupForm from '../components/auth/signupForm.jsx';
+import brandLogo from '../assets/Gemini_Generated_Image_hi4jb6hi4jb6hi4j.png';
 
 const AuroraBackground = () => (
   <div
@@ -172,22 +172,18 @@ const SignupPage = () => {
             marginBottom: '20px',
           }}
         >
-          <div
+          <img
+            src={brandLogo}
+            alt="TakeuUpward logo"
             style={{
               width: '38px',
               height: '38px',
               borderRadius: '11px',
               flexShrink: 0,
-              background:
-                'linear-gradient(135deg, #7c3aed 0%, #d946ef 50%, #06b6d4 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 0 20px rgba(124,58,237,0.4)',
+              objectFit: 'cover',
+              boxShadow: '0 0 20px rgba(124,58,237,0.25)',
             }}
-          >
-            <FileText size={16} color="#fff" />
-          </div>
+          />
           <span
             style={{
               fontSize: '20px',

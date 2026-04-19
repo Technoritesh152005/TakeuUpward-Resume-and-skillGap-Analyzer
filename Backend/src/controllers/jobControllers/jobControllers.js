@@ -31,7 +31,7 @@ export const getAllJobRoles = asyncHandler(async (req, res) => {
     if (cachedData) {                                                                                                      
                const parsedCache = JSON.parse(cachedData)                                                                         
                 return res.status(200)                                                                                             
-                   .json(new ApiResponse(201, parsedCache, 'cached data of jobrole fetched succesfully'))                         
+                   .json(new ApiResponse(200, parsedCache, 'cached data of jobrole fetched succesfully'))                         
             }  
     const jobRoles = await jobRoleModel.paginate(filter, {
         page: parseInt(page),
@@ -40,13 +40,13 @@ export const getAllJobRoles = asyncHandler(async (req, res) => {
         select: '-requiredSkills.critical.description -requiredSkills.important.description',
     })
     if (!jobRoles || !Array.isArray(jobRoles.docs) || jobRoles.docs.length === 0) {
-        throw new ApiError(401, 'No Job roles found')
+        throw new ApiError(404, 'No Job roles found')
     }
     await redisClient.setEx(cacheKey, 600, JSON.stringify(jobRoles))
     // u should not increment views here cause u r just viewing it in homepage
 
     res.status(200)
-       .json(new ApiResponse(201,jobRoles,'All Job roles fetched succss'))
+       .json(new ApiResponse(200,jobRoles,'All Job roles fetched succss'))
 })
 
 // get job role by id
@@ -60,7 +60,7 @@ export const getJobRolesFromId = asyncHandler(async (req, res, next) => {
     if (cachedData) {
         const parsedCache = JSON.parse(cachedData)
         return res.status(200)
-            .json(new ApiResponse(201, parsedCache, 'Cached data of job role by id succesfully fetched'))
+            .json(new ApiResponse(200, parsedCache, 'Cached data of job role by id succesfully fetched'))
     }
     const getSingleJobRole = await jobRoleModel.findOne({
         _id: jobRoleId,
@@ -91,7 +91,7 @@ export const getJobRoleFromSlug = asyncHandler(async (req, res, next) => {
     if (cachedData) {
         const cache = JSON.parse(cachedData)
         return res.status(200)
-            .json(new ApiResponse(201, cache, 'Cache data succesfully fetchhed for job role from slug'))
+            .json(new ApiResponse(200, cache, 'Cache data succesfully fetchhed for job role from slug'))
     }
     const jobRole = await jobRoleModel.findOne({
         slug: slug,
@@ -99,7 +99,7 @@ export const getJobRoleFromSlug = asyncHandler(async (req, res, next) => {
     }).populate('relatedRoles', 'title description category experienceLevel slug')
 
     if (!jobRole) {
-        throw new ApiError(401, 'No job role found for it')
+        throw new ApiError(404, 'No job role found for it')
     }
     jobRole.views = (jobRole.views || 0) + 1
     await jobRole.save({ validateBeforeSave: false })
@@ -115,7 +115,7 @@ export const searchJobRoles = asyncHandler(async (req, res, next) => {
 
 
     if (!q) {
-        throw new ApiError(401, 'No search field provided')
+        throw new ApiError(400, 'No search field provided')
     }
     // regex searches character casing but $text searches full words
     const filter = { isActive: true, $text: { $search: q } }
@@ -152,7 +152,7 @@ export const getTrendingJobRoles = asyncHandler(async (req, res, next) => {
     if (cachedData) {
         const data = JSON.parse(cachedData)
         return res.status(200)
-            .json(new ApiResponse(201, data, 'Cached data of trending job roles fetched succesfully'))
+            .json(new ApiResponse(200, data, 'Cached data of trending job roles fetched succesfully'))
     }
     // gives e trending + active job roles
     let trendingJobRole = await jobRoleModel.find({
@@ -178,7 +178,7 @@ if (!Array.isArray(trendingJobRole) || trendingJobRole.length === 0) {
 }
 await redisClient.setEx(cacheKey, 300, JSON.stringify(trendingJobRole))
     res.status(200)
-        .json(new ApiResponse(201, trendingJobRole,'All trending Job roles gave successfukky'))
+        .json(new ApiResponse(200, trendingJobRole,'All trending Job roles gave successfukky'))
 })
 
 export const getJobRolesByCategory = asyncHandler(async (req, res, next) => {
@@ -255,7 +255,7 @@ export const getSimilarJobRoles = asyncHandler(async (req, res, next) => {
     if (cachedData) {
         const data = JSON.parse(cachedData)
         return res.status(200)
-            .json(new ApiResponse(201, data, 'Cached data of get similar job roles fetched'))
+            .json(new ApiResponse(200, data, 'Cached data of get similar job roles fetched'))
     }
 
     if (!job) {
@@ -279,5 +279,5 @@ export const getSimilarJobRoles = asyncHandler(async (req, res, next) => {
 
     await redisClient.setEx(cacheKey, 500, JSON.stringify(filtered));
     res.status(200)
-        .json(new ApiResponse(201, filtered, 'All similar job roles fetched succesfully for this job'))
+        .json(new ApiResponse(200, filtered, 'All similar job roles fetched succesfully for this job'))
 })
