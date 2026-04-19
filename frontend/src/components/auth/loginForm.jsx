@@ -63,6 +63,9 @@ const LoginForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isLoading) {
+      return;
+    }
 
     // if there is validation in form dont submit
     if (!validateForm()) {
@@ -75,7 +78,7 @@ const LoginForm = () => {
         password: formData.password,
       });
 
-      toast.success('Welcome back! 🎉');
+      toast.success('Welcome back!', { id: 'login-success' });
       // Redirect to dashboard, or to the page user was trying to visit (e.g. from ProtectedRoute)
       const from = location?.state?.from?.pathname || '/dashboard';
       navigate(from, { replace: true });

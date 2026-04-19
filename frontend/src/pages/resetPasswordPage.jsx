@@ -21,55 +21,33 @@ const ResetPasswordPage = () => {
     event.preventDefault()
     
     if(!hasToken){
-      toast.error('Reset token is missing from the link. chutiya bana raha hai kya hume?')
+      toast.error('Reset token is missing from the link.')
       return
     }
     if(!newPassword.trim() || newPassword.length <8){
-      toast.error('Password not given or length of password is less than 8 characters!..')
+      toast.error('Password must be at least 8 characters.')
       return
     }
     if(newPassword !== confirmPassword){
-      toast.error('Both new Password and confirmPassword dont match')
+      toast.error('Passwords do not match.')
       return
     }
 
     try{
       setLoading(true)
-      const response = await authService.resetPassword({token,newPassword})
-      toast.success('You Have successfully changed your password. Please ab side meh aja')
+      await authService.resetPassword({token,newPassword})
+      toast.success('Password reset successfully. Please sign in again.')
       navigate('/login',{replace:true})
     }catch(error){
-      toast.error(error?.message||'Something went wrong. maybe failed to reset password ')
+      toast.error(error?.message||'Failed to reset password.')
     }finally{
       setLoading(false)
     }
   }
   return (
     <div className="min-h-screen bg-neutral-950 px-4 py-10 text-neutral-100">
-      <div className="mx-auto flex min-h-[85vh] max-w-5xl items-center justify-center">
-        <div className="grid w-full overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 shadow-2xl backdrop-blur xl:grid-cols-[1.05fr_0.95fr]">
-          <section className="hidden bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.26),_transparent_30%),linear-gradient(135deg,_#111827,_#0f172a_50%,_#065f46)] p-10 xl:flex xl:flex-col xl:justify-between">
-            <div>
-              <p className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-white/80">
-                <ShieldCheck className="h-4 w-4" />
-                Secure Reset
-              </p>
-              <h1 className="mt-6 text-4xl font-black tracking-tight text-white">
-                Set a new password and revoke old sessions safely.
-              </h1>
-              <p className="mt-4 max-w-md text-sm leading-7 text-white/75">
-                Once the password is reset, old refresh tokens are revoked so previous sessions can no longer be used.
-              </p>
-            </div>
-
-            <div className="rounded-3xl border border-white/10 bg-white/5 p-6 text-sm text-white/75">
-              <p className="font-semibold text-white">Security note</p>
-              <p className="mt-3">
-                This reset link is short-lived and one-time use. If it expires, start the forgot-password flow again.
-              </p>
-            </div>
-          </section>
-
+      <div className="mx-auto flex min-h-[85vh] max-w-2xl items-center justify-center">
+        <div className="w-full overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 shadow-2xl backdrop-blur">
           <section className="bg-neutral-950/80 p-6 sm:p-10">
             <Link
               to="/login"

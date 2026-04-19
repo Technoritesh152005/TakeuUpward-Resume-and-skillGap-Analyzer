@@ -97,6 +97,31 @@ export const createAnalysis = asyncHandler(async (req, res) => {
         throw new ApiError(400, 'Job Role not found');
     }
 
+    const existingCompletedAnalysis = await analysisModel.findOne({
+        user: req.user._id,
+        resume: resumeId,
+        jobRole: jobRoleId,
+        isActive: true,
+        status: ANALYSIS_STATUS.COMPLETED,
+    })
+        .sort({ completedAt: -1, createdAt: -1 })
+        .populate('resume', 'fileName originalFileName createdAt')
+        .populate('jobRole', 'title category experienceLevel salaryRange');
+
+    if (existingCompletedAnalysis) {
+        if (req.aiQuotaReserved) {
+            req.aiUsage = await refundAiUsage(req.user._id);
+            req.aiQuotaReserved = false;
+        }
+
+        return res.status(200).json(
+            new ApiResponse(200, {
+                analysis: existingCompletedAnalysis,
+                aiUsage: req.aiUsage,
+            }, 'Existing completed analysis found')
+        );
+    }
+
     // create analysis for job creation
     const queuedAnalysis = await analysisModel.create({
         resume: resumeId,
@@ -145,7 +170,7 @@ export const createAnalysis = asyncHandler(async (req, res) => {
         await clearAnalysisCache(req.user._id, queuedAnalysis._id);
 
         logger.error(`Error while queueing analysis: ${error.message}`);
-        throw new ApiError(401, 'Failed to queue analysis');
+        throw new ApiError(500, 'Failed to queue analysis');
     }
 });
 
@@ -214,7 +239,7 @@ export const getMyAnalysis = asyncHandler(async (req, res) => {
     // let in cache for 5 minutes
     await redisClient.setEx(cacheKey,300,JSON.stringify(analyses))
     if (!analyses) {
-        throw new ApiError(401, 'Analysis not found')
+        throw new ApiError(404, 'Analysis not found')
     }
     res.status(200).json(
         new ApiResponse(200, analyses, 'Analysis Fetched successfully')
@@ -233,7 +258,7 @@ export const getAnalysisById = asyncHandler(async (req, res) => {
     if(cachedData){
         const parsed = JSON.parse(cachedData)
         return res.status(200)
-        .json(new ApiResponse(201,parsed,'Cached data fetched succesfully'))
+        .json(new ApiResponse(200,parsed,'Cached data fetched succesfully'))
     }
 
     const analysis = await analysisModel.findOne({
@@ -247,13 +272,13 @@ export const getAnalysisById = asyncHandler(async (req, res) => {
         .populate('jobRole')
 
     if (!analysis) {
-        throw new ApiError(401, 'No analysis found of user')
+        throw new ApiError(404, 'No analysis found of user')
     }
     await redisClient.setEx(cacheKey,300,JSON.stringify(analysis))
     // thid will get that analysis document and also give resume of which analaysis is created with their
     // parsed data and also jobRole target
     res.status(200)
-        .json(new ApiResponse(201, analysis, `Successfully fetched analysis for user: ${req.user.email}`))
+        .json(new ApiResponse(200, analysis, `Successfully fetched analysis for user: ${req.user.email}`))
 })
 
 export const getAnalysisStatus = asyncHandler(async (req, res) => {
@@ -264,7 +289,7 @@ export const getAnalysisStatus = asyncHandler(async (req, res) => {
     }).select('_id status processingStage error queuedAt processingStartedAt completedAt processingTime')
 
     if (!analysis) {
-        throw new ApiError(401, 'No analysis found of user')
+        throw new ApiError(404, 'No analysis found of user')
     }
 
     res.set('Cache-Control', 'no-store')
@@ -311,7 +336,7 @@ export const deleteAnalysis = asyncHandler(async (req, res) => {
         }
     )
     if (!analaysis) {
-        throw new ApiError(400, 'No analysis Model Found')
+        throw new ApiError(404, 'No analysis Model Found')
     }
 
     if (analaysis.status === ANALYSIS_STATUS.QUEUED) {
@@ -325,7 +350,7 @@ export const deleteAnalysis = asyncHandler(async (req, res) => {
     logger.info(201, `User succesfuly deleted his analysis. user is: ${req.user.email}`)
 
     res.status(200)
-        .json(new ApiResponse(201,null,'User deleted succesfully'))
+        .json(new ApiResponse(200,null,'User deleted succesfully'))
 })
 
 export const compare_Multiple_Job_Role_With_Resume_And_Get_Analysis = asyncHandler(async (req, res) => {
@@ -342,7 +367,7 @@ export const compare_Multiple_Job_Role_With_Resume_And_Get_Analysis = asyncHandl
     })
 
     if (!resume) {
-        throw new ApiError(401, 'No resume found ')
+        throw new ApiError(404, 'No resume found ')
     }
 
     const jobRoles = await jobRoleModel.find(
@@ -354,7 +379,7 @@ export const compare_Multiple_Job_Role_With_Resume_And_Get_Analysis = asyncHandl
     )
 
     if (!jobRoles || jobRoles.length === 0) {
-        throw new ApiError(401, 'No Job Roles found to compare')
+        throw new ApiError(404, 'No Job Roles found to compare')
     }
 
     // checks whether we already have the analysis for the resume and jobrole pair
@@ -420,7 +445,7 @@ export const compare_Multiple_Job_Role_With_Resume_And_Get_Analysis = asyncHandl
             }
 
             logger.error(`Failed multi-role comparison for user ${userId}: ${error.message}`)
-            throw new ApiError(401, 'Failed to compare selected job roles')
+            throw new ApiError(500, 'Failed to compare selected job roles')
         }
     }
 

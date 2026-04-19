@@ -158,8 +158,6 @@ const AnalysisListPage = ()=>{
     }
   }
 
-  const isAnalysisRunning = (status) => ['queued', 'processing', 'finalizing'].includes(status)
-
   const handleRegenerateAnalysis = async (event, analysisId) => {
     event.stopPropagation()
 
@@ -501,7 +499,7 @@ return (
                       event.stopPropagation();
                       handleDeleteAnalysis(analysis._id);
                     }}
-                    disabled={deletingId === analysis._id || isAnalysisRunning(analysis?.status)}
+                    disabled={deletingId === analysis._id}
                     className="inline-flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-4 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-100 disabled:opacity-60 dark:border-red-900/40 dark:bg-red-900/15 dark:text-red-300"
                   >
                     <Trash2 className="h-3.5 w-3.5" />

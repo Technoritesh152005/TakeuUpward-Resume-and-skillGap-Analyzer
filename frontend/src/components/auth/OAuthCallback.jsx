@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import useAuthStore from '../../services/authStore.js'
 import LoadingSpinner from '../common components/LoadingSpinner.jsx'
@@ -9,9 +9,15 @@ const OAuthCallback = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { updateUser } = useAuthStore();
+  const hasProcessedRef = useRef(false);
 
 //   every time a login success components loads this runs
   useEffect(() => {
+    if (hasProcessedRef.current) {
+      return;
+    }
+    hasProcessedRef.current = true;
+
     const processOAuthCallback = async () => {
       const error = searchParams.get('error');
 
@@ -30,7 +36,7 @@ const OAuthCallback = () => {
         updateUser(userData);
 
         // Show success message
-        toast.success(`Welcome back, ${userData.name || 'User'}!`);
+        toast.success(`Welcome back, ${userData.name || 'User'}!`, { id: 'oauth-success' });
 
         // Redirect to dashboard
         navigate('/dashboard', { replace: true });

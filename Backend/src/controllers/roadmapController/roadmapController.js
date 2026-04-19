@@ -11,6 +11,7 @@ import { refundAiUsage } from '../../services/aiQuota.service.js'
 import { enqueueRoadmapGeneration } from '../../queues/roadmap.queue.js'
 import { ROADMAP_PROCESSING_STAGE, ROADMAP_STATUS } from '../../config/constant.js'
 import { recordLearningItemCompletion, resetProgressTracking } from '../../services/progress.service.js'
+import { logMissingResource } from '../../utils/missingResourceLogger.js'
 
 const RESOURCE_TYPE_FALLBACKS = {
     course: ['course', 'tutorial', 'documentation', 'article', 'video'],
@@ -232,6 +233,14 @@ const enrichRoadmapResources = async (roadmap) => {
 
                 if (!matchedResource && !item.url) {
                     item.url = buildResourceSearchLink(item)
+                    logMissingResource({
+                        item,
+                        generatedUrl: item.url,
+                        roadmapId: roadmap._id,
+                        analysisId: roadmap.analysis,
+                        userId: roadmap.user,
+                        source: 'roadmap_enrichment',
+                    })
                     hasChanges = true
                 }
             }
@@ -543,7 +552,7 @@ export const retryRoadmap = asyncHandler(async (req, res) => {
         })
 
         return res.status(202)
-            .json(new ApiResponse(201, { roadmap, aiUsage: req.aiUsage }, 'Roadmap retry queued sucessfully'))
+            .json(new ApiResponse(202, { roadmap, aiUsage: req.aiUsage }, 'Roadmap retry queued sucessfully'))
     } catch (error) {
         if (req.aiQuotaReserved) {
             req.aiUsage = await refundAiUsage(req.user._id)
@@ -569,7 +578,7 @@ export const markItemComplete = asyncHandler(async (req, res) => {
         }
     )
     if (!roadmap) {
-        throw new ApiError(400, 'No roadmap found')
+        throw new ApiError(404, 'No roadmap found')
     }
 
     // validate the index provided
@@ -613,7 +622,7 @@ export const markItemComplete = asyncHandler(async (req, res) => {
     }).populate(roadmapDetailPopulate)
 
     res.status(200).json(
-        new ApiResponse(201, populatedRoadmap || roadmap, 'Item Marked completed'))
+        new ApiResponse(200, populatedRoadmap || roadmap, 'Item Marked completed'))
 })
 
 export const resetRoadmapProgress = asyncHandler(async (req, res) => {
@@ -623,7 +632,7 @@ export const resetRoadmapProgress = asyncHandler(async (req, res) => {
     })
 
     if (!roadmap) {
-        throw new ApiError(400, 'No roadmap found')
+        throw new ApiError(404, 'No roadmap found')
     }
 
     for (const phase of roadmap.phases || []) {
@@ -684,7 +693,7 @@ export const updateReference = asyncHandler(async (req, res) => {
     })
 
     if (!roadmap) {
-        throw new ApiError(400, 'No roadmap found to update user preference')
+        throw new ApiError(404, 'No roadmap found to update user preference')
     }
 
     roadmap.userPreferences = roadmap.userPreferences || {}
@@ -695,7 +704,7 @@ export const updateReference = asyncHandler(async (req, res) => {
     await roadmap.save()
     await clearRoadmapCache(roadmap.analysis, req.user._id)
     res.status(200).json(
-        new ApiResponse(201, roadmap, 'User preferne updated succesfully'))
+        new ApiResponse(200, roadmap, 'User preferne updated succesfully'))
 })
 
 export const getProgressOfUser = asyncHandler(async (req, res) => {
@@ -709,7 +718,7 @@ export const getProgressOfUser = asyncHandler(async (req, res) => {
     }).select('phases progress')
 
     if (!roadmap) {
-        throw new ApiError(400, 'Failed to get roadmap')
+        throw new ApiError(404, 'Failed to get roadmap')
     }
 
     const progress = await progressModel.findOne({

@@ -7,6 +7,7 @@ const requireAiQuota = (serviceName)=>asyncHandler(async(req,res,next) =>{
     const aiUsage = await reserveAiUsage(req.user._id, serviceName)
     req.aiUsage = aiUsage,
     req.aiQuotaReserved = true
+    
     next()
 })
 export {requireAiQuota}

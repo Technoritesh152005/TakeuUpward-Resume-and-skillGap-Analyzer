@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import {
   Brain, Map, Shield, Upload, Search, BarChart3, Rocket,
   CheckCircle, ArrowRight, Zap, Target, ChevronRight, Sparkles,
-  TrendingUp, FileText, Database
+  FileText, Database
 } from 'lucide-react';
 import Navbar from '../components/layout/navbar.jsx';
 import Footer from '../components/layout/footer.jsx';
@@ -214,20 +214,25 @@ const LandingPage = () => {
             {/* Left */}
             <div className="text-center lg:text-left">
               {/* Headline */}
-              <h1 className="text-5xl md:text-6xl xl:text-[4.5rem] font-extrabold leading-[1.06] mb-6 tracking-tight animate-slide-up">
-                <span className="text-white font-black italic">TakeU</span><span className="text-white">Upward</span>
-                <br />
-                <span className="text-grad-anim min-h-[1.1em] block">
+              <h1 className="mb-6 animate-slide-up leading-[0.92]">
+                <span className="block text-5xl md:text-6xl xl:text-[4.5rem] font-black tracking-[-0.06em] text-white [font-family:'Manrope',sans-serif]">
+                  TakeuUpward
+                </span>
+                <span className="mt-2 text-grad-anim min-h-[1.1em] block text-[3.6rem] md:text-[4.25rem] xl:text-[4.9rem] font-semibold tracking-[-0.08em] [font-family:'Manrope',sans-serif]">
                   {typed}<span className="cursor-blink text-primary-400">|</span>
                 </span>
-                <span className="text-white">Career Engine</span>
+                <span className="mt-1 block text-5xl md:text-6xl xl:text-[4.5rem] font-black tracking-[-0.06em] text-white [font-family:'Manrope',sans-serif]">
+                  Career Engine
+                </span>
               </h1>
 
               {/* Sub */}
               <p className="text-lg md:text-xl text-neutral-400 mb-10 max-w-[520px] mx-auto lg:mx-0 leading-relaxed animate-slide-up" style={{ animationDelay: '0.1s' }}>
-                Systematically bridge the gap between your professional experience and technical benchmarks. 
-                Identify <span className="text-white font-semibold">structural skill deficits</span> and 
-                verify <span className="text-primary-400 font-semibold">ATS index performance</span> through semantic analysis.
+                A resume analysis platform that compares a candidate profile with target job roles,
+                highlights
+                <span className="text-white font-semibold"> skill gaps and strengths,</span> and gives a
+                <span className="text-primary-400 font-semibold"> clear view of ATS readiness</span>, relevant live job suggestions,
+                and a structured roadmap for improvement.
               </p>
 
               {/* CTAs */}
@@ -238,7 +243,7 @@ const LandingPage = () => {
                   style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)', boxShadow: '0 0 48px rgba(124,58,237,0.45)' }}
                 >
                   <Rocket className="w-5 h-5 relative z-10 group-hover:rotate-12 transition-transform duration-300" />
-                  <span className="relative z-10">Analyze Profile Readiness</span>
+                  <span className="relative z-10">Start Resume Analysis</span>
                 </button>
                 <button
                   onClick={() => navigate('/login')}
@@ -251,9 +256,9 @@ const LandingPage = () => {
               {/* Key Trust Points */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:justify-start text-xs font-bold text-neutral-500 uppercase tracking-widest animate-fade-in" style={{ animationDelay: '0.4s' }}>
                 {[
-                  { t: 'Enterprise Parsing', d: 'PDF/DOCX Recovery' },
-                  { t: 'ATS Indexing', d: 'Semantic Validation' },
-                  { t: 'Growth Pipelines', d: 'Deterministic Paths' },
+                  { t: 'Resume Analysis', d: 'Role Fit Evaluation' },
+                  { t: 'ATS Review', d: 'Keyword And Structure Check' },
+                  { t: 'Live Job Matches', d: 'Target And Winnable Roles' },
                 ].map((p, i) => (
                   <div key={i} className="flex flex-col gap-1 border-l border-neutral-800 pl-4 py-1">
                     <span className="text-white">{p.t}</span>
@@ -327,22 +332,6 @@ const LandingPage = () => {
                 </div>
               </div>
 
-              {/* ATS Card */}
-              <div className="float-b absolute bottom-16 left-2 w-[190px] bg-neutral-900/80 backdrop-blur-xl rounded-2xl border border-white/10 p-4 shadow-dark-lg">
-                <div className="text-[11px] text-neutral-500 mb-1">ATS Score</div>
-                <div className="text-4xl font-black text-white">82<span className="text-base text-neutral-500">/100</span></div>
-                <div className="flex items-center gap-1 text-success-400 text-xs mt-1">
-                  <TrendingUp className="w-3 h-3" />
-                  <span>+12 pts possible</span>
-                </div>
-                <div className="mt-3 h-1.5 bg-neutral-800 rounded-full overflow-hidden">
-                  <div className="h-full rounded-full glow-bar" style={{
-                    width: '82%',
-                    background: 'linear-gradient(90deg,#7c3aed,#06b6d4)'
-                  }} />
-                </div>
-              </div>
-
               {/* Roadmap Card */}
               <div className="float-c absolute top-[42%] -left-4 w-[175px] bg-neutral-900/80 backdrop-blur-xl rounded-2xl border border-white/10 p-4 shadow-dark-lg">
                 <div className="text-[11px] text-neutral-500 mb-1">Your Roadmap</div>
@@ -383,10 +372,10 @@ const LandingPage = () => {
               <span className="text-sm font-semibold text-primary-300">Core Capabilities</span>
             </div>
             <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-5 tracking-tight">
-              Strategic <span className="text-grad-anim">Professional</span> Alignment
+              Clear <span className="text-grad-anim">Product</span> Features
             </h2>
             <p className="text-lg text-neutral-400 max-w-2xl mx-auto">
-              Our system leverages semantic extraction and adaptive benchmarks to reconcile profile data with industry standards.
+              Built to analyze resumes against target roles, explain fit clearly, and turn skill gaps into practical next steps.
             </p>
           </div>
 
@@ -396,10 +385,10 @@ const LandingPage = () => {
               <div className="w-14 h-14 bg-primary-600/20 rounded-2xl flex items-center justify-center mb-6 border border-white/8">
                 <Brain className="w-7 h-7 text-primary-400" />
               </div>
-              <h3 className="text-xl font-bold text-white mb-3">Automated Technical Indexing</h3>
-              <p className="text-sm text-neutral-400 leading-relaxed mb-5">High-fidelity profile extraction mapping semantic entities against verifiable role benchmarks.</p>
+              <h3 className="text-xl font-bold text-white mb-3">Resume Parsing</h3>
+              <p className="text-sm text-neutral-400 leading-relaxed mb-5">Extracts candidate details, skills, education, and experience from PDF and DOCX resumes.</p>
               <ul className="space-y-2">
-                {['Role-aware entity extraction', 'Semantic skill correlation', 'Competency hierarchy mapping'].map((b, j) => (
+                {['Structured data extraction', 'Skill identification', 'Profile-ready resume view'].map((b, j) => (
                   <li key={j} className="flex items-center gap-2 text-sm text-neutral-300">
                     <ChevronRight className="w-4 h-4 text-primary-400" />
                     {b}
@@ -412,10 +401,10 @@ const LandingPage = () => {
               <div className="w-14 h-14 bg-fresh-600/20 rounded-2xl flex items-center justify-center mb-6 border border-white/8">
                 <Map className="w-7 h-7 text-fresh-400" />
               </div>
-              <h3 className="text-xl font-bold text-white mb-3">Strategic Competency Benchmarking</h3>
-              <p className="text-sm text-neutral-400 leading-relaxed mb-5">Generates precise deficit roadmaps structured into execution-ready technical sprints.</p>
+              <h3 className="text-xl font-bold text-white mb-3">Skill Gap Analysis</h3>
+              <p className="text-sm text-neutral-400 leading-relaxed mb-5">Compares resumes with selected job roles to show strengths, missing skills, and match score.</p>
               <ul className="space-y-2">
-                {['Gap-to-Goal alignment', 'Validated resource indexing', 'Targeted learning pathways'].map((b, j) => (
+                {['Role match scoring', 'Critical gap detection', 'Recruiter-friendly analysis summary'].map((b, j) => (
                   <li key={j} className="flex items-center gap-2 text-sm text-neutral-300">
                     <ChevronRight className="w-4 h-4 text-fresh-400" />
                     {b}
@@ -428,10 +417,10 @@ const LandingPage = () => {
               <div className="w-14 h-14 bg-energy-600/20 rounded-2xl flex items-center justify-center mb-6 border border-white/8">
                 <Shield className="w-7 h-7 text-energy-400" />
               </div>
-              <h3 className="text-xl font-bold text-white mb-3">Algorithmic Screening Simulation</h3>
-              <p className="text-sm text-neutral-400 leading-relaxed mb-5">Predictive scoring that simulates modern screening systems to detect structural and keyword indexing issues.</p>
+              <h3 className="text-xl font-bold text-white mb-3">ATS And Roadmap Support</h3>
+              <p className="text-sm text-neutral-400 leading-relaxed mb-5">Checks resume quality for screening systems, recommends live jobs, and generates a guided roadmap to improve readiness.</p>
               <ul className="space-y-2">
-                {['ATS syntax validation', 'Keyword density indexing', 'Structural barrier detection'].map((b, j) => (
+                {['ATS score breakdown', 'Live job suggestions by fit', '90-day learning roadmap'].map((b, j) => (
                   <li key={j} className="flex items-center gap-2 text-sm text-neutral-300">
                     <ChevronRight className="w-4 h-4 text-energy-400" />
                     {b}
@@ -503,10 +492,10 @@ const LandingPage = () => {
               <span className="text-sm font-semibold text-energy-300">Data Points & Insights</span>
             </div>
             <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-5 tracking-tight">
-              Comprehensive <span className="text-grad-anim">Recruiter</span> Output
+              Candidate <span className="text-grad-anim">Evaluation</span> Snapshot
             </h2>
             <p className="text-lg text-neutral-400 max-w-2xl mx-auto">
-              Our system generates multi-dimensional metrics across technical readiness and ATS compatibility.
+              A structured preview of candidate fit, strengths, gaps, and role alignment designed for faster review.
             </p>
           </div>
 
@@ -522,7 +511,7 @@ const LandingPage = () => {
                 <div>
                   <div className="text-xs text-neutral-500 mb-1">Inference Context</div>
                   <div className="text-2xl font-bold text-white">Fullstack Engineering Lead</div>
-                  <div className="text-sm text-neutral-500 mt-1">Node.js \u00b7 System Design \u00b7 Leadership</div>
+                  <div className="text-sm text-neutral-500 mt-1">Node.js • System Design • Leadership</div>
                 </div>
                 <div className="flex gap-3 flex-shrink-0">
                   <div className="px-5 py-3 bg-success-600/15 border border-success-600/25 rounded-xl text-center">
@@ -581,14 +570,14 @@ const LandingPage = () => {
                 Internal Architecture
               </div>
               <h2 className="text-4xl font-extrabold text-white mb-8 tracking-tight">
-                Built for <span className="text-grad-anim">Reliable</span> Technical Intelligence
+                Built with a <span className="text-grad-anim">Production-Oriented</span> Architecture
               </h2>
               
               <div className="space-y-6">
                 {[
-                  { t: 'Asynchronous Workflow', d: 'Queue-based processing via BullMQ and Redis ensures 100% job reliability even under high structural load.', i: Shield },
-                  { t: 'Heuristic Mapping', d: 'Proprietary mapping logic that reconciles non-standard job titles with international technical standards.', i: Zap },
-                  { t: 'Semantic Signal Recovery', d: 'Advanced LLM context windowing to recover implicit skills from resume bullet points.', i: Brain }
+                  { t: 'Asynchronous Processing Pipeline', d: 'Long-running analysis and roadmap generation are handled through BullMQ workers backed by Redis, so resume parsing, AI analysis, and roadmap creation can run reliably outside the request-response cycle.', i: Shield },
+                  { t: 'Role Matching And Recommendation Logic', d: 'The platform compares resumes with target roles, calculates fit, identifies the closest winnable role, and uses that output to support live job recommendations that are more realistic for the candidate profile.', i: Zap },
+                  { t: 'Hybrid Analysis Layer', d: 'The backend combines structured resume parsing, ATS scoring, skill gap analysis, readiness evaluation, and roadmap generation to turn raw resume data into recruiter-friendly insights and actionable next steps.', i: Brain }
                 ].map((item, idx) => (
                   <div key={idx} className="flex gap-5 group">
                     <div className="w-12 h-12 rounded-xl bg-neutral-900 flex-shrink-0 flex items-center justify-center border border-white/5 group-hover:bg-primary-600/20 transition-colors">
@@ -627,7 +616,7 @@ const LandingPage = () => {
       <section className="section-padding relative overflow-hidden">
         <div className="container-custom relative text-center">
           <div className="max-w-3xl mx-auto py-20 px-10 rounded-[3rem] bg-gradient-to-br from-primary-600 to-indigo-900 relative overflow-hidden">
-            <h2 className="text-4xl md:text-5xl font-black text-white mb-6 relative z-10 italic">TakeUUpward</h2>
+            <h2 className="text-4xl md:text-5xl font-black text-white mb-6 relative z-10 italic">TakeuUpward</h2>
             <p className="text-lg text-white/80 mb-10 relative z-10 max-w-xl mx-auto">
               Align your technical profile with industry standards today. Experience precision career strategy.
             </p>

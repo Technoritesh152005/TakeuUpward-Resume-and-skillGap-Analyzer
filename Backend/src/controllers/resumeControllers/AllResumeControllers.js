@@ -70,7 +70,7 @@ export const uploadResume = asyncHandler(async (req, res, next) => {
             textExtractionSource,
         } = await resumeParserInstance.parseResume(buffer, mimetype)
         if (!parsedData) {
-            throw new ApiError(401, 'Faced difficulty to parse data from resume')
+            throw new ApiError(500, 'Faced difficulty to parse data from resume')
         }
 
         const resume = new resumeModel({
@@ -103,7 +103,7 @@ export const uploadResume = asyncHandler(async (req, res, next) => {
         await clearResumeUserCaches(req.user._id)
         await clearResumeDetailCache(resume._id, req.user._id)
 
-        res.status(200)
+        res.status(201)
             .json(new ApiResponse(201, resume, 'Resume uploaded Succesfully'))
     } catch (error) {
         try {
@@ -170,7 +170,7 @@ export const getMyResume = asyncHandler(async (req, res, next) => {
     if (cachedData) {
         const data = JSON.parse(cachedData)
         return res.status(200)
-            .json(new ApiResponse(201, data, 'Resume of user fetched from cache successfuly'))
+            .json(new ApiResponse(200, data, 'Resume of user fetched from cache successfuly'))
     }
     const resume = await resumeModel.paginate(
         {
@@ -186,7 +186,7 @@ export const getMyResume = asyncHandler(async (req, res, next) => {
 
     await redisClient.setEx(cacheKey, 300, JSON.stringify(resume))
     res.status(200)
-        .json(new ApiResponse(201, resume, 'resume of user fetched succesfully'))
+        .json(new ApiResponse(200, resume, 'resume of user fetched succesfully'))
 })
 
 export const getResumeById = asyncHandler(async (req, res, next) => {
@@ -200,7 +200,7 @@ export const getResumeById = asyncHandler(async (req, res, next) => {
     if (cachedData) {
         const data = JSON.parse(cachedData)
         return res.status(200)
-            .json(new ApiResponse(201, data, 'Resume fetched successfully from cache'))
+            .json(new ApiResponse(200, data, 'Resume fetched successfully from cache'))
     }
     const resume = await resumeModel.findOne({ _id: req.params.id, user: req.user._id })
 
@@ -213,7 +213,7 @@ export const getResumeById = asyncHandler(async (req, res, next) => {
 
     await redisClient.setEx(cacheKey, 900, JSON.stringify(resume))
     res.status(200)
-        .json(new ApiResponse(201, resume, 'Resume fetched of user succesfully'))
+        .json(new ApiResponse(200, resume, 'Resume fetched of user succesfully'))
 })
 
 // delete resume
@@ -255,7 +255,7 @@ export const getResumeSkill = asyncHandler(async (req, res, next) => {
     if (cachedData) {
         const data = JSON.parse(cachedData)
         return res.status(200)
-            .json(new ApiResponse(201, data, 'Resume skill of user fetched from cache'))
+            .json(new ApiResponse(200, data, 'Resume skill of user fetched from cache'))
     }
     const resume = await resumeModel.findOne({ _id: req.params.id, user: req.user._id })
 
@@ -268,7 +268,7 @@ export const getResumeSkill = asyncHandler(async (req, res, next) => {
     await redisClient.setEx(cacheKey, 300, JSON.stringify(resumeSkill))
 
     res.status(200)
-        .json(201, 'Resume skill of user fetched succesfully', resumeSkill)
+        .json(new ApiResponse(200, resumeSkill, 'Resume skill of user fetched succesfully'))
 })
 
 export const reparseResume = asyncHandler(async (req, res) => {

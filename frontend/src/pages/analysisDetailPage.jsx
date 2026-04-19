@@ -626,17 +626,6 @@ const AnalysisDetailPage = ()=>{
                 </Panel>
               ) : null}
 
-              <Panel
-                title="Related Job Matches"
-                icon={Briefcase}
-                description="Live roles that look close to your current profile."
-              >
-                <RecommendedJobsCard
-                  jobs={recommendedJobs}
-                  jobsLoading={jobsLoading}
-                  basedOn={jobRecommendationMeta?.basedOn || []}
-                />
-              </Panel>
             </div>
 
             <div className="space-y-8 xl:sticky xl:top-24 xl:self-start">
@@ -731,6 +720,18 @@ const AnalysisDetailPage = ()=>{
               ) : null}
             </div>
           </section>
+
+          <Panel
+            title="Related Job Matches"
+            icon={Briefcase}
+            description="Live roles that look close to your current profile."
+          >
+            <RecommendedJobsCard
+              jobs={recommendedJobs}
+              jobsLoading={jobsLoading}
+              basedOn={jobRecommendationMeta?.basedOn || []}
+            />
+          </Panel>
         </>
       )}
     </div>
@@ -880,7 +881,7 @@ const AnalysisProcessingState = ({ analysis }) => {
 
           <div className="mt-4 flex flex-wrap items-center justify-between gap-4 text-[10px] font-bold text-neutral-500 uppercase tracking-widest">
             <span>Stage: {String(currentStage).replaceAll('_', ' ')}</span>
-            <span>Estimated time: 30s - 60s</span>
+            <span>Estimated time: 20s - 40s</span>
           </div>
         </div>
 
@@ -933,19 +934,23 @@ const AnalysisProcessingState = ({ analysis }) => {
           </div>
         </Panel>
 
-        <Panel title="Process Log" icon={Clock3}>
+        <Panel title="What to Expect" icon={Clock3}>
           <div className="space-y-4 text-xs font-medium leading-relaxed text-neutral-500">
             <p className="flex gap-2">
               <span className="text-primary-500">•</span>
-              Initializing resume parsing and data extraction...
+              Match score and role-fit summary
             </p>
             <p className="flex gap-2">
               <span className="text-blue-500">•</span>
-              Cross-referencing skills with job market data...
+              Skill gaps and candidate strengths
             </p>
             <p className="flex gap-2">
               <span className="text-emerald-500">•</span>
-              Generating final readiness score and insights...
+              ATS readiness insights and next-step recommendations
+            </p>
+            <p className="flex gap-2">
+              <span className="text-amber-500">â€¢</span>
+              Live job suggestions based on the target role or closest winnable role
             </p>
           </div>
         </Panel>
@@ -1382,9 +1387,11 @@ const MiniMeter = ({ label, value }) => (
 );
 
 const AtsTagSection = ({ title, items, emptyText, tone = 'blue' }) => {
-  const toneClass = tone === 'emerald'
-    ? 'border border-emerald-500/20 bg-emerald-500/10 text-emerald-300'
-    : 'border border-blue-500/20 bg-blue-500/10 text-blue-300'
+  const toneClass = tone === 'red'
+    ? 'border border-red-500/20 bg-red-500/10 text-red-300'
+    : tone === 'emerald'
+      ? 'border border-emerald-500/20 bg-emerald-500/10 text-emerald-300'
+      : 'border border-blue-500/20 bg-blue-500/10 text-blue-300'
 
   return (
     <div>
@@ -1559,6 +1566,19 @@ const ClosestRoleCard = ({ role }) => (
       title="Why This Role"
       items={Array.isArray(role?.reasons) ? role.reasons : []}
       emptyText="No supporting role reasons were returned."
+    />
+
+    <AtsTagSection
+      title="Critical Skills To Fix First"
+      items={Array.isArray(role?.missingCriticalSkills) ? role.missingCriticalSkills : []}
+      emptyText="No critical blockers were identified for this closest role."
+      tone="red"
+    />
+
+    <AtsTagSection
+      title="Important Skills To Add"
+      items={Array.isArray(role?.missingImportantSkills) ? role.missingImportantSkills : []}
+      emptyText="No additional important gaps were identified for this closest role."
     />
 
     <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4">

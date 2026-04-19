@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, X, FileText } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import Button from '../common components/Button';
 import ThemeToggle from '../common components/themeToggle';
+import brandLogo from '../../assets/Gemini_Generated_Image_hi4jb6hi4jb6hi4j.png';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -22,7 +23,7 @@ const Navbar = () => {
 //   items for nav 
   const navLinks = [
     { name: 'Features', href: '#features' },
-    { name: 'How It Works', href: '#how-it-works' },
+    { name: 'How It Works', href: '#workflow' },
     { name: 'Job Roles', href: '/job-roles' },
   ];
 
@@ -38,11 +39,13 @@ const Navbar = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 group">
-            <div className="w-10 h-10 rounded-lg bg-primary-600 flex items-center justify-center group-hover:bg-primary-700 transition-colors">
-              <FileText className="w-6 h-6 text-white" />
-            </div>
+            <img
+              src={brandLogo}
+              alt="TakeuUpward logo"
+              className="h-10 w-10 rounded-lg object-cover"
+            />
             <span className="text-xl font-bold">
-  <span className="text-neutral-900 dark:text-white">TakeU</span>
+  <span className="text-neutral-900 dark:text-white">Takeu</span>
   <span className="text-primary-600 dark:text-primary-500">Upward</span>
 </span>
           </Link>

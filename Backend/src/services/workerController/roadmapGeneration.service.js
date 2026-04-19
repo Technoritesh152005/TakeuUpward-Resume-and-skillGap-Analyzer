@@ -8,6 +8,7 @@ import redisClient from '../../config/redis.js'
 import { refundAiUsage } from '../aiQuota.service.js'
 import { ROADMAP_PROCESSING_STAGE, ROADMAP_STATUS } from '../../config/constant.js'
 import { ensureProgressRecord, syncProgressPosition } from '../progress.service.js'
+import { logMissingResource } from '../../utils/missingResourceLogger.js'
 
 const RESOURCE_TYPE_FALLBACKS = {
     course: ['course', 'tutorial', 'documentation', 'article', 'video'],
@@ -350,6 +351,14 @@ export const processRoadmapGenerationJob = async ({ analysisId, userId, roadmapI
                         item.title = learningResource.title
                     } else if(!item.url){
                         item.url = buildResourceSearchLink(item)
+                        logMissingResource({
+                            item,
+                            generatedUrl: item.url,
+                            roadmapId: roadmap._id,
+                            analysisId,
+                            userId,
+                            source: 'roadmap_generation',
+                        })
                     }
                 }
             }
