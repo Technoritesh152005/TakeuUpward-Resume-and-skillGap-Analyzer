@@ -122,7 +122,7 @@ const resumeSchema = mongoose.Schema(
             enum:['pending','completed','processing','failed'],
             default:'pending',
             },
-            // error generated during parsing
+            // error generated during pars11ing
             processError:String,
             // all the text of the ocr based text extraction are stored here
             ocrText: {
@@ -166,7 +166,8 @@ const resumeSchema = mongoose.Schema(
     {
         timestamps:true,
         toObject:{virtuals:true},
-        toJson:{virtuals:true},
+        // expose virtuals in JSON responses too
+        toJSON:{virtuals:true},
     }
 )
 // sort this user resume in newest form
@@ -188,16 +189,16 @@ resumeSchema.methods.getSkillSummary = function () {
 
     const technical = this.parsedData?.skills?.technical?.length || 0;
     const tools = this.parsedData?.skills?.tools?.length || 0;
-    const languages =
-        this.parsedData?.skills?.languages?.length ||
-        this.parsedData?.skills?.language?.length ||
-        0;
+    // const languages =
+    //     this.parsedData?.skills?.languages?.length ||
+    //     this.parsedData?.skills?.language?.length ||
+    //     0;
 
     return {
         technical,
         tools,
-        languages,
-        total: technical + tools + languages
+        // languages,
+        total: technical + tools 
     };
 };
 

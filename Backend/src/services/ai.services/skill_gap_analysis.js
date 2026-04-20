@@ -3,6 +3,14 @@ import logger from '../../utils/logs.js';
 import { extractCandidateSkillSet, matchRoleSkill, expandSkillVariants, skillsOverlap } from './fallbackSkillMatcher.js';
 
 class SkillGapAnalysis {
+    normalizeUserPreferences(userPreferences = {}) {
+        return {
+            hoursPerWeek: this.toNumber(userPreferences?.hoursPerWeek, 8) || 8,
+            budget: this.toString(userPreferences?.budget || 'free').toLowerCase() || 'free',
+            learningStyle: this.toString(userPreferences?.learningStyle || 'mixed').toLowerCase() || 'mixed',
+        };
+    }
+
     buildDebugPreview(value, limit = 600) {
         return String(value || '')
             .replace(/\s+/g, ' ')
@@ -12,6 +20,29 @@ class SkillGapAnalysis {
 
     toString(value) {
         return String(value || '').trim();
+    }
+
+    toNumber(value, fallback = 0) {
+        if (typeof value === 'number' && Number.isFinite(value)) {
+            return value;
+        }
+
+        if (typeof value === 'string') {
+            const parsed = Number(value);
+            if (Number.isFinite(parsed)) {
+                return parsed;
+            }
+
+            const match = value.match(/\d+(\.\d+)?/);
+            if (match) {
+                const extracted = Number(match[0]);
+                if (Number.isFinite(extracted)) {
+                    return extracted;
+                }
+            }
+        }
+
+        return fallback;
     }
 
     toStringArray(value, limit = 10) {
@@ -379,7 +410,16 @@ class SkillGapAnalysis {
 
         return {
             overallAssessment: {
-                matchPercentage: Number(fallbackAssessment.matchPercentage ?? 0),
+                matchPercentage: Math.max(
+                    0,
+                    Math.min(
+                        100,
+                        this.toNumber(
+                            sourceAssessment.matchPercentage,
+                            this.toNumber(fallbackAssessment.matchPercentage, 0)
+                        )
+                    )
+                ),
                 readinessLevel: this.toString(
                     sourceAssessment.readinessLevel ||
                     fallbackAssessment.readinessLevel ||
@@ -466,10 +506,11 @@ ${invalidJson}
         return this.normalizeJsonString(response.text());
     }
 
-    async performDeepSkillGapAnalyze(resumeData, jobRole) {
+    async performDeepSkillGapAnalyze(resumeData, jobRole, userPreferences = {}) {
         try {
             const compactResume = this.buildCompactResumeSummary(resumeData);
             const compactRole = this.buildCompactRoleSummary(jobRole);
+            const normalizedPreferences = this.normalizeUserPreferences(userPreferences);
 
             const prompt = `
 You are an expert career coach analyzing a candidate's fit for a job role.
@@ -479,6 +520,9 @@ ${JSON.stringify(compactResume, null, 2)}
 
 TARGET JOB ROLE:
 ${JSON.stringify(compactRole, null, 2)}
+
+USER PREFERENCES:
+${JSON.stringify(normalizedPreferences, null, 2)}
 
 Perform comprehensive gap analysis and return ONLY valid JSON:
 
@@ -543,6 +587,8 @@ Important rules for reasoning quality:
 - Every uniqueAdvantage should explain what concrete resume evidence makes that strength valuable.
 - Do not use vague reasons like "important skill" or "good to have" without context.
 - Stay grounded only in the provided resume and role data.
+- estimatedTimeToReady should account for the available hoursPerWeek.
+- recommendations should reflect budget and learningStyle when suggesting next actions.
 
 Return ONLY the JSON object, no markdown formatting.
 `;
@@ -558,8 +604,8 @@ Return ONLY the JSON object, no markdown formatting.
             const response = await result.response;
             const rawText = response.text();
 
-            const fallbackData = this.buildFallbackAnalysis(resumeData, jobRole);
-            const parsedData = await this.parseJsonResponse(rawText, resumeData, jobRole);
+            const fallbackData = this.buildFallbackAnalysis(resumeData, jobRole, normalizedPreferences);
+            const parsedData = await this.parseJsonResponse(rawText, resumeData, jobRole, normalizedPreferences);
             const structuredData = this.normalizeSkillGapPayload(parsedData, fallbackData, resumeData, jobRole);
 
             if (!structuredData || !structuredData.overallAssessment) {
@@ -574,7 +620,7 @@ Return ONLY the JSON object, no markdown formatting.
         }
     }
 
-    async parseJsonResponse(rawContent, resumeData, jobRole) {
+    async parseJsonResponse(rawContent, resumeData, jobRole, userPreferences = {}) {
         const normalized = this.normalizeJsonString(rawContent);
         const extracted = this.extractJsonBlock(normalized);
 
@@ -591,12 +637,13 @@ Return ONLY the JSON object, no markdown formatting.
                 return this.tryParseJson(repaired);
             } catch (repairError) {
                 logger.warn(`Falling back to deterministic skill gap analysis due to unrecoverable AI JSON: ${repairError.message}`);
-                return this.buildFallbackAnalysis(resumeData, jobRole);
+                return this.buildFallbackAnalysis(resumeData, jobRole, userPreferences);
             }
         }
     }
 
-    buildFallbackAnalysis(resumeData, jobRole) {
+    buildFallbackAnalysis(resumeData, jobRole, userPreferences = {}) {
+        const normalizedPreferences = this.normalizeUserPreferences(userPreferences);
         const candidateSkills = extractCandidateSkillSet(resumeData);
         const strengths = [];
         const skillGaps = {
@@ -645,6 +692,23 @@ Return ONLY the JSON object, no markdown formatting.
         const matchPercentage = requiredCount > 0
             ? Math.max(0, Math.min(100, Math.round((matchedCount / requiredCount) * 100)))
             : 0;
+        const estimatedHours = (skillGaps.critical.length * 20) + (skillGaps.important.length * 10);
+        const estimatedWeeks = Math.max(
+            1,
+            Math.ceil(estimatedHours / Math.max(1, normalizedPreferences.hoursPerWeek))
+        );
+        const recommendationSeed = normalizedPreferences.budget === 'free'
+            ? 'Use high-quality free resources for the missing critical skills first.'
+            : normalizedPreferences.budget === 'high'
+                ? 'Use premium resources and mentorship where they accelerate the highest-priority gaps.'
+                : 'Mix free and paid resources to close the highest-priority gaps efficiently.';
+        const styleRecommendationMap = {
+            visual: 'Prefer video-first explanations and walkthroughs for the top missing skills.',
+            auditory: 'Prefer spoken explanations, guided sessions, and discussion-driven learning for the top gaps.',
+            reading: 'Prefer documentation, books, and structured notes for the top gaps.',
+            kinesthetic: 'Prefer hands-on projects and exercises that force repeated practice of the missing skills.',
+            mixed: 'Mix projects, documentation, and guided tutorials to keep momentum while closing the top gaps.',
+        };
 
         return {
             overallAssessment: {
@@ -655,8 +719,8 @@ Return ONLY the JSON object, no markdown formatting.
                         ? 'nearly-ready'
                         : 'not-ready',
                 estimatedTimeToReady: {
-                    weeks: skillGaps.critical.length * 4 + skillGaps.important.length * 2,
-                    reason: 'Generated from fallback skill-matching logic because AI JSON was invalid',
+                    weeks: estimatedWeeks,
+                    reason: `Generated from fallback skill-matching logic using ${normalizedPreferences.hoursPerWeek} study hours per week because AI JSON was invalid`,
                 },
                 summary: 'Fallback analysis generated from resume and job-role skill matching.',
             },
@@ -672,6 +736,8 @@ Return ONLY the JSON object, no markdown formatting.
                 'Improve missing critical skills first',
                 'Add role-specific keywords to the resume',
                 'Build projects that demonstrate required skills',
+                recommendationSeed,
+                styleRecommendationMap[normalizedPreferences.learningStyle] || styleRecommendationMap.mixed,
             ],
         };
     }

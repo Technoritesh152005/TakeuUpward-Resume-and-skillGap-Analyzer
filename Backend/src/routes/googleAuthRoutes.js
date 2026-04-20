@@ -4,10 +4,16 @@ import {
   googleAuthCallback,
   googleAuthFailure,
 } from '../controllers/googleAuthControllers/googleAuthControllers.js'
-import passport from '../config/passport.js';
+import passport, { isGoogleAuthConfigured } from '../config/passport.js';
 
 router.get(
     '/google',
+    (req, res, next) => {
+        if (!isGoogleAuthConfigured) {
+            return googleAuthFailure(req, res, next)
+        }
+        return next()
+    },
     // passport midlleware is called
     // it internally reads strategypassport.use(new GoogleStrategy(...)) and sees what u means the system needs
     // also send redirect response to google means browser gets redirect to google
@@ -35,6 +41,9 @@ router.get(
 router.get(
     '/google/callback',
     (req, res, next) => {
+        if (!isGoogleAuthConfigured) {
+            return googleAuthFailure(req, res, next)
+        }
         passport.authenticate('google', { session: false }, (err, user) => {
             if (err || !user) {
                 return googleAuthFailure(req, res, next)

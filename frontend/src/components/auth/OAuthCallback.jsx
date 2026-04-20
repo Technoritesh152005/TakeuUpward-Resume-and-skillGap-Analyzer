@@ -3,12 +3,11 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import useAuthStore from '../../services/authStore.js'
 import LoadingSpinner from '../common components/LoadingSpinner.jsx'
 import toast from 'react-hot-toast';
-import authService from '../../services/authService.js';
 
 const OAuthCallback = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { updateUser } = useAuthStore();
+  const { loadUser } = useAuthStore();
   const hasProcessedRef = useRef(false);
 
 //   every time a login success components loads this runs
@@ -29,11 +28,7 @@ const OAuthCallback = () => {
       }
 
       try {
-        const response = await authService.getCurrentUser();
-        const userData = response.data?.data ?? response.data;
-
-        // Update auth store
-        updateUser(userData);
+        const userData = await loadUser();
 
         // Show success message
         toast.success(`Welcome back, ${userData.name || 'User'}!`, { id: 'oauth-success' });
@@ -48,7 +43,7 @@ const OAuthCallback = () => {
     };
 
     processOAuthCallback();
-  }, [searchParams, navigate, updateUser]);
+  }, [searchParams, navigate, loadUser]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-neutral-50 dark:bg-neutral-900">

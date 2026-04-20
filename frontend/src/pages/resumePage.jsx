@@ -39,7 +39,6 @@ const resumePage = ()=> {
             toast.success('Resume deleted successfully')
             setDeleteConfirm(null)
             // aftee deleting fetch the new resume list
-            fetchResume()
             await fetchResume()
         }catch(error){
       toast.error('Failed to delete resume');
@@ -245,7 +244,7 @@ const resumePage = ()=> {
                   Delete Resume?
                 </h3>
                 <p className="text-neutral-400 font-medium">
-                  This action is permanent and will remove all associated AI analytics.
+                  This action is permanent for the resume record and may make linked analysis history unusable.
                 </p>
               </div>
               <div className="flex gap-4">

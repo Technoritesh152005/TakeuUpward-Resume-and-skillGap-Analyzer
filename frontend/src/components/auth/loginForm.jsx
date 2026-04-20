@@ -19,7 +19,6 @@ const LoginForm = () => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    rememberMe: false,
   });
 
 //   states to manage whether to show pass or not
@@ -28,10 +27,10 @@ const LoginForm = () => {
 
 //   whenever there is event on form this gets called
   const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value,
+      [name]: value,
     }));
     // Clear validation error when user types
     if (validationErrors[name]) {
@@ -135,20 +134,8 @@ const LoginForm = () => {
         />
       </div>
 
-      {/* Remember Me & Forgot Password */}
-      <div className="flex items-center justify-between">
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            name="rememberMe"
-            checked={formData.rememberMe}
-            onChange={handleChange}
-            className="w-4 h-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
-            disabled={isLoading}
-          />
-          <span className="text-sm text-neutral-600 dark:text-neutral-400">Remember me</span>
-        </label>
-
+      {/* Forgot Password */}
+      <div className="flex justify-end">
         <Link
           to="/forgot-password"
           className="text-sm font-medium text-primary-600 dark:text-primary-500 hover:text-primary-700 dark:hover:text-primary-400"

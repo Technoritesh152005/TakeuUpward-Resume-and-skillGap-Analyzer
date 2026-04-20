@@ -3,6 +3,7 @@ import logger from "../utils/logs.js"
 
 const connectDb = async function db_connection() {
     try {
+        // connection of mongodb with mongoose
         const dbConnection = await mongoose.connect(process.env.DATABASE_URL)
         logger.info(`MongoDB connected: ${dbConnection.connection.host}`)
         return dbConnection

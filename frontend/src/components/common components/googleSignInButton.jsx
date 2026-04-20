@@ -1,10 +1,8 @@
-import { Chrome } from 'lucide-react';
+import { API_BASE_URL } from '../../communication/api.js';
 
 const GoogleSignInButton = ({ text = "Continue with Google" }) => {
   const handleGoogleSignIn = () => {
-    // Redirect to backend Google OAuth
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:7000/api';
-    window.location.href = `${apiUrl}/auth/google`;
+    window.location.href = `${API_BASE_URL}/auth/google`;
   };
 
   return (

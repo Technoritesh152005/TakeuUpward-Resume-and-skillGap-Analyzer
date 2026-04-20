@@ -33,7 +33,8 @@ const useAuthStore = create((set, get) => ({
                     isLoading: false,
                     user: response.data.data.user,
                     error: null,
-                    isAuthenticated: true
+                    isAuthenticated: true,
+                    hasCheckedAuth: true,
                 }
             )
             return response
@@ -43,6 +44,7 @@ const useAuthStore = create((set, get) => ({
                     user: null,
                     isAuthenticated: false,
                     isLoading: false,
+                    hasCheckedAuth: true,
                     error: getAuthErrorMessage(error, 'Failed Login')
                 }
             )
@@ -62,7 +64,8 @@ const useAuthStore = create((set, get) => ({
                     isLoading: false,
                     user: resp.data.data.user,
                     error: null,
-                    isAuthenticated: true
+                    isAuthenticated: true,
+                    hasCheckedAuth: true,
                 }
             )
             return resp;
@@ -72,6 +75,7 @@ const useAuthStore = create((set, get) => ({
                     user: null,
                     isAuthenticated: false,
                     isLoading: false,
+                    hasCheckedAuth: true,
                     error: getAuthErrorMessage(error, 'Signup Failed')
                 }
             )
@@ -89,7 +93,8 @@ const useAuthStore = create((set, get) => ({
                     isLoading: false,
                     user: null,
                     error: null,
-                    isAuthenticated: false
+                    isAuthenticated: false,
+                    hasCheckedAuth: true,
                 }
             )
         } catch (error) {
@@ -97,6 +102,7 @@ const useAuthStore = create((set, get) => ({
                 user: null,
                 isAuthenticated: false,
                 isLoading: false,
+                hasCheckedAuth: true,
                 error: null,
             });
         }
@@ -110,7 +116,11 @@ const useAuthStore = create((set, get) => ({
  
   // Update user profile
   updateUser: (userData) => {
-    set({ user: { ...get().user, ...userData } });
+    set({
+      user: { ...(get().user || {}), ...userData },
+      isAuthenticated: Boolean(userData),
+      hasCheckedAuth: true,
+    });
   },
 
   // Load user from token (check if already logged in)
@@ -127,6 +137,7 @@ const useAuthStore = create((set, get) => ({
         hasCheckedAuth: true,
         error: null,
       });
+      return userData;
     } catch (error) {
       set({
         user: null,
@@ -135,6 +146,7 @@ const useAuthStore = create((set, get) => ({
         hasCheckedAuth: true,
         error: null,
       });
+      throw error;
     }
   },
 }))

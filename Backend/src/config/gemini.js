@@ -8,11 +8,13 @@ const GEMINI_CONFIG = {
   maxOutputTokens: 3000,
 };
 
+// primary model primary keys
 const PRIMARY_GEMINI_KEYS = [
   process.env.GEMINI_API_KEY,
   process.env.GEMINI_API_KEY_2,
 ].filter(Boolean);
 
+// fallback model fallback keys
 const FALLBACK_GEMINI_KEYS = [
   process.env.GEMINI_API_KEY_3,
 ].filter(Boolean);

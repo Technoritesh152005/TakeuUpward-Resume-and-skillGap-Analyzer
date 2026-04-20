@@ -8,6 +8,7 @@ import { ApiResponse } from '../../utils/apiResponse.js';
 import { asyncHandler } from '../../utils/asyncHandler.js';
 import logger from '../../utils/logs.js';
 import { sendPasswordResetEmail } from '../../utils/sendEmail.js';
+import { clearAuthCookies } from '../../utils/authCookies.js';
 
 
 
@@ -36,7 +37,11 @@ export const changePassword = asyncHandler(async (req, res) => {
         throw new ApiError(404, 'User not found')
     }
 
-    const isPasswordCorrect = await user.isPasswordCorrect(oldPassword)
+    if (!user.password) {
+        throw new ApiError(400, 'Password change is not available for this account')
+    }
+
+    const isPasswordCorrect = await user.comparePassword(oldPassword)
 
     if (!isPasswordCorrect) {
         throw new ApiError(400, 'Current password is incorrect')
@@ -54,6 +59,7 @@ export const changePassword = asyncHandler(async (req, res) => {
     )
 
     logger.info(`Password changed successfully for user: ${user.email}`)
+    clearAuthCookies(res)
 
     res.status(200).json(
         new ApiResponse(200, null, 'Password changed successfully. Please login again')
@@ -164,6 +170,7 @@ export const resetPassword = asyncHandler(async (req, res) => {
     )
 
     logger.info(`Password reset successfully for user: ${user.email}`)
+    clearAuthCookies(res)
 
     res.status(200).json(
         new ApiResponse(200, null, 'Password has been reset successfully. Please login again')

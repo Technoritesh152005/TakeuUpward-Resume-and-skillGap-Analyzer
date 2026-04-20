@@ -102,6 +102,7 @@ const jobRoleSchema = mongoose.Schema(
         },
         growthRate: Number,
         jobOpenings: Number,
+        //related roles basically matches category and skill and rate them. i think it works like this only
         relatedRoles: [{
             type: mongoose.Types.ObjectId,
             ref: 'jobRoleModel',
@@ -165,6 +166,7 @@ jobRoleSchema.methods.getAllRequiredSkill = function(){
 
     for(let s of critical){
         // woh item ko pehla aur dekh ki woh category critical hai kya
+        // take all proprites of criticial and put in skills with catgeory also
         skills.push({...s , category:'critical'})
     }
     for(let s of important){
