@@ -9,7 +9,7 @@ import {
   Clock3,
   DollarSign,
   Lightbulb,
-  Map,
+  Map as MapIcon,
   Rocket,
   Sparkles,
   Target,
@@ -81,6 +81,22 @@ const getPrioritySkills = (analysis) => [
   .filter(Boolean)
   .slice(0, 4);
 
+const roadmapStatusTone = {
+  queued: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300',
+  processing: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+  finalizing: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+  completed: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
+  failed: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+};
+
+const roadmapStatusLabel = {
+  queued: 'Roadmap queued',
+  processing: 'Roadmap processing',
+  finalizing: 'Roadmap finalizing',
+  completed: 'Roadmap ready',
+  failed: 'Roadmap failed',
+};
+
 const RoadmapCreatePage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -89,6 +105,7 @@ const RoadmapCreatePage = () => {
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [analyses, setAnalyses] = useState([]);
+  const [roadmaps, setRoadmaps] = useState([]);
   const [selectedAnalysisId, setSelectedAnalysisId] = useState(analysisIdFromQuery);
   const [preferences, setPreferences] = useState(defaultPreferences);
   const [aiUsage, setAiUsage] = useState(null);
@@ -96,6 +113,7 @@ const RoadmapCreatePage = () => {
 
   useEffect(() => {
     fetchCompletedAnalyses();
+    fetchExistingRoadmaps();
     fetchAiUsage();
   }, []);
 
@@ -125,6 +143,17 @@ const RoadmapCreatePage = () => {
     }
   };
 
+  const fetchExistingRoadmaps = async () => {
+    try {
+      const response = await roadmapService.getMyRoadmaps({
+        page: 1,
+        limit: 100,
+      });
+      setRoadmaps(Array.isArray(response?.docs) ? response.docs : []);
+    } catch (error) {
+    }
+  };
+
   const completedAnalyses = useMemo(
     () => analyses.filter((item) => item?.status === 'completed'),
     [analyses]
@@ -145,6 +174,16 @@ const RoadmapCreatePage = () => {
   const selectedAnalysis = useMemo(
     () => completedAnalyses.find((item) => item?._id === selectedAnalysisId) || null,
     [completedAnalyses, selectedAnalysisId]
+  );
+
+  const roadmapByAnalysisId = useMemo(
+    () =>
+      new Map(
+        roadmaps
+          .map((roadmap) => [roadmap?.analysis?._id, roadmap])
+          .filter(([analysisId]) => Boolean(analysisId))
+      ),
+    [roadmaps]
   );
 
   const summary = useMemo(() => {
@@ -191,6 +230,7 @@ const RoadmapCreatePage = () => {
       });
       const roadmap = response?.roadmap || response;
       if (response?.aiUsage) setAiUsage(response.aiUsage);
+      await fetchExistingRoadmaps();
 
       // Queue-aware create flow: navigate immediately and let detail page track progress.
       toast.success(roadmapStatusCopy[roadmap?.status] || 'Roadmap created successfully');
@@ -206,6 +246,16 @@ const RoadmapCreatePage = () => {
       if (normalizedMessage.includes('existing roadmap')) {
         try {
           const existingRoadmap = await roadmapService.getRoadmapByAnalysis(selectedAnalysisId);
+          if (existingRoadmap?.status === 'failed') {
+            const retriedRoadmapResponse = await roadmapService.retryRoadmap(existingRoadmap?._id);
+            const retriedRoadmap = retriedRoadmapResponse?.roadmap || retriedRoadmapResponse;
+            if (retriedRoadmapResponse?.aiUsage) setAiUsage(retriedRoadmapResponse.aiUsage);
+            await fetchExistingRoadmaps();
+            toast.success('Existing failed roadmap found. Retrying it now.');
+            navigate(`/roadmap/${retriedRoadmap?._id || existingRoadmap?._id}`);
+            return;
+          }
+
           toast.success('Existing roadmap found. Opening it now.');
           navigate(`/roadmap/${existingRoadmap?._id}`);
           return;
@@ -236,7 +286,7 @@ const RoadmapCreatePage = () => {
               </button>
 
               <p className="mt-5 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-white/80">
-                <Map className="h-4 w-4" />
+                <MapIcon className="h-4 w-4" />
                 Roadmap Builder
               </p>
               <h1 className="mt-4 text-3xl font-bold tracking-tight md:text-4xl">
@@ -276,6 +326,10 @@ const RoadmapCreatePage = () => {
                   {completedAnalyses.map((analysis) => {
                     const isSelected = analysis._id === selectedAnalysisId;
                     const totalGaps = getGapCount(analysis);
+                    const roadmap = roadmapByAnalysisId.get(analysis._id);
+                    const roadmapStatus = roadmap?.processingStage === 'finalizing'
+                      ? 'finalizing'
+                      : roadmap?.status;
 
                     return (
                       <button
@@ -294,6 +348,11 @@ const RoadmapCreatePage = () => {
                               <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
                                 Completed
                               </span>
+                              {roadmapStatus ? (
+                                <span className={`rounded-full px-3 py-1 text-xs font-semibold ${roadmapStatusTone[roadmapStatus] || 'bg-neutral-100 text-neutral-700 dark:bg-neutral-700 dark:text-neutral-200'}`}>
+                                  {roadmapStatusLabel[roadmapStatus] || roadmapStatus}
+                                </span>
+                              ) : null}
                               <span className="text-xs text-neutral-500 dark:text-neutral-400">
                                 {analysis?.createdAt ? format(new Date(analysis.createdAt), 'dd MMM yyyy') : 'No date'}
                               </span>
@@ -479,7 +538,7 @@ const RoadmapCreatePage = () => {
                   disabled={!canSubmit || isAiLimitReached}
                   className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-primary-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  <Map className="h-4 w-4" />
+                  <MapIcon className="h-4 w-4" />
                   {creating ? 'Generating roadmap...' : 'Generate Roadmap'}
                 </button>
                 {isAiLimitReached ? (
@@ -567,7 +626,7 @@ const MetricCard = ({ label, value }) => (
 const EmptyStateCard = ({ title, description, actionLabel, onAction }) => (
   <div className="rounded-3xl border border-dashed border-neutral-300 bg-neutral-50 px-6 py-14 text-center dark:border-neutral-700 dark:bg-neutral-900/40">
     <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-soft dark:bg-neutral-800">
-      <Map className="h-8 w-8 text-neutral-400" />
+      <MapIcon className="h-8 w-8 text-neutral-400" />
     </div>
     <h3 className="mt-5 text-xl font-semibold text-neutral-900 dark:text-white">{title}</h3>
     <p className="mt-2 text-sm leading-6 text-neutral-500 dark:text-neutral-400">{description}</p>

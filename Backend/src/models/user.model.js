@@ -7,6 +7,7 @@ const DEFAULT_DAILY_AI_LIMIT = 4
 const DEFAULT_AI_USAGE_TIMEZONE = 'Asia/Kolkata'
 
 // function to show the limit of ai uasge
+// basicaally return day
 const getCurrentAiUsageDay = () => {
     return new Intl.DateTimeFormat('en-CA', {
         timeZone: DEFAULT_AI_USAGE_TIMEZONE,
@@ -40,6 +41,7 @@ const learningPreferenceSchema = new mongoose.Schema(
     { _id: false }
 )
 
+// basicaaly may be done for setting / profile
 const careerPreferenceSchema = new mongoose.Schema(
     {
         targetRole: {
@@ -75,6 +77,7 @@ const careerPreferenceSchema = new mongoose.Schema(
     { _id: false }
 )
 
+// schema for ai credits
 const aiUsageSchema = new mongoose.Schema(
     {
         dailyLimit: {
@@ -110,7 +113,7 @@ const userSchema = mongoose.Schema(
             type: String,
             required: [true, "Please provide your email"],
             trim: true,
-            maxLength: [25, "Size cannot exceed more than 25 chaacters"],
+            maxLength: [254, "Size cannot exceed more than 254 characters"],
             match: [
                 /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
                 'Please provide a valid email',
@@ -138,6 +141,7 @@ const userSchema = mongoose.Schema(
         avatar: {
             type: String,
         },
+        // uniquely identifier for user if done oauth 
         googleId: {
             type: String,
             sparse: true,
@@ -229,6 +233,7 @@ userSchema.virtual('preferences')
     // if (!this.password.isModified()) {
     //     next()
     // }
+    // this runs before .save
     userSchema.pre('save', async function (next) {
 
         if (!this.isModified('password')) {
@@ -253,6 +258,10 @@ userSchema.virtual('preferences')
 // in compare method we hash the new password and check their hash value
 userSchema.methods.comparePassword = async function (eneteredPassword) {
     return await bcrypt.compare(eneteredPassword,this.password)
+}
+
+userSchema.methods.isPasswordCorrect = async function (enteredPassword) {
+    return this.comparePassword(enteredPassword)
 }
 
 // now u need to create jwt access and refresh tokens

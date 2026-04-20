@@ -5,6 +5,9 @@ import DashboardLayout from '../components/layout/DashboardLayout.jsx';
 import resumeService from '../services/resumeService.js';
 import toast from 'react-hot-toast';
 
+// keep frontend upload validation aligned with backend defaults unless env overrides it
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+
 const Uploadresume = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
@@ -20,8 +23,6 @@ const Uploadresume = () => {
     'application/pdf',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   ];
-  const MAX_FILE_SIZE = 5 * 1024 * 1024;
-
   const validateFile = (file) => {
     const fileExtension = file?.name?.split('.').pop()?.toLowerCase();
     const supportedExtensions = ['pdf', 'docx'];
@@ -30,7 +31,7 @@ const Uploadresume = () => {
       return 'Only PDF and DOCX files are supported.';
     }
     if (file.size > MAX_FILE_SIZE) {
-      return 'File size must be less than 5MB.';
+      return 'File size must be less than 10MB.';
     }
     return null;
   };
@@ -158,7 +159,7 @@ const Uploadresume = () => {
                     ref={fileInputRef}
                     type="file"
                     className="hidden"
-                    accept=".pdf,.doc,.docx"
+                    accept=".pdf,.docx"
                     onChange={handleChange}
                     disabled={uploading}
                   />
@@ -175,7 +176,7 @@ const Uploadresume = () => {
                             Drag & Drop
                           </p>
                           <p className="text-neutral-500 text-xs font-black uppercase tracking-[0.35em]">
-                            Supports PDF, DOCX (Max 5MB)
+                            Supports PDF, DOCX (Max 10MB)
                           </p>
                         </div>
 

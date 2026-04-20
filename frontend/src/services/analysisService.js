@@ -26,7 +26,13 @@ const analysisService = {
       jobRoleId,
       ...(preference ? { preference } : {}),
     });
-    return extractPayload(response);
+    return {
+      ...extractPayload(response),
+      meta: {
+        statusCode: response?.status,
+        message: response?.data?.message,
+      },
+    };
   },
 
   compareRoles: async ({ resumeId, jobRoleIds }) => {

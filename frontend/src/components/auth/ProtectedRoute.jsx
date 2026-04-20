@@ -11,8 +11,10 @@ const ProtectedRoute = ({ children }) => {
   // Load user on mount if not already loaded
 // when components loads it checks if valid
   useEffect(() => {
-    loadUser();
-  }, [loadUser]);
+    if (!hasCheckedAuth && !isLoading) {
+      loadUser().catch(() => {});
+    }
+  }, [hasCheckedAuth, isLoading, loadUser]);
 
   // Show loading spinner while checking auth
   if (isLoading || !hasCheckedAuth) {

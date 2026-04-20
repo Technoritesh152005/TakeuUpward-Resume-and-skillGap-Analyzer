@@ -35,7 +35,7 @@ router.post('/login',validateLogin, login)
  * @desc    Logout user (revoke refresh token)
  * @access  Private means protectmust be there
  */
-router.post('/logout',protectAccess,logout)
+router.post('/logout',logout)
 
 /**
  * @route   POST /api/v1/auth/refresh-token
@@ -48,6 +48,8 @@ router.post('/refresh-token',refreshToken)
 router.post('/forgot-password',forgotPassword)
 
 router.post('/reset-password',resetPassword)
+
+router.post('/change-password',protectAccess,changePassword)
 
 
 /**

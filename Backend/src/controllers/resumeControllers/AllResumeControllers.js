@@ -162,9 +162,9 @@ export const getMyResume = asyncHandler(async (req, res, next) => {
     // .json(201,'All resume of user fetched successfully',resume)
     // the problem in above code is that we return all resume once. there is a other method called paginate where we return data in chinks
 
-    const { limit = 10, page = 1 } = req.query
+    const { limit = 10, page = 1, sort = '-createdAt', processingStatus } = req.query
 
-    const cacheKey = `Resume:user:${req.user._id}:limit:${limit}:page:${page}`
+    const cacheKey = `Resume:user:${req.user._id}:limit:${limit}:page:${page}:sort:${sort}:processingStatus:${processingStatus || 'all'}`
     const cachedData = await redisClient.get(cacheKey)
 
     if (cachedData) {
@@ -172,14 +172,21 @@ export const getMyResume = asyncHandler(async (req, res, next) => {
         return res.status(200)
             .json(new ApiResponse(200, data, 'Resume of user fetched from cache successfuly'))
     }
+    // keep inactive resumes hidden across the list API as this powers the main resume UI
+    const filter = {
+        user: req.user._id,
+        $or: [{ isActive: true }, { isActive: { $exists: false } }]
+    }
+
+    if (processingStatus) {
+        filter.processingStatus = processingStatus
+    }
+
     const resume = await resumeModel.paginate(
-        {
-            user: req.user._id,
-            $or: [{ isActive: true }, { isActive: { $exists: false } }]
-        }, {
+        filter, {
         page: page,
         limit,
-        sort: { createdAt: -1 },
+        sort,
         select: '-rawText',
     }
     )
@@ -202,15 +209,15 @@ export const getResumeById = asyncHandler(async (req, res, next) => {
         return res.status(200)
             .json(new ApiResponse(200, data, 'Resume fetched successfully from cache'))
     }
-    const resume = await resumeModel.findOne({ _id: req.params.id, user: req.user._id })
+    const resume = await resumeModel.findOne({
+        _id: req.params.id,
+        user: req.user._id,
+        $or: [{ isActive: true }, { isActive: { $exists: false } }]
+    })
 
     if (!resume) {
         throw new ApiError(404, 'Resume not found')
     }
-    if (resume.isActive === false) {
-        throw new ApiError(400, 'Resume is not active... u cannot get it')
-    }
-
     await redisClient.setEx(cacheKey, 900, JSON.stringify(resume))
     res.status(200)
         .json(new ApiResponse(200, resume, 'Resume fetched of user succesfully'))
@@ -224,7 +231,11 @@ export const deleteResume = asyncHandler(async (req, res, next) => {
     const resume = req.params.id
     const user = req.user
 
-    const resumeData = await resumeModel.findOne({ _id: resume, user: user._id })
+    const resumeData = await resumeModel.findOne({
+        _id: resume,
+        user: user._id,
+        $or: [{ isActive: true }, { isActive: { $exists: false } }]
+    })
 
     if (!resumeData) {
         throw new ApiError(400, 'No resume found of user')
@@ -257,7 +268,12 @@ export const getResumeSkill = asyncHandler(async (req, res, next) => {
         return res.status(200)
             .json(new ApiResponse(200, data, 'Resume skill of user fetched from cache'))
     }
-    const resume = await resumeModel.findOne({ _id: req.params.id, user: req.user._id })
+    // deleted resumes should behave as unavailable for downstream summary reads too
+    const resume = await resumeModel.findOne({
+        _id: req.params.id,
+        user: req.user._id,
+        $or: [{ isActive: true }, { isActive: { $exists: false } }]
+    })
 
     if (!resume) {
         throw new ApiError(400, 'No resume found')
@@ -276,6 +292,7 @@ export const reparseResume = asyncHandler(async (req, res) => {
     const resume = await resumeModel.findOne({
         _id: req.params.id,
         user: req.user._id,
+        $or: [{ isActive: true }, { isActive: { $exists: false } }]
     }).select('+rawText');
 
     if (!resume) {

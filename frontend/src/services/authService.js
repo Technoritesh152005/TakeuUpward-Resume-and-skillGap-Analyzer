@@ -21,9 +21,10 @@ class AuthService {
             throw error.response?.data || error
         }
     }
-    async logout(){
+   async logout(){
         try{
-            await api.post('/auth/logout')
+            const response = await api.post('/auth/logout')
+            return response
         }catch(error){
             throw error.response?.data || error
         }
@@ -63,7 +64,7 @@ class AuthService {
         const response = await api.post('/auth/forgot-password',{email})
         return response;
     }catch(error){
-        throw error.message
+        throw error.response?.data || error
     }
    }
 
@@ -79,17 +80,6 @@ class AuthService {
     }
    }
 
-    isAuthenticated(){
-        return false
-    }
-
-    getAccessToken (){
-        return null
-    }
-
-    getRefreshToken(){
-        return null
-    }
 }
 
 // we r passing class instance

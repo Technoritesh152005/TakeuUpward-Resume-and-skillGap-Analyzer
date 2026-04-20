@@ -90,7 +90,7 @@ const asNumber = (value, fallback = 0) => {
 }
 
 const getAnalysisStatusPollMs = (status, processingStage) => {
-  if (status !== 'queued' && status !== 'processing' && status !== 'finalizing') {
+  if (status !== 'queued' && status !== 'processing' && processingStage !== 'finalizing') {
     return null
   }
 
@@ -98,11 +98,22 @@ const getAnalysisStatusPollMs = (status, processingStage) => {
     return 6000
   }
 
-  if (processingStage === 'finalizing' || status === 'finalizing') {
+  if (processingStage === 'finalizing') {
     return 4000
   }
 
   return 3000
+}
+
+const isAnalysisInProgress = (analysis) => {
+  const status = analysis?.status
+  const processingStage = analysis?.processingStage
+
+  return (
+    status === 'queued' ||
+    status === 'processing' ||
+    processingStage === 'finalizing'
+  )
 }
 
 const normalizeAnalysisDetail = (payload) => {
@@ -185,8 +196,7 @@ const AnalysisDetailPage = ()=>{
   const [jobRecommendationMeta, setJobRecommendationMeta] = useState({ basedOn: [] })
   const [jobsLoading, setJobsLoading] = useState(false)
   const isAiLimitReached = (aiUsage?.usesRemaining ?? 0) === 0
-  const isAnalysisRunning = ['queued', 'processing', 'finalizing'].includes(analysis?.status)
-  const isAnalysisDeleteBlocked = ['processing', 'finalizing'].includes(analysis?.status)
+  const isAnalysisDeleteBlocked = analysis?.status === 'processing' || analysis?.processingStage === 'finalizing'
 
   // whenever there is a change in id in params call these means someone want analysis detail
   useEffect(()=>{
@@ -204,7 +214,7 @@ const AnalysisDetailPage = ()=>{
   // if analysis not finished keep retrying
   useEffect(() => {
     if (!id) return undefined
-    if (!['queued', 'processing', 'finalizing'].includes(analysis?.status)) return undefined
+    if (!isAnalysisInProgress(analysis)) return undefined
 
     const pollMs = getAnalysisStatusPollMs(analysis?.status, analysis?.processingStage)
     if (!pollMs) return undefined
@@ -227,7 +237,7 @@ const AnalysisDetailPage = ()=>{
       }
       const payload = await analysisService.getAnalysisById(id)
       const cleandata = payload?.data || payload
-      if (silent && ['queued', 'processing', 'finalizing'].includes(cleandata?.status)) {
+      if (silent && isAnalysisInProgress(cleandata)) {
         setAnalysis((current) => ({
           ...current,
           status: cleandata?.status || current?.status,
@@ -350,7 +360,21 @@ const AnalysisDetailPage = ()=>{
       setRegenerating(true)
       const payload = await analysisService.regenerateAnalysis(id)
       const clean = payload?.analysis || payload?.data || payload
-      setAnalysis(normalizeAnalysisDetail(clean))
+      setAnalysis((current) => ({
+        ...normalizeAnalysisDetail({
+          ...current,
+          ...clean,
+        }),
+        status: clean?.status || 'queued',
+        processingStage: clean?.processingStage || 'queued',
+        error: clean?.error || '',
+        queuedAt: clean?.queuedAt || new Date().toISOString(),
+        processingStartedAt: clean?.processingStartedAt || null,
+        completedAt: clean?.completedAt || null,
+        processingTime: clean?.processingTime || null,
+      }))
+      setRecommendedJobs([])
+      setJobRecommendationMeta({ basedOn: [] })
       if (payload?.aiUsage) setAiUsage(payload.aiUsage)
       toast.success(clean?.status === 'queued' ? 'Analysis retry queued successfully' : 'Analysis regenerated successfully')
     } catch (error) {
@@ -389,6 +413,16 @@ const AnalysisDetailPage = ()=>{
                     {analysis.status}
                   </span>
                 )}
+                {Number(analysis?.version || 1) > 1 ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-primary-500/20 bg-primary-500/10 px-3 py-1 text-xs font-semibold text-primary-300">
+                    v{analysis.version}
+                  </span>
+                ) : null}
+                {Number(analysis?.version || 1) > 1 ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-300">
+                    Regenerated
+                  </span>
+                ) : null}
               </div>
             </div>
 
@@ -403,7 +437,12 @@ const AnalysisDetailPage = ()=>{
               </span>
               <span className="inline-flex items-center gap-2">
                 <Clock3 className="h-4 w-4 text-neutral-500" />
-                {analysis?.createdAt ? format(new Date(analysis.createdAt), 'MMM dd, yyyy') : 'No Date'}
+                Created {analysis?.createdAt ? format(new Date(analysis.createdAt), 'MMM dd, yyyy') : 'No Date'}
+              </span>
+              <span className="inline-flex items-center gap-2">
+                <Clock3 className="h-4 w-4 text-neutral-500" />
+                {Number(analysis?.version || 1) > 1 ? 'Last updated' : 'Updated'}{' '}
+                {analysis?.updatedAt ? format(new Date(analysis.updatedAt), 'MMM dd, yyyy, hh:mm a') : 'Not available'}
               </span>
             </div>
 
@@ -464,7 +503,7 @@ const AnalysisDetailPage = ()=>{
           <div className="h-96 animate-pulse rounded-3xl border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800 xl:col-span-2" />
           <div className="h-96 animate-pulse rounded-3xl border border-neutral-200 bg-white dark:border-neutral-700 dark:bg-neutral-800" />
         </div>
-      ) : ['queued', 'processing', 'finalizing'].includes(analysis?.status) ? (
+      ) : isAnalysisInProgress(analysis) ? (
         <AnalysisProcessingState analysis={analysis} />
       ) : analysis?.status === 'failed' ? (
         <AnalysisFailedState
@@ -789,7 +828,7 @@ const AnalysisProcessingState = ({ analysis }) => {
 
     updateElapsed()
 
-    if (!['queued', 'processing', 'finalizing'].includes(analysis?.status)) {
+    if (!isAnalysisInProgress(analysis)) {
       return undefined
     }
 

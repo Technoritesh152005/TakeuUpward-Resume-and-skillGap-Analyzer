@@ -75,6 +75,7 @@ const progressSchema = new mongoose.Schema(
             type: Number,
             default: 0,
         },
+        // weekly time log basically means week bhar me kya activity kiya maybe it start from monday or sunday
         weeklyTimeLog: [
             {
                 week: Date,

@@ -16,7 +16,7 @@ const validateSignUp = (req, res, next) => {
             .messages({
                 'string.empty': 'Name is required',
                 'string.min': 'Name must be at least 2 character',
-                'string.max': 'Name cannot excceed above 12 character'
+                'string.max': 'Name cannot exceed 30 characters'
             }),
 
         email: joi
@@ -35,13 +35,13 @@ const validateSignUp = (req, res, next) => {
             string()
             .required()
             .min(8)
-            .max(12)
+            .max(128)
             .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
             .messages(
                 {
                     'password.empty': 'Password cannot be empty',
                     'password.min': 'Password should be min 8 characters',
-                    'password.max': 'Password cannot exceed more than 12 characters',
+                    'password.max': 'Password cannot exceed more than 128 characters',
                     'string.pattern.base': 'Password must contain at least one uppercase letter, one lowercase letter, and one number',
                 }
             ),

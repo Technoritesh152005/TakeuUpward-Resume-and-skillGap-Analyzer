@@ -10,6 +10,7 @@ const analysisSchema = mongoose.Schema(
             required: true,
             index: true
         },
+        // this says this will have id of the other refernce
         resume: {
             type: mongoose.Types.ObjectId,
             ref: 'resumeModel',
@@ -170,11 +171,13 @@ const analysisSchema = mongoose.Schema(
         ],
 
         // Transferable skills
-        transferrableSkills: {
-            skill: String,
-            relatesTo: [String],
-            explanation: String
-        },
+        transferrableSkills: [
+            {
+                skill: String,
+                relatesTo: [String],
+                explanation: String
+            }
+        ],
 
         // Experience analysis
         experienceAnalysis: {
@@ -194,6 +197,25 @@ const analysisSchema = mongoose.Schema(
         estimatedTimeToReady: {
             weeks: Number,
             reason: String
+        },
+
+        userPreferences: {
+            hoursPerWeek: {
+                type: Number,
+                min: 1,
+                max: 168,
+                default: 8,
+            },
+            budget: {
+                type: String,
+                enum: ['free', 'low', 'medium', 'high'],
+                default: 'free',
+            },
+            learningStyle: {
+                type: String,
+                enum: ['mixed', 'auditory', 'visual', 'reading', 'kinesthetic'],
+                default: 'mixed',
+            },
         },
 
         // ATS score
@@ -232,6 +254,7 @@ const analysisSchema = mongoose.Schema(
             },
         },
 
+        // application readineess basically tells the status of analysis to apply before job
        applicationReadiness:{
         label:{
             type:String,
@@ -244,6 +267,7 @@ const analysisSchema = mongoose.Schema(
         nextAction:String,
        },
 
+    //    apart target role he can have a look to the closest role
        closestWinnableRole: {
         roleId: {
             type: mongoose.Types.ObjectId,
@@ -306,7 +330,7 @@ const analysisSchema = mongoose.Schema(
         toObject: { virtuals: true }
     }
 );
-
+// When you have many records, you don’t want to send all at once.
 analysisSchema.plugin(mongoosePaginate);
 
 // Index for dashboard queries

@@ -189,17 +189,33 @@ const normalizeDifficulty = (value) => {
     return 'beginner';
 };
 
-const normalizeReadinessLevel = (value) => {
+const normalizeReadinessLevel = (value, matchScore = 0) => {
     const raw = String(value || '').trim().toLowerCase();
+    const safeMatchScore = extractNumericValue(matchScore);
 
-    if (!raw) return 'not-ready';
+    // if AI gives no usable readiness label, fall back to the actual score bands
+    if (!raw) {
+        if (safeMatchScore >= 80) return 'ready';
+        if (safeMatchScore >= 55) return 'nearly-ready';
+        return 'not-ready';
+    }
     if (raw.includes('over')) return 'overqualified';
     if (raw.includes('nearly') || raw.includes('moderately') || raw.includes('almost')) {
         return 'nearly-ready';
     }
-    if (raw === 'ready' || raw.includes('job ready')) return 'ready';
+    if (
+        raw === 'ready' ||
+        raw.includes('job ready') ||
+        raw.includes('highly ready') ||
+        raw.includes('strong fit')
+    ) {
+        return 'ready';
+    }
     if (raw.includes('not')) return 'not-ready';
 
+    // keep score as the final safety net so high-match analyses do not degrade to not-ready
+    if (safeMatchScore >= 80) return 'ready';
+    if (safeMatchScore >= 55) return 'nearly-ready';
     return 'not-ready';
 };
 
@@ -415,7 +431,8 @@ export const processAnalysisGenerationJob = async ({ analysisId, userId, resumeI
     try {
         const skillGapPromise = skillgapanalysis.performDeepSkillGapAnalyze(
             resume.parsedData,
-            jobRole
+            jobRole,
+            analysis?.userPreferences || {}
         )
 
         const atsPromise = generateAtsScore.getAtsScore(
@@ -464,7 +481,8 @@ export const processAnalysisGenerationJob = async ({ analysisId, userId, resumeI
         }
 
         analysis.readinessLevel = normalizeReadinessLevel(
-            skillGapAnalysisData.overallAssessment.readinessLevel
+            skillGapAnalysisData.overallAssessment.readinessLevel,
+            analysis.matchScore
         )
         analysis.estimatedTimeToReady = skillGapAnalysisData.overallAssessment.estimatedTimeToReady
 

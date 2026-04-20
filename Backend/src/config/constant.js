@@ -6,7 +6,7 @@ export const ROLES = {
 export const FILE_TYPES = {
   PDF: 'application/pdf',
   DOCX: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  TXT: 'text/plain',
+  
 };
 
 export const ANALYSIS_STATUS = {

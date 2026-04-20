@@ -73,7 +73,12 @@ check whether this resume and job role id exist and to crea
 
 // during creating analysis we just create their analysis id and pass it to enque
 export const createAnalysis = asyncHandler(async (req, res) => {
-    const { resumeId, jobRoleId } = req.body;
+    const { resumeId, jobRoleId, preference } = req.body;
+    const resolvedPreferences = {
+        hoursPerWeek: preference?.hoursPerWeek ?? req.user?.preference?.hoursPerWeek ?? 8,
+        budget: preference?.budget ?? req.user?.preference?.budget ?? 'free',
+        learningStyle: preference?.learningStyle ?? req.user?.preference?.learningStyle ?? 'mixed',
+    };
 
     // Verify resume exists
     const resume = await resumeModel.findOne({ 
@@ -86,6 +91,9 @@ export const createAnalysis = asyncHandler(async (req, res) => {
     }
     if (resume.isActive === false) {
         throw new ApiError(400, 'Your resume is inactive');
+    }
+    if (resume.processingStatus !== 'completed') {
+        throw new ApiError(400, 'Resume is not parsed yet');
     }
     if (!resume.parsedData) {
         throw new ApiError(400, 'Resume is not parsed yet');
@@ -101,6 +109,9 @@ export const createAnalysis = asyncHandler(async (req, res) => {
         user: req.user._id,
         resume: resumeId,
         jobRole: jobRoleId,
+        'userPreferences.hoursPerWeek': resolvedPreferences.hoursPerWeek,
+        'userPreferences.budget': resolvedPreferences.budget,
+        'userPreferences.learningStyle': resolvedPreferences.learningStyle,
         isActive: true,
         status: ANALYSIS_STATUS.COMPLETED,
     })
@@ -127,6 +138,7 @@ export const createAnalysis = asyncHandler(async (req, res) => {
         resume: resumeId,
         user: req.user._id,
         jobRole: jobRoleId,
+        userPreferences: resolvedPreferences,
         matchScore: 0,
         status: ANALYSIS_STATUS.QUEUED,
         processingStage: ANALYSIS_PROCESSING_STAGE.QUEUED,
@@ -268,7 +280,7 @@ export const getAnalysisById = asyncHandler(async (req, res) => {
     })
         // u will analysis of that user with the id>< so id is unique means u will find
         // onedocument only of analysis model. populate resume and 
-        .populate('resume', 'fileName , originalFileName , parsedData uploadedAt')
+        .populate('resume', 'fileName originalFileName parsedData uploadedAt')
         .populate('jobRole')
 
     if (!analysis) {
@@ -515,6 +527,11 @@ export const regenerateAnalysis = asyncHandler(async (req, res) => {
     analysis.completedAt = undefined;
     analysis.processingTime = undefined;
     analysis.version = Number(analysis.version || 1) + 1;
+    analysis.userPreferences = {
+      hoursPerWeek: preferences?.hoursPerWeek ?? analysis?.userPreferences?.hoursPerWeek ?? 8,
+      budget: preferences?.budget ?? analysis?.userPreferences?.budget ?? 'free',
+      learningStyle: preferences?.learningStyle ?? analysis?.userPreferences?.learningStyle ?? 'mixed',
+    };
 
     await analysis.save();
     await clearAnalysisCache(req.user._id, analysis._id);

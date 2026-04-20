@@ -4,6 +4,7 @@ import logger from "../../utils/logs.js"
 import {refreshTokenModel} from "../../models/refreshToken.js"
 import { ApiResponse } from "../../utils/apiResponse.js"
 import { getCookieValue, setAuthCookies, REFRESH_TOKEN_COOKIE } from "../../utils/authCookies.js"
+import jwt from 'jsonwebtoken'
 
 export const refreshToken = asyncHandler(async(req,res,next)=>{
 
@@ -25,7 +26,20 @@ export const refreshToken = asyncHandler(async(req,res,next)=>{
         throw new ApiError(401,'Token got expired')
     }
 
+    try {
+        jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET)
+    } catch (error) {
+        throw new ApiError(401, 'Invalid refresh token')
+    }
+
     const user = token.user;
+    if (!user) {
+        throw new ApiError(401, 'User not found for refresh token')
+    }
+    if (!user.isActive) {
+        throw new ApiError(401, 'User account has been deactivated')
+    }
+
     // now generate token both access and refresh token for security
     const newaccessToken = user.generateAccessToken()
     const newrefreshToken = user.generateRefreshToken()

@@ -381,20 +381,77 @@ export const createRoadmap = asyncHandler(async (req, res) => {
         throw new ApiError(400, 'Analysis has been currently not in completed status. please complete the analsys status')
     }
 
-    // also check if analysis already have roadmap created
-    const existingRoadmap = await roadmapModel.findOne({
-        analysis: analysis._id,
-        isActive: true
-    })
-    if (existingRoadmap) {
-        throw new ApiError(400, 'Existing roadmap found of this analaysis')
-    }
-
     const preference = {
         hoursPerWeek: preferences?.hoursPerWeek || req.user?.preferences?.hoursPerWeek || 10,
         budget: preferences?.budget || req.user?.preferences?.budget || 'free',
         learningStyle: preferences?.learningStyle || req.user?.preferences?.learningStyle || 'mixed',
     }
+
+    // one active roadmap per analysis/user.
+    // if it already exists, either reuse it or retry it if it failed.
+    const existingRoadmap = await roadmapModel.findOne({
+        analysis: analysis._id,
+        user: req.user._id,
+        isActive: true
+    })
+
+    if (existingRoadmap) {
+        if (existingRoadmap.status === ROADMAP_STATUS.FAILED) {
+            existingRoadmap.userPreferences = preference
+            existingRoadmap.status = ROADMAP_STATUS.QUEUED
+            existingRoadmap.processingStage = ROADMAP_PROCESSING_STAGE.QUEUED
+            existingRoadmap.error = ''
+            existingRoadmap.queuedAt = new Date()
+            existingRoadmap.processingStartedAt = null
+            existingRoadmap.completedAt = null
+            existingRoadmap.processingTime = null
+            await existingRoadmap.save()
+            await clearRoadmapCache(analysisId, req.user._id)
+
+            try {
+                await enqueueRoadmapGeneration({
+                    roadmapId: existingRoadmap._id,
+                    analysisId,
+                    userId: req.user._id,
+                })
+
+                return res.status(202).json(
+                    new ApiResponse(
+                        202,
+                        { roadmap: existingRoadmap, aiUsage: req.aiUsage },
+                        'Existing failed roadmap re-queued successfully'
+                    )
+                )
+            } catch (error) {
+                if (req.aiQuotaReserved) {
+                    req.aiUsage = await refundAiUsage(req.user._id)
+                    req.aiQuotaReserved = false
+                }
+
+                existingRoadmap.status = ROADMAP_STATUS.FAILED
+                existingRoadmap.processingStage = ROADMAP_PROCESSING_STAGE.FAILED
+                existingRoadmap.error = error.message
+                await existingRoadmap.save()
+                await clearRoadmapCache(analysisId, req.user._id)
+
+                throw error
+            }
+        }
+
+        if (req.aiQuotaReserved) {
+            req.aiUsage = await refundAiUsage(req.user._id)
+            req.aiQuotaReserved = false
+        }
+
+        return res.status(200).json(
+            new ApiResponse(
+                200,
+                { roadmap: existingRoadmap, aiUsage: req.aiUsage },
+                'Existing roadmap found'
+            )
+        )
+    }
+
     logger.info(200, 'Starting roadmap generation for the analysis')
 
     const queuedRoadmap = await roadmapModel.create({
@@ -527,7 +584,7 @@ export const retryRoadmap = asyncHandler(async (req, res) => {
         throw new ApiError(404, 'Roadmap not found')
     }
 
-    if (roadmap.status !== 'FAILED') {
+    if (roadmap.status !== ROADMAP_STATUS.FAILED) {
         throw new ApiError(400, 'Only failed roadmaps can be retried')
     }
 

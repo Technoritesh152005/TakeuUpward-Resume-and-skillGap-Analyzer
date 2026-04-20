@@ -9,7 +9,28 @@
 // every request must go to backend
 
 import axios from 'axios'
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:7000/api'
+
+const DEFAULT_API_ORIGIN = 'http://localhost:7000'
+const DEFAULT_API_VERSION = 'v1'
+
+const normalizeApiBaseUrl = (rawUrl) => {
+  const sanitized = String(rawUrl || DEFAULT_API_ORIGIN).trim().replace(/\/+$/, '')
+
+  if (/\/api\/v[^/]+$/i.test(sanitized)) {
+    return sanitized
+  }
+
+  if (/\/api$/i.test(sanitized)) {
+    return `${sanitized}/${DEFAULT_API_VERSION}`
+  }
+
+  return `${sanitized}/api/${DEFAULT_API_VERSION}`
+}
+
+const getApiOrigin = (baseUrl) => baseUrl.replace(/\/api\/v[^/]+$/i, '')
+
+const API_BASE_URL = normalizeApiBaseUrl(import.meta.env.VITE_API_URL)
+const API_ORIGIN = getApiOrigin(API_BASE_URL)
 
 // reate axios api instance to communicate
 const api = axios.create({
@@ -124,6 +145,7 @@ api.interceptors.response.use(
   );
 
 export default api
+export { API_BASE_URL, API_ORIGIN, normalizeApiBaseUrl }
 
 
 

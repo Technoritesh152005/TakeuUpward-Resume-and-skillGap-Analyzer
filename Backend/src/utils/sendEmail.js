@@ -2,6 +2,7 @@ import { ApiError } from './apiError.js'
 
 const RESEND_API_URL = 'https://api.resend.com/emails'
 
+// send email is a method to send email through resend
 const sendEmail = async ({ to, subject, html }) => {
     const apiKey = process.env.RESEND_API_KEY
     const from = process.env.MAIL_FROM

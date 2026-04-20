@@ -80,6 +80,17 @@ const processingStageText = {
   finalizing: 'Saving the final analysis output.',
 }
 
+const isAnalysisInProgress = (analysis) => {
+  const status = analysis?.status
+  const stage = analysis?.processingStage
+
+  return (
+    status === 'queued' ||
+    status === 'processing' ||
+    stage === 'finalizing'
+  )
+}
+
 const AnalysisListPage = ()=>{
 
   const navigate = useNavigate()
@@ -100,7 +111,7 @@ const AnalysisListPage = ()=>{
   }, [])
 
   useEffect(() => {
-    if (!analyses.some((item) => ['queued', 'processing', 'finalizing'].includes(item?.status))) {
+    if (!analyses.some((item) => isAnalysisInProgress(item))) {
       return undefined
     }
 
@@ -227,7 +238,7 @@ const summary = useMemo(()=>{
 },[analyses])
 
 const activeRuns = useMemo(
-  () => analyses.filter((item) => ['queued', 'processing', 'finalizing'].includes(item?.status)).length,
+  () => analyses.filter((item) => isAnalysisInProgress(item)).length,
   [analyses]
 )
 

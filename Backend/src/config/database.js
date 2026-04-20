@@ -12,6 +12,9 @@ const connectDb = async()=>{
 
     // Handling succesfully connection
     // mongoose.connection.on always take a event and a callback fxn
+//     Yes — when you call mongoose.connect(), Mongoose emits events, but not directly from connect() itself.
+//  The events come from:
+// mongoose.connection
         mongoose.connection.on('connected',()=>{
         logger.info('Mongoose connected to MongoDB')
     })

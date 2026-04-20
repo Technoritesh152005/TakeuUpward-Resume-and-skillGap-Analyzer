@@ -40,7 +40,7 @@ import resumeService from '../services/resumeService.js';
 import analysisService from '../services/analysisService.js';
 import jobRoleService from '../services/jobRoleService.js';
 import dashboardService from '../services/dashboardServices.js';
-import { getRoleTheme, getStatusConfig } from '../utils/analysisTheme.js';
+import { getRoleTheme } from '../utils/analysisTheme.js';
 
 // Animation variants
 const containerVariants = {
@@ -260,7 +260,16 @@ const AnalysisPage = () => {
       const clean = payload?.analysis || payload?.data || payload;
       setAnalysisOverview({ ...emptyOverview, ...clean });
       if (payload?.aiUsage) setAiUsage(payload.aiUsage);
-      toast.success(clean?.status === 'queued' ? 'Analysis queued successfully' : 'Analysis completed');
+      const responseMessage = String(payload?.meta?.message || '').toLowerCase();
+      const isExistingAnalysis = responseMessage.includes('existing completed analysis found');
+
+      toast.success(
+        isExistingAnalysis
+          ? 'Existing analysis already exists. Opening it now.'
+          : clean?.status === 'queued'
+            ? 'Analysis queued successfully'
+            : 'Analysis completed'
+      );
       if (clean?._id) {
         navigate(`/analysis/${clean._id}`);
       }
