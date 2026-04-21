@@ -14,11 +14,14 @@ import jobRecommendationService from '../../services/adzunaJobRecomendation/jobR
 
 const clearAnalysisCache = async (userId, analysisId = null) => {
     const normalizedUserId = String(userId);
+    // this is used to find pattern of that keys
+    // means basically it gets the user all analysis
     const userCacheKeys = await redisClient.keys(`analysis:${normalizedUserId}:*`);
+    // if u have such all ananlysiss of user they r removed from cache
     if (userCacheKeys.length) {
         await redisClient.del(...userCacheKeys);
     }
-
+    // if id given delete that particular cache
     if (analysisId) {
         await redisClient.del(`analysis:${normalizedUserId}:${analysisId}`);
     }
@@ -74,6 +77,7 @@ check whether this resume and job role id exist and to crea
 // during creating analysis we just create their analysis id and pass it to enque
 export const createAnalysis = asyncHandler(async (req, res) => {
     const { resumeId, jobRoleId, preference } = req.body;
+    // reference if not provided takes the prefernece what user sets in profile
     const resolvedPreferences = {
         hoursPerWeek: preference?.hoursPerWeek ?? req.user?.preference?.hoursPerWeek ?? 8,
         budget: preference?.budget ?? req.user?.preference?.budget ?? 'free',
@@ -105,6 +109,7 @@ export const createAnalysis = asyncHandler(async (req, res) => {
         throw new ApiError(400, 'Job Role not found');
     }
 
+    // here we check for existing analysis for same job role and same resume.. This reduces cost. But it is not same for regenerate..even if prefernce change u will have ability to create new analysis
     const existingCompletedAnalysis = await analysisModel.findOne({
         user: req.user._id,
         resume: resumeId,
@@ -119,6 +124,7 @@ export const createAnalysis = asyncHandler(async (req, res) => {
         .populate('resume', 'fileName originalFileName createdAt')
         .populate('jobRole', 'title category experienceLevel salaryRange');
 
+        // if ananlysis found existing refund the ai limits
     if (existingCompletedAnalysis) {
         if (req.aiQuotaReserved) {
             req.aiUsage = await refundAiUsage(req.user._id);
@@ -145,6 +151,7 @@ export const createAnalysis = asyncHandler(async (req, res) => {
         queuedAt: new Date(),
     });
 
+    // clear all the cache of the user related analysis
     await clearAnalysisCache(req.user._id);
 
     try {
@@ -204,6 +211,7 @@ export const getMyAnalysis = asyncHandler(async (req, res) => {
     
 
     const userId = req.user._id
+    // seperate cache key for as per query prefernce
     const cacheKey = `analysis:${String(userId)}:${JSON.stringify({
         page,
         limit,
@@ -239,6 +247,7 @@ export const getMyAnalysis = asyncHandler(async (req, res) => {
     }
     
     // paginate helps to go through deep searching and return docs
+    // You use pagination when returning large amounts of data so you don’t send everything at once.
     const analyses = await analysisModel.paginate(filter, {
         page: parseInt(page, 10) || 1,
         limit: parseInt(limit, 10) || 12,
@@ -249,6 +258,7 @@ export const getMyAnalysis = asyncHandler(async (req, res) => {
         ]
     })
     // let in cache for 5 minutes
+    // cahche of my analysysis is cache based on the prefernce
     await redisClient.setEx(cacheKey,300,JSON.stringify(analyses))
     if (!analyses) {
         throw new ApiError(404, 'Analysis not found')
@@ -304,6 +314,7 @@ export const getAnalysisStatus = asyncHandler(async (req, res) => {
         throw new ApiError(404, 'No analysis found of user')
     }
 
+    // this tells browser and proxies to not store this response anywhere
     res.set('Cache-Control', 'no-store')
     res.status(200).json(
         new ApiResponse(200, analysis, 'Analysis status fetched successfully')
@@ -328,6 +339,7 @@ export const getRecommendedJobsForAnalysis = asyncHandler(async (req, res) => {
 
     res.status(200).json(
         new ApiResponse(200, {
+            // based on are job roles and jobs are jobs...........
             basedOn: recommendations?.basedOn || [],
             jobs: recommendations?.jobs || [],
         }, 'Recommended jobs fetched successfully')
@@ -351,12 +363,14 @@ export const deleteAnalysis = asyncHandler(async (req, res) => {
         throw new ApiError(404, 'No analysis Model Found')
     }
 
+    // while deleting the ananlysis if the status of analysis is queue means we remove it from queue
     if (analaysis.status === ANALYSIS_STATUS.QUEUED) {
         await removeQueuedAnalysisJob(analaysis._id)
     }
 
     analaysis.isActive = false
     await analaysis.save()
+    // when deleted the analysis we remove all user analysis cache
     await clearAnalysisCache(userId, analysisId)
 
     logger.info(201, `User succesfuly deleted his analysis. user is: ${req.user.email}`)
@@ -395,6 +409,7 @@ export const compare_Multiple_Job_Role_With_Resume_And_Get_Analysis = asyncHandl
     }
 
     // checks whether we already have the analysis for the resume and jobrole pair
+    //it checks each ananlysis whether its job roles id is one among them
     const existingAnalyses = await analysisModel.find({
         user: userId,
         resume: resumeId,
@@ -403,6 +418,7 @@ export const compare_Multiple_Job_Role_With_Resume_And_Get_Analysis = asyncHandl
         isActive: true,
     }).populate('jobRole', 'title category experienceLevel salaryRange')
 
+    // xplain me this even i dont get this
     const savedAnalysisByRoleId = new Map(
         existingAnalyses.map((analysis) => [String(analysis.jobRole?._id), analysis])
     )
@@ -501,10 +517,10 @@ export const compare_Multiple_Job_Role_With_Resume_And_Get_Analysis = asyncHandl
 })
 
 // analysis.controller.js - CORRECTED
-
+//ananlysis can be regenerated only when its state is not queued or processing
 export const regenerateAnalysis = asyncHandler(async (req, res) => {
 
-    const { preferences } = req.body;  // ← Get preferences from request
+    const { preferences } = req.body;  // Get preferences from request
   
     const analysis = await analysisModel.findOne({
       _id: req.params.id,
@@ -519,6 +535,7 @@ export const regenerateAnalysis = asyncHandler(async (req, res) => {
       throw new ApiError(409, 'Analysis is already running');
     }
 
+    // we reset al the parameter of ananlysis
     analysis.status = ANALYSIS_STATUS.QUEUED;
     analysis.processingStage = ANALYSIS_PROCESSING_STAGE.QUEUED;
     analysis.error = undefined;
@@ -534,6 +551,7 @@ export const regenerateAnalysis = asyncHandler(async (req, res) => {
     };
 
     await analysis.save();
+    // clear all the analysis cache cause ab naya ayega na bhidu
     await clearAnalysisCache(req.user._id, analysis._id);
 
     try {

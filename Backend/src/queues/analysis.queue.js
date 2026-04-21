@@ -23,6 +23,7 @@ const analysisQueue = new Queue(QUEUE_NAMES.ANALYSIS_GENERATION , {
 const enqueueAnalysisGeneration = async({analysisId , resumeId , jobRoleId,userId}) =>{
     const normalizedAnalysisId = String(analysisId)
     const jobId = `analysis-${normalizedAnalysisId}`
+    // we first check that whwether this jobid is in queue
     const existingJob = await analysisQueue.getJob(jobId)
 
     // BullMQ keeps failed/completed jobs for debugging. Remove the stale terminal job
@@ -30,6 +31,7 @@ const enqueueAnalysisGeneration = async({analysisId , resumeId , jobRoleId,userI
     if (existingJob) {
         const existingState = await existingJob.getState()
 
+        // if we get that the job is in failed or complete state we remove it.iska abhi kuch ho nahi sakta isiliye nikala jata hai
         if (['failed', 'completed'].includes(existingState)) {
             await existingJob.remove()
         }
@@ -63,6 +65,7 @@ export const removeQueuedAnalysisJob = async (analysisId) => {
 
     const jobState = await existingJob.getState()
 
+    // if we found that that the job is in queue and its state is these then we remove it from queue only
     if (['waiting', 'delayed', 'prioritized'].includes(jobState)) {
         await existingJob.remove()
         return true

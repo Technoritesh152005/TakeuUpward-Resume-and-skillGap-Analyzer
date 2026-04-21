@@ -24,6 +24,7 @@ export const getCurrentUser = asyncHandler(async (req, res, next) => {
     res.status(200).json(new ApiResponse(200, user, 'User fetched successfully'))
 })
 
+// for 
 export const changePassword = asyncHandler(async (req, res) => {
     const { oldPassword, newPassword } = req.body
 
@@ -41,7 +42,7 @@ export const changePassword = asyncHandler(async (req, res) => {
         throw new ApiError(400, 'Password change is not available for this account')
     }
 
-    const isPasswordCorrect = await user.comparePassword(oldPassword)
+    const isPasswordCorrect = await user.isPasswordCorrect(oldPassword)
 
     if (!isPasswordCorrect) {
         throw new ApiError(400, 'Current password is incorrect')
@@ -50,6 +51,8 @@ export const changePassword = asyncHandler(async (req, res) => {
     user.password = newPassword
     await user.save()
 
+    // Model.updateMany(filter, update, options)
+    // take all the refresh token docs which is not revoked and revoked it 
     await refreshTokenModel.updateMany(
         { user: user._id, revokedAt: null },
         {
@@ -59,6 +62,7 @@ export const changePassword = asyncHandler(async (req, res) => {
     )
 
     logger.info(`Password changed successfully for user: ${user.email}`)
+    // remove all cookies token and forward to
     clearAuthCookies(res)
 
     res.status(200).json(

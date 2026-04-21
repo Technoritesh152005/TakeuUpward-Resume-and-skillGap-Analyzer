@@ -13,6 +13,12 @@ export const getAllJobRoles = asyncHandler(async (req, res) => {
     const cacheKey = `jobRole:list:${JSON.stringify(req.query)}`
     const cachedData = await redisClient.get(cacheKey)
 
+
+    if (cachedData) {                                                                                                      
+        const parsedCache = JSON.parse(cachedData)                                                                         
+         return res.status(200)                                                                                             
+            .json(new ApiResponse(200, parsedCache, 'cached data of jobrole fetched succesfully'))                         
+     }  
     const filter = { isActive: true }
 
     if (category) {
@@ -33,6 +39,7 @@ export const getAllJobRoles = asyncHandler(async (req, res) => {
                 return res.status(200)                                                                                             
                    .json(new ApiResponse(200, parsedCache, 'cached data of jobrole fetched succesfully'))                         
             }  
+            
     const jobRoles = await jobRoleModel.paginate(filter, {
         page: parseInt(page),
         limit: parseInt(limit),

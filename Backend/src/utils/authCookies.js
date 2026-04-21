@@ -24,6 +24,7 @@ const refreshTokenCookieOptions = {
 
 // res response object from express is send to browser
 // It represents the HTTP response going back to the client (browser)
+// /we get these tokens from login controllers
 const setAuthCookies = (res, { accessToken, refreshToken }) => {
 
 //     Internally this creates a header like:
