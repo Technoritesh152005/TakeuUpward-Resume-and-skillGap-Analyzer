@@ -8,6 +8,7 @@ const MAX_ROLE_SKILLS = 10;
 
 const makeString = (value) => String(value || '').trim()
 
+// checks whether array are of string and if not make it
 const toStringArray = (value, limit = 10) => {
 
     if (!Array.isArray(value)) return []
@@ -86,6 +87,7 @@ const extractJsonBlock = (content) => {
     return source.slice(startIndex).trim()
 }
 
+// normalize the content removes the leading trailing spaces
 const normalizeJson = (content) => {
     if (!content) return content;
 
@@ -101,6 +103,7 @@ const normalizeJson = (content) => {
         .replace(/\r/g, '');
 };
 
+// It escapes newline, tab, and carriage return characters ONLY inside quoted strings so the content becomes safe/valid.
 const escapeControlCharactersInStrings = (content) => {
     let escapedContent = ''
     let inString = false
@@ -256,6 +259,7 @@ class MultiRoleCompareAnalysis {
     parseResponse(content) {
         const normalized = normalizeJson(content)
         const extracted = extractJsonBlock(normalized)
+
         const attempts = [
             content,
             extractJsonObject(content),
@@ -268,6 +272,7 @@ class MultiRoleCompareAnalysis {
 
         let lastError = null;
 
+        // means try parsing first raw response if not try cleaner one
         for (const attempt of attempts) {
             try {
                 return JSON.parse(attempt)
@@ -282,7 +287,7 @@ class MultiRoleCompareAnalysis {
     normalizeResponse(rawResponse, jobRoles) {
         // comparision will have job role id of all comapred jobs
         const comparisons = Array.isArray(rawResponse?.comparisons)
-            ? rawResponse.comparisons.map(normalizeComparison).filter((item) => item.jobRoleId)
+            ? rawResponse.comparisons.map((item) => normalizeComparison(item))
             : [];
 
         if (!comparisons.length) {
@@ -291,6 +296,7 @@ class MultiRoleCompareAnalysis {
 
         // now take valid role ids means how many user did job selected
         const validRoleIds = new Set(jobRoles.map((jobRole) => String(jobRole._id)));
+        // take those comparison whose job role id must be present in comaprision
         const filteredComparisons = comparisons.filter((item) => validRoleIds.has(item.jobRoleId));
 
         if (!filteredComparisons.length) {

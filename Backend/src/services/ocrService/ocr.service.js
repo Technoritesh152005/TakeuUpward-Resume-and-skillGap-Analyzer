@@ -24,6 +24,7 @@ class OcrService {
     }
 
     // OCR should also run when native extraction returns noisy garbage, not only short text.
+    // we check against many bad condition . if any one bad condition satisfy we use ocr-OPTICAL CHARACTER RECOGNITION
     shouldUseOcrFallback(text) {
         const normalizedText = normalizeText(text);
 
@@ -50,6 +51,7 @@ class OcrService {
         return false;
     }
 
+    // if the fallback condition is not true we will not accept extractting text using ocr
     async extractTextWithTesseract(fileBuffer) {
         if (!this.isEnabled) {
             return {
@@ -63,6 +65,7 @@ class OcrService {
         const tempFilePath = path.join(os.tmpdir(), `resume-ocr-${Date.now()}.pdf`);
 
         try {
+            // This line writes the content of fileBuffer into a file at tempFilePath
             await fs.writeFile(tempFilePath, fileBuffer);
             // call python
             const result = await this.runPythonOcr(tempFilePath);

@@ -1,4 +1,4 @@
-import { extractCandidateSkillSet, matchRoleSkill } from './ai.services/fallbackSkillMatcher.js';
+import { extractCandidateSkillSet, matchRoleSkill } from '../ai.services/fallbackSkillMatcher.js';
 
 class ClosestWinnableRoleService {
     
@@ -17,6 +17,7 @@ class ClosestWinnableRoleService {
         return fallback;
     }
 
+    // return job role skill gaps or required skills
     buildRoleSkillBuckets(jobRole = {}) {
         return {
             critical: Array.isArray(jobRole?.requiredSkills?.critical) ? jobRole.requiredSkills.critical : [],
@@ -26,7 +27,11 @@ class ClosestWinnableRoleService {
     }
 
     scoreRoleFit(candidateSkillSet, jobRole) {
+        // we score role with candiadtae
+        // we first remove all the required skills for that gap
         const buckets = this.buildRoleSkillBuckets(jobRole);
+
+        // weightage score for each role
         const scoreWeights = {
             critical: 14,
             important: 7,
@@ -53,17 +58,24 @@ class ClosestWinnableRoleService {
         let weightedScore = 0;
         let maxScore = 0;
 
+        // loop through the array where array have inside again array
+        // Object.keys(buckets) are critical , imp...
         for (const bucket of Object.keys(buckets)) {
+            // in critical each skill item
             for (const item of buckets[bucket]) {
                 const title = item?.title || item?.skill;
                 if (!title) continue;
 
+                // we see the skill importance.we add that skill importance to macsxore
                 const weight = this.toSafeNumber(item?.importance, scoreWeights[bucket]);
-                maxScore += weight;
+                maxScore = maxScore+weight
 
+                // this checks whether candidate skill and the role required skills match?
+                // if matched return matched[critical = 1]
                 if (matchRoleSkill(candidateSkillSet, title)) {
                     matched[bucket] += 1;
                     weightedScore += weight;
+                    // if not found fill it with gaps bucket
                 } else {
                     gaps[bucket] += 1;
                     missingSkills[bucket].push(title);
@@ -128,11 +140,16 @@ class ClosestWinnableRoleService {
         const currentReadinessScore = this.toSafeNumber(currentAnalysis?.applicationReadiness?.readinessScore, 0);
 
         const scoredRoles = roles
+        // keep onlt the role which r unique
+        // means remove the roles which r present in both target role and roles
             .filter((role) => role && String(role._id || '') !== targetRoleId)
+            // means true that both role id are diff means unique role
             .map((role) => {
                 const roleFit = this.scoreRoleFit(candidateSkillSet, role);
+                // we check whether the user category is equal to this role category
                 const categoryBonus = String(role?.category || '').toLowerCase() === targetCategory ? 8 : 0;
                 const levelBonus = String(role?.experienceLevel || '').toLowerCase() === targetExperienceLevel ? 5 : 0;
+                // we calculate current readiness score 
                 const atsPenalty = currentReadinessScore < 60 ? 6 : 0;
                 const winnableScore = Math.max(
                     0,
@@ -164,8 +181,10 @@ class ClosestWinnableRoleService {
                     nextAction: this.buildNextAction(roleFit),
                 };
             })
+            // map always retun an array
+            // it arranges the array in decreasing order of winnable score
             .sort((a, b) => b.winnableScore - a.winnableScore);
-
+            
         return scoredRoles[0] || null;
     }
 }

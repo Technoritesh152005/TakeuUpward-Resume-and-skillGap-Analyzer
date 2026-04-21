@@ -21,12 +21,12 @@ class TextExtractor {
                 // if its docx this case will handle\
                 case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
 
-                    const docxresult = await docxInstance(file)
+                    const docxresult = await docxInstance.docxTextParser(file)
 
                     return {
-                        text:docxresult.value,
+                        text:docxresult.text,
                         messages:docxresult.messages,
-                        wordcount:this.countWords(docxresult.value)
+                        wordcount:this.countWords(docxresult.text)
                     }
 
 

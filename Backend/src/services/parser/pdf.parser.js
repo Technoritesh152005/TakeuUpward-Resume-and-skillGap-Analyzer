@@ -8,7 +8,7 @@ const extractPdfText = async function (pdf){
 
        return {
         text:pdfdata.text,
-        pageno:pdfdata.numpages,
+        pages:pdfdata.numpages,
         info:pdfdata.info
        }
     }catch(err){

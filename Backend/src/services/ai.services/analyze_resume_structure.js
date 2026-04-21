@@ -174,11 +174,14 @@ ${invalidJson}
   // it both does normalization and extract json block
   async parseStructuredJson(rawContent) {
     const normalized = this.normalizeJsonString(rawContent);
+    // we use ai cause ai can send extra markup before or after json
     const extracted = this.extractJsonBlock(normalized);
 
     try {
       // It is used to safely convert a string into a JSON object without crashing the app
       return this.tryParseJson(extracted);
+
+      // if u got error while converting clean js object string to js object  do repairJsonWithGemini
     } catch (firstError) {
       logger.warn(`Primary JSON parse failed, attempting Gemini repair: ${firstError.message}`);
 
@@ -290,6 +293,7 @@ IMPORTANT:
       const response = await result.response;
       const rawText = response.text();
 
+      // this give the cean structured js object data
       const structuredData = await this.parseStructuredJson(rawText);
 
       if (structuredData) {

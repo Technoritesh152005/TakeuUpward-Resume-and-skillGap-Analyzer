@@ -601,7 +601,7 @@ Return ONLY the JSON object, no markdown formatting.
                     maxOutputTokens: 2500,
                 },
             });
-            const response = await result.response;
+            const response =  result.response;
             const rawText = response.text();
 
             const fallbackData = this.buildFallbackAnalysis(resumeData, jobRole, normalizedPreferences);
@@ -620,12 +620,16 @@ Return ONLY the JSON object, no markdown formatting.
         }
     }
 
+
+    // it truws to parse the response from ai
+    // 
     async parseJsonResponse(rawContent, resumeData, jobRole, userPreferences = {}) {
         const normalized = this.normalizeJsonString(rawContent);
         const extracted = this.extractJsonBlock(normalized);
 
         try {
             return this.tryParseJson(extracted);
+            // if primary parse failed try deterministic or fallback
         } catch (firstError) {
             logger.warn(`Primary skill gap JSON parse failed, attempting Gemini repair: ${firstError.message}`);
             logger.warn(`Skill gap AI raw preview: ${this.buildDebugPreview(rawContent)}`);
@@ -663,6 +667,8 @@ Return ONLY the JSON object, no markdown formatting.
                 const skillName = item?.title || item?.skill || '';
                 if (!skillName) continue;
 
+                // in your target role of skill gaps we check r critical gaps of target role has this skill.if u have the skill in ur resume which is also a critical gap means u have done critical skill learnt
+                // so put in strengths
                 const hasSkill = matchRoleSkill(candidateSkills, skillName);
 
                 if (hasSkill) {
@@ -673,6 +679,7 @@ Return ONLY the JSON object, no markdown formatting.
                         uniqueAdvantage: 'Detected in resume content',
                         importance: item?.importance || defaultImportance,
                     });
+                    // if not push in ur skillgaps bucket array
                 } else {
                     skillGaps[bucket].push({
                         skill: skillName,

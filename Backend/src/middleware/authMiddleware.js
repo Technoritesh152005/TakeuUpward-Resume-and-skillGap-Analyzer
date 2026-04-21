@@ -17,6 +17,7 @@ const protectAccess = asyncHandler(async (req, res, next) => {
         token = req.headers.authorization.split(' ')[1]
 
     }
+    // try to get token from both authorization and cookies
     if (!token) {
         token = getCookieValue(req, ACCESS_TOKEN_COOKIE)
     }
@@ -96,49 +97,10 @@ const optionalAuth = asyncHandler(async (req, res, next) => {
 })
 
 
-const restrictRoles = (...roles) => {
-    return asyncHandler(async (req, res, next) => {
 
-        if (!req.user) {
-            throw new ApiError(401, "Invalid login or not authorized");
-        }
 
-        if (!roles.includes(req.user.role)) {
-            logger.error(
-                `${req.user.role} tried to access restricted operation`
-            );
-            throw new ApiError(403, "Unauthorized operation");
-        }
 
-        next();
-    });
-};
-
-// multiple checkownership can be present like for resume, analysis, resource. so we pass model and we pass id as default 'id'
-// means in analysisownerhsip id can be :analysisId,. so if nothing provided we use'id
-const checkOwnership = (anyModel, anyId = 'id') => {
-    return asyncHandler(async (req, res, next) => {
-
-        const id = req.params[anyId]
-        const resource = await anyModel.findById(id)
-
-        if (!resource) {
-            throw new ApiError(404, "Resource not found")
-        }
-
-        const resourceOwnerId =
-            resource.user?._id?.toString?.() ?? resource.user?.toString?.()
-        const currentUserId = req.user?._id?.toString?.()
-
-        if (!resourceOwnerId || resourceOwnerId !== currentUserId) {
-            throw new ApiError(403, 'You do not have access to this resource')
-        }
-
-        req.resource = resource
-        next()
-    })
-}
-export { protectAccess, restrictRoles, optionalAuth, checkOwnership }
+export { protectAccess, optionalAuth }
 
 
 // later add late limiting

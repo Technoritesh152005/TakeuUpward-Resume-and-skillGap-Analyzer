@@ -120,6 +120,7 @@ class RoadmapAnalysis {
         };
     }
 
+    // both takes fallback data and raw data and if some fiels of rawdata not present we add fallbackdata
     normalizeRoadmapPayload(rawData, fallbackData) {
         const source = rawData && typeof rawData === 'object' ? rawData : {};
         const fallback = fallbackData && typeof fallbackData === 'object' ? fallbackData : this.buildFallbackRoadmap({}, {});
@@ -227,7 +228,10 @@ class RoadmapAnalysis {
                 weeks: 12,
                 totalEstimatedHours: hoursPerWeek * 12,
             },
-            phases: phases.length ? phases : [
+            // agar phases fallback nhi aya toh dummy data dalo
+            phases: phases.length ? phases : 
+            
+            [
                 {
                     phaseNumber: 1,
                     title: 'Foundation Building',
@@ -291,12 +295,6 @@ class RoadmapAnalysis {
         };
     }
 
-    /**
-     * Generate personalized learning roadmap using Gemini
-     * @param {Object} gapAnalysis - Skill gap analysis result
-     * @param {Object} userpreference - User preferences
-     * @returns {Object} - Structured roadmap data
-     */
     async performRoadmap(gapAnalysis, userpreference = {}) {
         try {
             const {
