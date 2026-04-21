@@ -33,6 +33,7 @@ export const login = asyncHandler(async(req,res,next)=>{
         throw new ApiError(401,'Your account has been deactivated.Please contact "khilariritesh61@gmail.com" ')
     }
 
+    // during manual signin if user first done oauth then still he need to do signin using oauth only
     if (user.authProvider === 'google' && !user.password) {
         throw new ApiError(400, 'This account uses Google sign-in. Please continue with Google or set a password first.')
     }
@@ -41,12 +42,13 @@ export const login = asyncHandler(async(req,res,next)=>{
         throw new ApiError(400, 'Password login is not available for this account.')
     }
 
-    const correctPassword = await user.comparePassword(password)
+    const correctPassword = await user.isPasswordCorrect(password)
 
     if(!correctPassword){
         throw new ApiError(400,'Password is not same.Retry or forgot password')
     }
 
+    // for safety reason always generate both
     const accessToken = user.generateAccessToken();
     const refreshToken = user.generateRefreshToken()
 
@@ -62,7 +64,7 @@ export const login = asyncHandler(async(req,res,next)=>{
 
     })
     if(!rtsaved){
-        throw new ApiError(500,'Faced difficulty to store Tokens in database')
+        throw new ApiError(500,'Faced difficulty to store Tokens ..Not your fault its service side fault')
     }
 
     // after sometime see diff bwn new Date and Date.now()
@@ -72,12 +74,13 @@ export const login = asyncHandler(async(req,res,next)=>{
     const userresponse = user.toObject()
     delete userresponse.password
     logger.info(`User has been succesfully login of email ${user.email}`)
+
     setAuthCookies(res, { accessToken, refreshToken })
     res.status(200).json(
         new ApiResponse(
           200,
           { user: userresponse },  // data
-          'User has been successfully login'                  // message
+          'User has been successfully login'                 
         )
       );
     // never use next in controller and they r end of chainflow

@@ -43,6 +43,7 @@ const OAuthCallback = () => {
     };
 
     processOAuthCallback();
+    // if user or searchparams value changes this will run
   }, [searchParams, navigate, loadUser]);
 
   return (

@@ -385,6 +385,7 @@ const refundAiUsageSafely = async (userId) => {
     }
 }
 
+// main function logic which is called by worker
 export const processAnalysisGenerationJob = async ({ analysisId, userId, resumeId, jobRoleId }) => {
     const analysis = await analysisModel.findOne({
         _id: analysisId,
@@ -518,6 +519,7 @@ export const processAnalysisGenerationJob = async ({ analysisId, userId, resumeI
         })
 
         const relatedRoleIds = Array.isArray(jobRole?.relatedRoles) ? jobRole.relatedRoles : []
+        // nearby roles basically means in jobrole model to find such a job where that job is active and its id must not be equa to job role id
         const nearbyRoles = await jobRoleModel.find({
             isActive: true,
             _id: { $ne: jobRole._id },

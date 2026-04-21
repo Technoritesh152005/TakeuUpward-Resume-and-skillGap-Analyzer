@@ -135,6 +135,7 @@ class AtsScoreGenerator {
         };
     }
 
+    // takes both daata fallback and correct nd try t normalize
     normalizeAtsPayload(rawData, fallbackData) {
         const source = rawData && typeof rawData === 'object' ? rawData : {};
         const fallback = fallbackData && typeof fallbackData === 'object'
@@ -365,6 +366,8 @@ ${invalidJson}
         try {
             return this.tryParseJson(extracted);
         } catch (firstError) {
+            // The ATS prompt asks for JSON, but models still sometimes wrap it in prose or return malformed strings.
+            // Repair is a second AI call, so keep this as a recovery path instead of the normal path.
             logger.warn(`Primary ATS JSON parse failed, attempting Gemini repair: ${firstError.message}`);
             logger.warn(`ATS AI raw preview: ${this.buildDebugPreview(rawContent)}`);
             logger.warn(`ATS AI extracted preview: ${this.buildDebugPreview(extracted)}`);
@@ -470,6 +473,7 @@ ${invalidJson}
 
     // this builds fallback ats data according to the schema fields
     buildFallbackAtsScore(resumeData, jobRole) {
+        // This fallback stays deterministic so ATS scoring still works when the AI response is missing or unusable.
         const keywordSection = this.buildDeterministicKeywordSection(resumeData, jobRole);
         const { score: keywordScore, matched, missing, suggestions, recommended } = keywordSection;
 
@@ -618,6 +622,8 @@ Return ONLY the JSON object, no markdown formatting.
             const properData = this.normalizeAtsPayload(parsedData, fallbackData);
             const deterministicKeywords = this.buildDeterministicKeywordSection(resumeData, jobRole);
 
+            // Keyword matching is intentionally recomputed from local data so ATS keyword coverage stays stable
+            // even when the AI wording is noisy or inconsistent.
             properData.breakdown.keywords = deterministicKeywords;
             properData.overallScore = this.toScore(
                 Math.round(

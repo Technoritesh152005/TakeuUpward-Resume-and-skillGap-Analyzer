@@ -59,6 +59,12 @@ export const uploadResume = asyncHandler(async (req, res, next) => {
 
     logger.info('Processing uploading of file')
     try {
+        const quickPreview = await resumeParserInstance.quickParse(buffer, mimetype)
+
+        if (!quickPreview || quickPreview.wordcount === 0) {
+            throw new ApiError(400, 'Uploaded file has no extractable resume text')
+        }
+
         const {
             parsedData,
             wordCount,
@@ -104,7 +110,10 @@ export const uploadResume = asyncHandler(async (req, res, next) => {
         await clearResumeDetailCache(resume._id, req.user._id)
 
         res.status(201)
-            .json(new ApiResponse(201, resume, 'Resume uploaded Succesfully'))
+            .json(new ApiResponse(201, {
+                resume,
+                quickPreview,
+            }, 'Resume uploaded Succesfully'))
     } catch (error) {
         try {
             await fs.unlink(uploadedFilePath)

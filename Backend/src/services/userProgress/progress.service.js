@@ -1,4 +1,4 @@
-import progressModel from '../models/progress.model.js'
+import progressModel from '../../models/progress.model.js'
 
 const getRoadmapPosition = (roadmap) => {
 

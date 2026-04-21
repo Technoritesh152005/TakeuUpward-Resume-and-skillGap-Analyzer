@@ -18,7 +18,8 @@ if (!fs.existsSync(directory)) {
 }
 
 // configuration for setting in disk
-const multerDiskStorage = multer.diskStorage({
+const multerDiskStorage = multer.diskStorage(
+  {
   destination(req, file, cb) {
     cb(null, directory);
   },
@@ -30,9 +31,6 @@ const multerDiskStorage = multer.diskStorage({
     cb(null, `${sanitizedName}-${uniqueSuffix}${extension}`);
   },
 });
-
-// this memorystorage do not store in disk but stores in ram temporary while just used to parse only
-const memoryStorage = multer.memoryStorage()
 
 // to upload anything we provide storage, and filefilter confgiuration
 
@@ -63,25 +61,21 @@ const limits = {
   fileSize: parseInt(process.env.MAX_FILE_SIZE || '', 10) || 10 * 1024 * 1024,
 };
 
+// this is a function to upload file using multer providing storage , filter , limits
 const uploadResumeOnDisk = multer({
   storage: multerDiskStorage,
   fileFilter,
   limits,
 }).single('resume');
 
-// this return express middleware
-const uploadResumeOnRamRaw = multer({
-  storage: memoryStorage,
-  fileFilter,
-  limits,
-}).single('resume');
-
 // this return middleware cause it can be used in routes
 // uploadFunction is bascially uploadResumeOnDisk
+// whenever there is a error in multer it callback means a fxn is required to handle that error so what we do is we create a middleware wrap it over that and handle error fxn
 const handleUploadResumeError = (uploadFunction) => {
   return (req, res, next) => {
     uploadFunction(req, res, (err) => {
       if (err instanceof multer.MulterError) {
+
         if (err.code === 'LIMIT_FILE_SIZE') {
           return next(
             new ApiError(
@@ -90,6 +84,7 @@ const handleUploadResumeError = (uploadFunction) => {
             )
           );
         }
+
         if (err.code === 'LIMIT_UNEXPECTED_FILE') {
           return next(
             new ApiError(400, 'Unexpected field name. Use "resume" as field name ')
@@ -99,6 +94,7 @@ const handleUploadResumeError = (uploadFunction) => {
         return next(new ApiError(400, `Upload error: ${err.message}`));
       }
 
+      // this skipps all normal express middleware and goes to error handling middleware
       if (err) {
         return next(err);
       }
@@ -107,13 +103,14 @@ const handleUploadResumeError = (uploadFunction) => {
         return next(new ApiError(400, 'Please provide file'));
       }
 
+      // after .single multer creates req.file={}
       logger.info(`File uploaded: ${req.file.originalname}`, {
         size: req.file.size,
         mimetype: req.file.mimetype,
         userId: req.user?._id,
       });
 
-              next()
+        next()
         })
     }
 }
@@ -137,41 +134,22 @@ const validateBeforeUpload = (req, res, next) => {
   }
 
   if (!file.originalname || file.originalname.length > 255) {
-    throw new ApiError(400, 'Invalid filename');
+    throw new ApiError(400, 'Invalid filename or To big file name...');
   }
 
   next();
 };
 
-/**
- * Clean up uploaded file on error
- */
-const cleanupOnError = (err, req, res, next) => {
-  if (req.file && req.file.path) {
-    fs.unlink(req.file.path, (unlinkErr) => {
-      if (unlinkErr) {
-        logger.error(`Failed to delete file: ${req.file.path}`, unlinkErr);
-      }
-    });
-  }
-  next(err);
-};
-
 const uploadResumeOnDiskMiddleware = handleUploadResumeError(uploadResumeOnDisk);
-const uploadResumeOnRam = handleUploadResumeError(uploadResumeOnRamRaw);
 
 export {
   uploadResumeOnDiskMiddleware,
-  uploadResumeOnRam,
   validateBeforeUpload,
-  cleanupOnError,
 };
 
 export default {
   uploadResumeOnDisk: uploadResumeOnDiskMiddleware,
-  uploadResumeOnRam,
   validateBeforeUpload,
-  cleanupOnError,
 };
 // But Multer Is Special
 

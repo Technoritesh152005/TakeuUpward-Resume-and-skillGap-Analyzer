@@ -181,6 +181,7 @@ class resumeParser {
                     others: aiStructuredData.skills?.soft || aiStructuredData.skills?.others || [],
                 },
                 project: aiStructuredData.projects || [],
+                // we only take first certificate provided
                 certification: Array.isArray(aiStructuredData.certifications)
                     ? aiStructuredData.certifications[0] || {}
                     : aiStructuredData.certifications || {},

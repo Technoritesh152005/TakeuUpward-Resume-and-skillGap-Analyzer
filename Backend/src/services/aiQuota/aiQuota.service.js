@@ -1,5 +1,5 @@
-import { userModel } from '../models/user.model.js'
-import ApiError from '../utils/apiError.js'
+import { userModel } from '../../models/user.model.js'
+import ApiError from '../../utils/apiError.js'
 
 const AI_USAGE_DAILY_LIMIT = 4
 const AI_USAGE_TIME_ZONE = 'Asia/Kolkata'
@@ -31,6 +31,7 @@ const normalizeAiUsage = (aiUsage = {}) => {
 const resetAiUsageIfNeeded = async (userId) => {
     const today = getCurrentAiUsageDay()
 
+    // it will reset the limiit if the last reset day is not equal to today date 
     await userModel.updateOne(
         {
             _id: userId,
@@ -52,6 +53,7 @@ const resetAiUsageIfNeeded = async (userId) => {
 const reserveAiUsage = async (userId, serviceName = 'AI service') => {
     await resetAiUsageIfNeeded(userId)
 
+    // if cond not met return null
     const user = await userModel.findOneAndUpdate(
         {
             _id: userId,
@@ -105,6 +107,7 @@ const refundAiUsage = async (userId) => {
     return normalizeAiUsage(updatedUser?.aiUsage)
 }
 
+// shows ur limit history for todaty
 const getAiUsageSummary = async (userId) => {
     await resetAiUsageIfNeeded(userId)
 

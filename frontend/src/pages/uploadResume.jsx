@@ -19,6 +19,12 @@ const Uploadresume = () => {
   const [uploadedResume, setUploadedResume] = useState(null);
   const [error, setError] = useState(null);
 
+  const uploadedResumeRecord = uploadedResume?.resume || null;
+  const quickPreview = uploadedResume?.quickPreview || null;
+  const previewEmail = quickPreview?.email?.[0] || 'Not detected';
+  const previewPhone = quickPreview?.phone?.[0] || 'Not detected';
+  const previewUrls = quickPreview?.urls || [];
+
   const allowedTypes = [
     'application/pdf',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -293,6 +299,35 @@ const Uploadresume = () => {
                 <p className="text-neutral-500 text-[10px] font-black uppercase tracking-[0.3em] mb-10 max-w-sm mx-auto">
                   Neural parsing complete. Profile identity updated.
                 </p>
+
+                <div className="mx-auto mb-10 grid w-full max-w-3xl gap-4 text-left md:grid-cols-2">
+                  <div className="rounded-[24px] border border-white/10 bg-white/5 p-5">
+                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-neutral-500">Uploaded File</p>
+                    <p className="mt-2 truncate text-sm font-black text-white">
+                      {uploadedResumeRecord?.originalFileName || selectedFile?.name || 'Resume uploaded'}
+                    </p>
+                  </div>
+                  <div className="rounded-[24px] border border-white/10 bg-white/5 p-5">
+                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-neutral-500">Word Count</p>
+                    <p className="mt-2 text-sm font-black text-white">
+                      {quickPreview?.wordcount ?? 'Not available'}
+                    </p>
+                  </div>
+                  <div className="rounded-[24px] border border-white/10 bg-white/5 p-5">
+                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-neutral-500">Detected Email</p>
+                    <p className="mt-2 break-all text-sm font-black text-white">{previewEmail}</p>
+                  </div>
+                  <div className="rounded-[24px] border border-white/10 bg-white/5 p-5">
+                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-neutral-500">Detected Phone</p>
+                    <p className="mt-2 text-sm font-black text-white">{previewPhone}</p>
+                  </div>
+                  <div className="rounded-[24px] border border-white/10 bg-white/5 p-5 md:col-span-2">
+                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-neutral-500">Detected URLs</p>
+                    <p className="mt-2 break-all text-sm font-black text-white">
+                      {previewUrls.length > 0 ? previewUrls.join(', ') : 'Not detected'}
+                    </p>
+                  </div>
+                </div>
 
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
                   <button

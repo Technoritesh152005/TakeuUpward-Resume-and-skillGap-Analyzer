@@ -60,7 +60,7 @@ export const updateProfile = asyncHandler(async (req, res) => {
     if (!user) {
         throw new ApiError(404, 'User not found')
     }
-
+    // before updating fiels we see whether these values r provided means we check whether they r not empty
     if (name !== undefined) user.name = name
     if (phone !== undefined) user.phone = phone
     if (location !== undefined) user.location = location
@@ -68,6 +68,7 @@ export const updateProfile = asyncHandler(async (req, res) => {
     if (avatar !== undefined) user.avatar = avatar
     if (profilePicture !== undefined) user.profilePicture = profilePicture
 
+    // setting prefernces of analysiss creation
     if (preferences) {
         user.preference = user.preference || {}
 
@@ -82,6 +83,7 @@ export const updateProfile = asyncHandler(async (req, res) => {
         }
     }
 
+    
     if (careerPreferences) {
         user.careerPreferences = user.careerPreferences || {}
 
@@ -105,6 +107,7 @@ export const updateProfile = asyncHandler(async (req, res) => {
         }
     }
 
+    // when save runs before it .pre runs means it checks if password is changed or not.it is just a middleware
     await user.save()
 
     logger.info(`User profile updated: ${user._id}`)
@@ -114,6 +117,7 @@ export const updateProfile = asyncHandler(async (req, res) => {
     )
 })
 
+// we cache the dashboard stats caused why to run same operation everytime?just cache it
 export const getDashboardStats = asyncHandler(async (req, res) => {
     const cacheKey = `Dashboard:user:${req.user._id}`
     const cachedData = await redisClient.get(cacheKey)
@@ -145,6 +149,7 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
 
     let avgMatchScore = 0
 
+    // avg match score is calculated based on the latest 5 analysis
     if (analyses.length > 0) {
         const totalScore = analyses.reduce((sum, item) => sum + (item.matchScore || 0), 0)
         avgMatchScore = Math.round(totalScore / analyses.length)
@@ -167,13 +172,15 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
         averageMatchScore: avgMatchScore,
         skillsCount: skillCount
     }
-
+    // await redisClient.set(key, value);
+    // save data in redis for 20 min
     await redisClient.setEx(cacheKey, 1200, JSON.stringify(data))
 
     res.status(200).json(
         new ApiResponse(200, data, 'All dashboard stats fetched successfully')
     )
 })
+
 
 export const getUserActivity = asyncHandler(async (req, res) => {
     const { limit = 10 } = req.query
@@ -189,6 +196,7 @@ export const getUserActivity = asyncHandler(async (req, res) => {
         )
     }
 
+    // we get resume and analysis of user based on limit
     const [resumes, analyses] = await Promise.all([
         resumeModel.find({
             user: req.user._id,
@@ -207,6 +215,7 @@ export const getUserActivity = asyncHandler(async (req, res) => {
             .limit(parsedLimit)
     ])
 
+    // push it to activities. It basically show user latest activity
     const activities = [
         ...resumes.map((resume) => ({
             type: 'resume_upload',
@@ -240,7 +249,7 @@ export const deleteAccount = asyncHandler(async (req, res) => {
         throw new ApiError(404, 'No user found')
     }
 
-    const isPasswordTrue = await user.comparePassword(password)
+    const isPasswordTrue = await user.isPasswordCorrect(password)
 
     if (!isPasswordTrue) {
         throw new ApiError(400, 'Password is wrong. Please provide correct password')
@@ -249,6 +258,7 @@ export const deleteAccount = asyncHandler(async (req, res) => {
     user.isActive = false
     await user.save()
 
+    // after making the user inactive make all the documents of the user inactive
     await Promise.all([
         resumeModel.updateMany({ user: req.user._id }, { isActive: false }),
         analysisModel.updateMany({ user: req.user._id }, { isActive: false }),
@@ -261,6 +271,7 @@ export const deleteAccount = asyncHandler(async (req, res) => {
     )
 })
 
+// if user wants to export data it exports ananlyssi and resume
 export const exportUserData = asyncHandler(async (req, res) => {
     const user = await userModel.findById(req.user._id).select('-password')
 

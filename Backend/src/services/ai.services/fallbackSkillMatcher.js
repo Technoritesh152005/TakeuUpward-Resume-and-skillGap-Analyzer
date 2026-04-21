@@ -39,6 +39,7 @@ const buildCompositeParts = (value) => {
     const normalized = normalizeValue(value);
     if (!normalized) return [];
 
+    // Split phrases like "Node.js / Express" or "React and Redux" so each part can match independently.
     return normalized
         .split(/\s*(?:\/|&|\bor\b|\band\b|,)\s*/g)
         .map((part) => normalizeValue(part))
@@ -58,6 +59,8 @@ const expandSkillVariants = (value) => {
 
     for (const [canonical, aliases] of Object.entries(SKILL_ALIAS_MAP)) {
         const canonicalVariants = [canonical, ...aliases].map(normalizeValue);
+        // If any known alias is present, add the full alias family so matching works across naming differences
+        // like "node", "nodejs", and "node.js".
         const matchesKnownVariant = canonicalVariants.some((entry) =>
             normalized.includes(entry) || compositeParts.includes(entry)
         );
@@ -110,6 +113,8 @@ const extractCandidateSkillSet = (resumeData = {}) => {
         expandSkillVariants(value).forEach((variant) => skillSet.add(variant));
     };
 
+    // Build one normalized skill universe from explicit skills plus resume evidence text.
+    // ATS and fallback analyses use this to answer "does the resume show evidence for X?"
     [
         resumeData?.summary,
         resumeData?.personal?.headline,
@@ -186,6 +191,7 @@ const getRoleSkillList = (jobRole = {}) => {
             return;
         }
 
+        // Preserve role skill order so critical skills stay ahead of important/nice-to-have in downstream output.
         seen.add(normalized);
         orderedSkills.push(displayValue);
     };
@@ -207,6 +213,7 @@ const matchRoleSkill = (candidateSkillSet, rawSkill) => {
 };
 
 const skillsOverlap = (leftSkill, rightSkill) => {
+    // Overlap is alias-aware, so "CI/CD" and "continuous integration" count as the same concept.
     const leftVariants = expandSkillVariants(leftSkill);
     const rightVariants = new Set(expandSkillVariants(rightSkill));
 

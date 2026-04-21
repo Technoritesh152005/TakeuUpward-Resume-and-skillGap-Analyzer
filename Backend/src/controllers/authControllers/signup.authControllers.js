@@ -26,7 +26,6 @@ export const signup = asyncHandler(async (req, res) => {
             name: name,
             email: normalizedEmail,
             password: password,
-        
             location: location,
             isActive:true,
         }
