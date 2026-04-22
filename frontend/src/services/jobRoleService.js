@@ -17,6 +17,9 @@ const asArray = (value) => {
 };
 
 const jobRoleService = {
+
+  // we use this service in getjob roles 
+  // this jobs return in array
   getJobRoles: async ({ limit = 60, page = 1, trending = false } = {}) => {
     const safeLimit = Math.min(500, Math.max(1, Number(limit) || 60));
     const safePage = Math.max(1, Number(page) || 1);
@@ -27,10 +30,12 @@ const jobRoleService = {
       return asArray(extractPayload(response));
     };
 
+    // if the filter has trending job try these endpoint 
     if (trending) {
       return loadFromEndpoint('/job-roles/trending-job-roles');
     }
 
+    // else for common use this
     try {
       return await loadFromEndpoint('/job-roles');
     } catch (error) {
@@ -38,6 +43,7 @@ const jobRoleService = {
     }
   },
 
+  // provides more detailed view list of all jobs where it provides docs raw and pagination means more structured data
   getJobRolesCatalog: async (query = {}) => {
     const params = new URLSearchParams();
 
@@ -58,6 +64,7 @@ const jobRoleService = {
     };
   },
 
+  // this is a service to search job roles
   searchJobRolesCatalog: async ({ q, category, experienceLevel, limit = 20 } = {}) => {
     const params = new URLSearchParams();
 
@@ -76,17 +83,19 @@ const jobRoleService = {
     };
   },
 
+  // gets all categories list
   getJobRoleCategories: async () => {
     const response = await api.get('/job-roles/categories-list');
     return extractPayload(response);
   },
+
 
   getJobRoleById: async (jobRoleId) => {
     const response = await api.get(`/job-roles/${jobRoleId}`);
     
     return extractPayload(response);
   },
-
+// it shows similar job role to a particular jobrole
   getSimilarJobRoles: async (jobRoleId, { limit = 6, experienceLevel } = {}) => {
     const params = new URLSearchParams();
     params.set('limit', limit);

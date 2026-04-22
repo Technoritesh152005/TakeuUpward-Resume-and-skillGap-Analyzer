@@ -39,7 +39,7 @@ export const getAllJobRoles = asyncHandler(async (req, res) => {
                 return res.status(200)                                                                                             
                    .json(new ApiResponse(200, parsedCache, 'cached data of jobrole fetched succesfully'))                         
             }  
-            
+
     const jobRoles = await jobRoleModel.paginate(filter, {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -217,8 +217,6 @@ export const getAllJobCategory = asyncHandler(async (req, res, next) => {
 
     // first get all categories availavb;e
     // distinct gets unique elements  from all documents
-
-
     const categories = await jobRoleModel.distinct('category', { isActive: true })
     // we get all categories in array format
     // now we will map through each categoreis and find its count 
@@ -269,6 +267,7 @@ export const getSimilarJobRoles = asyncHandler(async (req, res, next) => {
         throw new ApiError(404, 'Job role not found')
     }
 
+    // as findsimilarrole is static so we dont take a specific document but a model
     const similarJob = await jobRoleModel.findSimilarRoles(
         job.category,
         parseInt(limit),

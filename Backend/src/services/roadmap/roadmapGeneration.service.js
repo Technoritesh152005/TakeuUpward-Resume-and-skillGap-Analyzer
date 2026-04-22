@@ -5,7 +5,7 @@ import logger from '../../utils/logs.js'
 import { logMetric } from '../../utils/metrics.js'
 import { refundAiUsage } from '../aiQuota.service.js'
 import { ROADMAP_PROCESSING_STAGE, ROADMAP_STATUS } from '../../config/constant.js'
-import { buildResourceSearchLink, clearRoadmapCache, findBestResourceForItem, isGeneratedResourceLink, normalizeRoadmapPayload } from '../roadmap/roadmapShared.service.js'
+import { buildResourceSearchLink, clearRoadmapCache, findBestResourceForItem, isGeneratedResourceLink, normalizeRoadmapPayload } from './roadmapShared.service.js'
 import { ensureProgressRecord, syncProgressPosition } from '../progress.service.js'
 import { logMissingResource } from '../../utils/missingResourceLogger.js'
 

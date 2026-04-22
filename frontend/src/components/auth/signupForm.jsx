@@ -8,11 +8,14 @@ import useAuthStore from '../../services/authStore'
 import GoogleSignInButton from '../common components/googleSignInButton.jsx'
 
 const SignupForm = () => {
+
   const navigate = useNavigate();
   const { clearError } = useAuthStore();
+  // before starting the operation clean the seeror
   useEffect(() => {
     clearError();
   }, [clearError]);
+
   const { signup, isLoading, error } = useAuthStore();
 
   const [formData, setFormData] = useState({
@@ -26,6 +29,7 @@ const SignupForm = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [validationErrors, setValidationErrors] = useState({});
 
+  // whenever there is a change in input field get these value from target and sets the value simantaneously in the prev data
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({

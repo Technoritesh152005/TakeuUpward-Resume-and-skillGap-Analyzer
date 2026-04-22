@@ -1,5 +1,12 @@
 import api from '../communication/api.js'
 
+// extrcat payload means main data
+// // axios always return data in this foramt.. this is the response from axios which is basically raw in our way/language
+// {
+//     data,
+//     statuscode,
+//     message
+// }
 const extractPayload = (response) => {
     const raw = response?.data
     if (!raw) return null
@@ -13,6 +20,7 @@ const resumeService = {
 
     uploadResume:async(formData)=>{
         const response = await api.post('/resumes/upload',formData,{
+            // it is used to tell ur express server that ur sending files image or pdf
             headers:{
                 'Content-Type': 'multipart/form-data',
             }

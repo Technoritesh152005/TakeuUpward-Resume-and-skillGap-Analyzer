@@ -4,7 +4,9 @@ import useAuthStore from '../../services/authStore.js';
 import LoadingSpinner from '../common components/LoadingSpinner';
 
 // While accessing any protected route: check auth; if not logged in, save location and redirect to login.
+// children is the component. if everything clear it checks and return the component
 const ProtectedRoute = ({ children }) => {
+  // keep its current location
   const location = useLocation();
   const { isAuthenticated, isLoading, hasCheckedAuth, loadUser } = useAuthStore();
 
@@ -12,6 +14,7 @@ const ProtectedRoute = ({ children }) => {
 // when components loads it checks if valid
   useEffect(() => {
     if (!hasCheckedAuth && !isLoading) {
+      // it checks whether they r checked or not if not then check the status
       loadUser().catch(() => {});
     }
   }, [hasCheckedAuth, isLoading, loadUser]);

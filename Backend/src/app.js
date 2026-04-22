@@ -15,7 +15,7 @@ import {
   handleJwtError,
 } from './middleware/errorHandler.js';
 
-// Initialize Passport
+
 
 
 // Import routes
@@ -86,6 +86,7 @@ app.get('/health', (req, res) => {
 // API routes
 const API_VERSION = process.env.API_VERSION || 'v1';
 
+// all the request on this routes are handle or transferred here
 app.use(`/api/${API_VERSION}/auth`, authRoutes);
 app.use(`/api/${API_VERSION}/resumes`, resumeRoutes);
 app.use(`/api/${API_VERSION}/job-roles`, jobRoleRoutes);

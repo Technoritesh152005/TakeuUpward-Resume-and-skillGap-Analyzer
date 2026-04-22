@@ -27,6 +27,7 @@ const analysisService = {
       ...(preference ? { preference } : {}),
     });
     return {
+      // it removes from its object copies all data and put in one object
       ...extractPayload(response),
       meta: {
         statusCode: response?.status,
@@ -95,3 +96,6 @@ const analysisService = {
 };
 
 export default analysisService;
+
+// when u send query in url form u may noticed that in controller we do {page , limit} = req.query
+// from where req.query comes? express anything after ? is put in query

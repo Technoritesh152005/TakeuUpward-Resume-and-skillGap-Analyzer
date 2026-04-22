@@ -32,6 +32,7 @@ const clearResumeUserCaches = async (userId) => {
     }
 };
 
+// clear one and all resume cache
 const clearResumeDetailCache = async (resumeId, userId) => {
     await redisClient.del(`Resume:id:${resumeId}`);
     await redisClient.del(`Resume:id:${resumeId}:user:${String(userId)}`);
@@ -51,6 +52,7 @@ export const uploadResume = asyncHandler(async (req, res, next) => {
     let buffer
 
     try {
+        // we read buffer from the disk path
         buffer = await fs.readFile(uploadedFilePath)
     } catch (error) {
         logger.error(`Failed to read uploaded resume from disk: ${uploadedFilePath}`)
@@ -59,6 +61,7 @@ export const uploadResume = asyncHandler(async (req, res, next) => {
 
     logger.info('Processing uploading of file')
     try {
+        // first for a while we do quick parse that show credential or important info of the resume which gives belief that processing is started
         const quickPreview = await resumeParserInstance.quickParse(buffer, mimetype)
 
         if (!quickPreview || quickPreview.wordcount === 0) {
@@ -115,6 +118,7 @@ export const uploadResume = asyncHandler(async (req, res, next) => {
                 quickPreview,
             }, 'Resume uploaded Succesfully'))
     } catch (error) {
+        // if error occured during arsing unlink it fom the disk
         try {
             await fs.unlink(uploadedFilePath)
         } catch (unlinkError) {
@@ -126,6 +130,7 @@ export const uploadResume = asyncHandler(async (req, res, next) => {
 })
 
 export const getResumeFile = asyncHandler(async (req, res) => {
+
     const resume = await resumeModel.findOne({
         _id: req.params.id,
         user: req.user._id,
@@ -136,6 +141,7 @@ export const getResumeFile = asyncHandler(async (req, res) => {
         throw new ApiError(404, 'Resume not found')
     }
 
+    // u can only show resume file which its storage type is local
     if (resume.storageType !== 'local') {
         throw new ApiError(400, 'Only local resume files are supported')
     }
@@ -143,13 +149,16 @@ export const getResumeFile = asyncHandler(async (req, res) => {
     const filePath = path.join(resumeUploadDirectory, resume.fileName)
 
     try {
+        // It is used to check if a file (or directory) exists and whether you have permission to access it.
         await fs.access(filePath)
     } catch {
         logger.warn(`Resume file missing on disk for resume ${resume._id}`)
         throw new ApiError(404, 'Resume file is not available')
     }
 
+    // this is used when u want to send a file in http
     res.setHeader('Content-Type', resume.mimeType || 'application/octet-stream')
+    // helps to show file in rowser
     res.setHeader(
         'Content-Disposition',
         `inline; filename="${encodeURIComponent(resume.originalFileName || resume.fileName)}"`
@@ -296,6 +305,7 @@ export const getResumeSkill = asyncHandler(async (req, res, next) => {
         .json(new ApiResponse(200, resumeSkill, 'Resume skill of user fetched succesfully'))
 })
 
+// reparse resume means retry to generate parse of resume. to reparse resume u must already first have text extracted. we dont regenerate some new resume we do changes in existing resume only
 export const reparseResume = asyncHandler(async (req, res) => {
 
     const resume = await resumeModel.findOne({
@@ -308,6 +318,7 @@ export const reparseResume = asyncHandler(async (req, res) => {
         throw new ApiError(404, 'Resume not found');
     }
 
+    // took existing resume extracted text
     const existingRaw = resume.rawText;
     if (!existingRaw) {
         throw new ApiError(400, 'Original resume text not available for re-parsing');
