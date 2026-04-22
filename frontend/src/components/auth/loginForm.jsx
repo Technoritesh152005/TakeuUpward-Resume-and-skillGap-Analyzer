@@ -11,9 +11,12 @@ const LoginForm = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { clearError } = useAuthStore();
+
+  // any error before performing any operation is cleared
   useEffect(() => {
     clearError();
   }, [clearError]);
+  // take the state from auth store
   const { login, isLoading, error } = useAuthStore();
 
   const [formData, setFormData] = useState({

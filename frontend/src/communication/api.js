@@ -13,6 +13,7 @@ import axios from 'axios'
 const DEFAULT_API_ORIGIN = 'http://localhost:7000'
 const DEFAULT_API_VERSION = 'v1'
 
+// we normalize the api url
 const normalizeApiBaseUrl = (rawUrl) => {
   const sanitized = String(rawUrl || DEFAULT_API_ORIGIN).trim().replace(/\/+$/, '')
 
@@ -29,6 +30,7 @@ const normalizeApiBaseUrl = (rawUrl) => {
 
 const getApiOrigin = (baseUrl) => baseUrl.replace(/\/api\/v[^/]+$/i, '')
 
+// every request must go here
 const API_BASE_URL = normalizeApiBaseUrl(import.meta.env.VITE_API_URL)
 const API_ORIGIN = getApiOrigin(API_BASE_URL)
 
@@ -46,6 +48,7 @@ const api = axios.create({
 })
 
 
+// this tell wheter the endpoint points to auth certification to generate tokens
 const isAuthEndpoint = (url = '') => {
   return (
     url.includes('/auth/login') ||
@@ -80,6 +83,7 @@ const isTokenRelated401 = (error) => {
 }
 
 // handling axios for every request
+// Request interceptor runs every time you send a request from frontend to backend, but just before the request actually goes out.
 api.interceptors.request.use(
     // config has all details of the request
     (config) => {
@@ -99,17 +103,21 @@ api.interceptors.response.use(
       const originalRequest = error.config || {}
 
     // Never refresh for auth endpoints
+    // suppose user applied for login and backend send error. so interceptor see this as an auth endpoint it does not try refresh token it return error
+    // this error is then handled in authservice
     if (isAuthEndpoint(originalRequest?.url || '')) {
       return Promise.reject(error)
     }
 
     // Refresh only for token-related 401s
     if (
+      // if the error is related token we get it and we handle refresh token
       isTokenRelated401(error) &&
       !originalRequest._retry
     ) {
       originalRequest._retry = true
 
+      // if its related to token error we create a new refresh token
       try {
         await axios.post(
           `${API_BASE_URL}/auth/refresh-token`,
@@ -117,9 +125,11 @@ api.interceptors.response.use(
           { withCredentials: true }
         )
 
+        // then we resend the original request
         return api(originalRequest)
       } catch (refreshError) {
         // logout only when refresh token itself is invalid/expired
+        
         const refreshMessage = String(
           refreshError?.response?.data?.message ||
           refreshError?.response?.data?.error ||

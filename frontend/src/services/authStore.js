@@ -1,8 +1,11 @@
 // we not use react use state cause it is valid state only in that component and not globally
 // this file is used to manage auth state accrross different parts of our app so that frontend acts according to it
+// Zustand is a small, simple state management library for React.
+// It helps you store and manage global state (data shared across components).
 import { create } from 'zustand'
 import authService from './authService.js'
 
+// it retrun the auth error message
 const getAuthErrorMessage = (error, fallback) => {
     return (
         error?.message ||
@@ -15,6 +18,9 @@ const getAuthErrorMessage = (error, fallback) => {
 
 const useAuthStore = create((set, get) => ({
 
+    // at start these state will be set.these helps to manage state across all
+    // we always manage or use this state across all
+    // many times frontend may require state across all layer so we maintain state here and we use it here
     user: null,
     isAuthenticated: false,
     isLoading: false,
