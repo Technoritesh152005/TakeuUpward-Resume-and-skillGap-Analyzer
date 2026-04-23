@@ -3,10 +3,10 @@ import roadmapModel from '../../models/roadmap.model.js'
 import performRoadmapInstance from '../ai.services/roadmap_planner.js'
 import logger from '../../utils/logs.js'
 import { logMetric } from '../../utils/metrics.js'
-import { refundAiUsage } from '../aiQuota.service.js'
+import { refundAiUsage } from '../aiQuota/aiQuota.service.js'
 import { ROADMAP_PROCESSING_STAGE, ROADMAP_STATUS } from '../../config/constant.js'
 import { buildResourceSearchLink, clearRoadmapCache, findBestResourceForItem, isGeneratedResourceLink, normalizeRoadmapPayload } from '../roadmap/roadmapShared.service.js'
-import { ensureProgressRecord, syncProgressPosition } from '../progress.service.js'
+import { ensureProgressRecord, syncProgressPosition } from '../userProgress/progress.service.js'
 import { logMissingResource } from '../../utils/missingResourceLogger.js'
 
 const refundAiUsageSafely = async (userId) => {

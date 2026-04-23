@@ -4,7 +4,7 @@ import { resumeModel } from '../../models/resume.model.js';
 import { analysisModel } from '../../models/analysis.model.js';
 import { roadmapModel } from '../../models/roadmap.model.js';
 import progressModel from '../../models/progress.model.js';
-import { getAiUsageSummary } from '../../services/aiQuota.service.js';
+import { getAiUsageSummary } from '../../services/aiQuota/aiQuota.service.js';
 
 /**
  * @desc    Get Dashboard Data

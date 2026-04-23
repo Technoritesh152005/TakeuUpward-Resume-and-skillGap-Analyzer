@@ -38,6 +38,10 @@ const clearResumeDetailCache = async (resumeId, userId) => {
     await redisClient.del(`Resume:id:${resumeId}:user:${String(userId)}`);
 };
 
+const clearDashboardStatsCache = async (userId) => {
+    await redisClient.del(`Dashboard:user:${String(userId)}`);
+};
+
 export const uploadResume = asyncHandler(async (req, res, next) => {
 
     if (!req.file) {
@@ -111,6 +115,7 @@ export const uploadResume = asyncHandler(async (req, res, next) => {
         // once a new resume is uploaded deleted the old cache
         await clearResumeUserCaches(req.user._id)
         await clearResumeDetailCache(resume._id, req.user._id)
+        await clearDashboardStatsCache(req.user._id)
 
         res.status(201)
             .json(new ApiResponse(201, {
@@ -268,6 +273,7 @@ export const deleteResume = asyncHandler(async (req, res, next) => {
     await clearResumeUserCaches(user._id)
     await clearResumeDetailCache(resume, user._id)
     await redisClient.del(`ResumeSkill:resume:${resume}:user:${user._id}`)
+    await clearDashboardStatsCache(user._id)
 
     res.status(200)
         .json(new ApiResponse(200, null, 'Resume deleted successfully'))
@@ -355,6 +361,7 @@ export const reparseResume = asyncHandler(async (req, res) => {
         await clearResumeDetailCache(req.params.id, req.user._id)
         await redisClient.del(`ResumeSkill:resume:${req.params.id}:user:${req.user._id}`)
         await clearResumeUserCaches(req.user._id)
+        await clearDashboardStatsCache(req.user._id)
         logger.info(`Resume re-parsed successfully: ${resume._id}`);
 
 

@@ -6,10 +6,10 @@ import generateAtsScore from '../ai.services/ats_score_generator.js'
 import redisClient from '../../config/redis.js'
 import logger from '../../utils/logs.js'
 import { logMetric } from '../../utils/metrics.js'
-import { refundAiUsage } from '../aiQuota.service.js'
+import { refundAiUsage } from '../aiQuota/aiQuota.service.js'
 import { ANALYSIS_PROCESSING_STAGE, ANALYSIS_STATUS } from '../../config/constant.js'
 import readinessEngineService from '../readinessEngine.service.js'
-import closestWinnableRoleService from '../closestWinnableRole.service.js'
+import closestWinnableRoleService from '../closestWinnableScoreLogic/closestWinnableRole.service.js'
 import { extractStructuredResumeSkills } from '../ai.services/fallbackSkillMatcher.js'
 
 const ANALYSIS_JOB_TIMEOUT_MS = 120000;
@@ -175,6 +175,10 @@ const clearAnalysisCache = async (userId, analysisId = null) => {
     if (analysisId) {
         await redisClient.del(`analysis:${normalizedUserId}:${analysisId}`);
     }
+};
+
+const clearDashboardStatsCache = async (userId) => {
+    await redisClient.del(`Dashboard:user:${String(userId)}`);
 };
 
 const normalizeDifficulty = (value) => {
@@ -423,6 +427,7 @@ export const processAnalysisGenerationJob = async ({ analysisId, userId, resumeI
     analysis.error = undefined
     await analysis.save()
     await clearAnalysisCache(userId, analysisId)
+    await clearDashboardStatsCache(userId)
     logMetric('analysis.queue_wait_ms', {
         analysisId: String(analysisId),
         userId: String(userId),
@@ -551,6 +556,7 @@ export const processAnalysisGenerationJob = async ({ analysisId, userId, resumeI
 
         await analysis.save()
         await clearAnalysisCache(userId, analysisId)
+        await clearDashboardStatsCache(userId)
         logMetric('analysis.processing_time_ms', {
             analysisId: String(analysisId),
             userId: String(userId),
@@ -566,6 +572,7 @@ export const processAnalysisGenerationJob = async ({ analysisId, userId, resumeI
         analysis.processingStage = ANALYSIS_PROCESSING_STAGE.FAILED
         await analysis.save()
         await clearAnalysisCache(userId, analysisId)
+        await clearDashboardStatsCache(userId)
         logMetric('analysis.processing_time_ms', {
             analysisId: String(analysisId),
             userId: String(userId),

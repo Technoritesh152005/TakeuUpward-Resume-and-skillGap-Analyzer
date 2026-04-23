@@ -27,6 +27,10 @@ const clearAnalysisCache = async (userId, analysisId = null) => {
     }
 };
 
+const clearDashboardStatsCache = async (userId) => {
+    await redisClient.del(`Dashboard:user:${String(userId)}`);
+};
+
 const buildComparisonFromSavedAnalysis = (analysis) => ({
     jobRole: {
         _id: analysis?.jobRole?._id,
@@ -153,6 +157,7 @@ export const createAnalysis = asyncHandler(async (req, res) => {
 
     // clear all the cache of the user related analysis
     await clearAnalysisCache(req.user._id);
+    await clearDashboardStatsCache(req.user._id);
 
     try {
         // as analysis id is created this isa a job now so need to be put in queue
@@ -187,6 +192,7 @@ export const createAnalysis = asyncHandler(async (req, res) => {
         queuedAnalysis.processingStage = ANALYSIS_PROCESSING_STAGE.FAILED;
         await queuedAnalysis.save();
         await clearAnalysisCache(req.user._id, queuedAnalysis._id);
+        await clearDashboardStatsCache(req.user._id);
 
         logger.error(`Error while queueing analysis: ${error.message}`);
         throw new ApiError(500, 'Failed to queue analysis');
@@ -372,6 +378,7 @@ export const deleteAnalysis = asyncHandler(async (req, res) => {
     await analaysis.save()
     // when deleted the analysis we remove all user analysis cache
     await clearAnalysisCache(userId, analysisId)
+    await clearDashboardStatsCache(userId)
 
     logger.info(201, `User succesfuly deleted his analysis. user is: ${req.user.email}`)
 
@@ -553,6 +560,7 @@ export const regenerateAnalysis = asyncHandler(async (req, res) => {
     await analysis.save();
     // clear all the analysis cache cause ab naya ayega na bhidu
     await clearAnalysisCache(req.user._id, analysis._id);
+    await clearDashboardStatsCache(req.user._id);
 
     try {
       await enqueueAnalysisGeneration({
@@ -576,6 +584,7 @@ export const regenerateAnalysis = asyncHandler(async (req, res) => {
       analysis.error = error.message;
       await analysis.save();
       await clearAnalysisCache(req.user._id, analysis._id);
+      await clearDashboardStatsCache(req.user._id);
 
       throw error;
     }
