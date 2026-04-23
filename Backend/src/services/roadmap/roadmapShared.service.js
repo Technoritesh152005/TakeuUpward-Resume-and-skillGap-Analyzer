@@ -248,8 +248,14 @@ const normalizeRoadmapPayload = (roadmapData) => {
             resources: [],
         })) : []
 
-    const projects = Array.isArray(roadmapData?.portfolioProjects)
-        ? roadmapData.portfolioProjects.map((item) => ({
+    const projectSource = Array.isArray(roadmapData?.portfolioProjects)
+        ? roadmapData.portfolioProjects
+        : Array.isArray(roadmapData?.projects)
+            ? roadmapData.projects
+            : []
+
+    const projects = projectSource.length
+        ? projectSource.map((item) => ({
             title: item?.title || 'Portfolio Project',
             description: item?.description || '',
             skillsCovered: Array.isArray(item?.skillsCovered) ? item.skillsCovered : [],
@@ -265,8 +271,16 @@ const normalizeRoadmapPayload = (roadmapData) => {
         }))
         : [];
 
-    const certification = Array.isArray(roadmapData?.recommendedCertifications)
-        ? roadmapData.recommendedCertifications.map(normalizeCertification)
+    const certificationSource = Array.isArray(roadmapData?.recommendedCertifications)
+        ? roadmapData.recommendedCertifications
+        : Array.isArray(roadmapData?.certifications)
+            ? roadmapData.certifications
+            : Array.isArray(roadmapData?.certification)
+                ? roadmapData.certification
+                : []
+
+    const certification = certificationSource.length
+        ? certificationSource.map(normalizeCertification)
         : [];
 
     const milestones = Array.isArray(roadmapData?.milestones)

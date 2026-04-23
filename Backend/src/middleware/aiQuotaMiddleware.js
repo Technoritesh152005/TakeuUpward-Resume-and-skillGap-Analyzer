@@ -1,4 +1,4 @@
-import { reserveAiUsage } from '../services/aiQuota.service.js'
+import { reserveAiUsage } from '../services/aiQuota/aiQuota.service.js'
 import asyncHandler from '../utils/asyncHandler.js'
 
 // middleware reserves one AI use atomically so parallel requests cannot overrun the quota.

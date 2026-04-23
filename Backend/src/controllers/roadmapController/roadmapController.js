@@ -6,10 +6,10 @@ import logger from '../../utils/logs.js'
 import progressModel from '../../models/progress.model.js'
 import roadmapModel from '../../models/roadmap.model.js'
 import redisClient from '../../config/redis.js'
-import { refundAiUsage } from '../../services/aiQuota.service.js'
+import { refundAiUsage } from '../../services/aiQuota/aiQuota.service.js'
 import { enqueueRoadmapGeneration } from '../../queues/roadmap.queue.js'
 import { ROADMAP_PROCESSING_STAGE, ROADMAP_STATUS } from '../../config/constant.js'
-import { recordLearningItemCompletion, resetProgressTracking } from '../../services/progress.service.js'
+import { recordLearningItemCompletion, resetProgressTracking } from '../../services/userProgress/progress.service.js'
 import { clearRoadmapCache, enrichRoadmapResources, roadmapCachekey } from '../../services/roadmap/roadmapShared.service.js'
 
 const roadmapDetailPopulate = [
@@ -432,6 +432,8 @@ export const updatePrefernce = asyncHandler(async (req, res) => {
         new ApiResponse(200, roadmap, 'User preferne updated succesfully'))
 })
 
+export const updateReference = updatePrefernce
+
 export const getProgressOfUser = asyncHandler(async (req, res) => {
 
     // here work is to return the progress of user
@@ -520,4 +522,3 @@ export const deleteRoadmap = asyncHandler(async (req, res) => {
         new ApiResponse(200, { roadmapId: roadmap._id }, 'Roadmap deleted successfully')
     )
 })
-
