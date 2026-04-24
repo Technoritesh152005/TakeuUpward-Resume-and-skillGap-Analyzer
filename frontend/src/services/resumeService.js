@@ -1,4 +1,4 @@
-import api from '../communication/api.js'
+import api, { API_ORIGIN } from '../communication/api.js'
 
 // extrcat payload means main data
 // // axios always return data in this foramt.. this is the response from axios which is basically raw in our way/language
@@ -36,6 +36,14 @@ const resumeService = {
     getResumeById:async(id)=>{
         const response = await api.get(`/resumes/${id}`)
         return extractPayload(response)
+    },
+
+    getResumeFileUrl: (id, fileUrl) => {
+        const resolvedPath = fileUrl || `/api/v1/resumes/${id}/file`
+        if (/^https?:\/\//i.test(resolvedPath)) {
+            return resolvedPath
+        }
+        return `${API_ORIGIN}${resolvedPath}`
     },
 
     getResumeSkills:async(id)=>{

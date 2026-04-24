@@ -389,6 +389,39 @@ const refundAiUsageSafely = async (userId) => {
     }
 }
 
+const buildAnalysisGenerationMeta = ({ skillGapMeta, atsMeta }) => {
+    const usedFallback = Boolean(skillGapMeta?.usedFallback || atsMeta?.usedFallback)
+    const usedRepair = Boolean(skillGapMeta?.usedRepair || atsMeta?.usedRepair)
+    const fallbackComponents = [
+        skillGapMeta?.usedFallback ? 'skill gap analysis' : null,
+        atsMeta?.usedFallback ? 'ATS analysis' : null,
+    ].filter(Boolean)
+
+    let mode = 'ai'
+    if (skillGapMeta?.usedFallback && atsMeta?.usedFallback) {
+        mode = 'fallback'
+    } else if (usedFallback) {
+        mode = 'fallback_partial'
+    } else if (usedRepair) {
+        mode = 'ai_repaired'
+    }
+
+    return {
+        provider: 'gemini',
+        mode,
+        usedFallback,
+        usedRepair,
+        generatedAt: new Date(),
+        fallbackReason: fallbackComponents.length
+            ? `Fallback mode was used for ${fallbackComponents.join(' and ')} because the AI response format was invalid.`
+            : '',
+        components: {
+            skillGap: skillGapMeta || null,
+            ats: atsMeta || null,
+        },
+    }
+}
+
 // main function logic which is called by worker
 export const processAnalysisGenerationJob = async ({ analysisId, userId, resumeId, jobRoleId }) => {
     const analysis = await analysisModel.findOne({
@@ -425,6 +458,7 @@ export const processAnalysisGenerationJob = async ({ analysisId, userId, resumeI
     analysis.processingStage = ANALYSIS_PROCESSING_STAGE.PROCESSING
     analysis.processingStartedAt = new Date()
     analysis.error = undefined
+    analysis.generationMeta = undefined
     await analysis.save()
     await clearAnalysisCache(userId, analysisId)
     await clearDashboardStatsCache(userId)
@@ -446,7 +480,7 @@ export const processAnalysisGenerationJob = async ({ analysisId, userId, resumeI
             jobRole
         )
 
-        const [skillGapAnalysisData, atsScore] = await withTimeout(
+        const [skillGapResult, atsResult] = await withTimeout(
             Promise.all([
                 skillGapPromise,
                 atsPromise,
@@ -454,6 +488,10 @@ export const processAnalysisGenerationJob = async ({ analysisId, userId, resumeI
             ANALYSIS_JOB_TIMEOUT_MS,
             'Analysis generation timed out. Please retry.'
         )
+        const skillGapAnalysisData = skillGapResult?.analysisData
+        const skillGapGenerationMeta = skillGapResult?.generationMeta
+        const atsScore = atsResult?.atsData
+        const atsGenerationMeta = atsResult?.generationMeta
 
         analysis.processingStage = ANALYSIS_PROCESSING_STAGE.FINALIZING
         await analysis.save()
@@ -513,6 +551,10 @@ export const processAnalysisGenerationJob = async ({ analysisId, userId, resumeI
             summary: skillGapAnalysisData.overallAssessment.summary,
             recommendations: skillGapAnalysisData.recommendations
         }
+        analysis.generationMeta = buildAnalysisGenerationMeta({
+            skillGapMeta: skillGapGenerationMeta,
+            atsMeta: atsGenerationMeta,
+        })
 
         analysis.applicationReadiness = readinessEngineService.buildReadiness({
             matchScore: analysis.matchScore,

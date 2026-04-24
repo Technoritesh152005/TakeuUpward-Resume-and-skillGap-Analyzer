@@ -33,6 +33,7 @@ const getApiOrigin = (baseUrl) => baseUrl.replace(/\/api\/v[^/]+$/i, '')
 // every request must go here
 const API_BASE_URL = normalizeApiBaseUrl(import.meta.env.VITE_API_URL)
 const API_ORIGIN = getApiOrigin(API_BASE_URL)
+let refreshRequest = null
 
 // reate axios api instance to communicate
 const api = axios.create({
@@ -82,6 +83,20 @@ const isTokenRelated401 = (error) => {
   )
 }
 
+const refreshAccessToken = async () => {
+  if (!refreshRequest) {
+    refreshRequest = axios.post(
+      `${API_BASE_URL}/auth/refresh-token`,
+      {},
+      { withCredentials: true }
+    ).finally(() => {
+      refreshRequest = null
+    })
+  }
+
+  return refreshRequest
+}
+
 // handling axios for every request
 // Request interceptor runs every time you send a request from frontend to backend, but just before the request actually goes out.
 api.interceptors.request.use(
@@ -119,11 +134,7 @@ api.interceptors.response.use(
 
       // if its related to token error we create a new refresh token
       try {
-        await axios.post(
-          `${API_BASE_URL}/auth/refresh-token`,
-          {},
-          { withCredentials: true }
-        )
+        await refreshAccessToken()
 
         // then we resend the original request
         return api(originalRequest)

@@ -37,6 +37,7 @@ const emptyRoadmap = {
     milestones: [],
   },
   userPreferences: {},
+  generationMeta: null,
   createdAt: '',
   status: 'completed',
   processingStage: 'completed',
@@ -62,6 +63,30 @@ const roadmapStageCopy = {
   finalizing: 'Saving roadmap phases, resources, and progress structure.',
   completed: 'Roadmap completed successfully.',
   failed: 'Roadmap generation failed before completion.',
+};
+
+const getRoadmapGenerationNotice = (generationMeta, status) => {
+  if (status !== 'completed' || !generationMeta) return null;
+
+  if (generationMeta?.usedFallback || generationMeta?.mode === 'fallback') {
+    return {
+      tone: 'warning',
+      title: 'Fallback Roadmap',
+      description:
+        generationMeta?.fallbackReason ||
+        'This roadmap was generated using deterministic fallback because the AI response format was invalid. It is usable, but may be less tailored.',
+    };
+  }
+
+  if (generationMeta?.usedRepair) {
+    return {
+      tone: 'info',
+      title: 'AI Response Repaired',
+      description: 'The AI response needed automatic JSON repair before this roadmap could be shown.',
+    };
+  }
+
+  return null;
 };
 
 const getPhaseCompletedCount = (phase) =>
@@ -164,6 +189,7 @@ const RoadmapDetailPage = () => {
         processingStartedAt: clean?.processingStartedAt || current?.processingStartedAt,
         completedAt: clean?.completedAt || current?.completedAt,
         processingTime: clean?.processingTime || current?.processingTime,
+        generationMeta: clean?.generationMeta ?? current?.generationMeta,
       }));
 
       if (clean?.status === 'completed' || clean?.status === 'failed') {
@@ -225,7 +251,7 @@ const RoadmapDetailPage = () => {
       setRetrying(true);
       const response = await roadmapService.retryRoadmap(id);
       const clean = response?.roadmap || response?.data || response;
-      setRoadmap((current) => ({ ...current, ...clean }));
+      setRoadmap((current) => ({ ...current, ...clean, generationMeta: clean?.generationMeta ?? null }));
       if (response?.aiUsage) setAiUsage(response.aiUsage);
       toast.success('Roadmap retry queued successfully');
     } catch (error) {
@@ -253,6 +279,10 @@ const RoadmapDetailPage = () => {
       currentPhaseIndex,
     };
   }, [roadmap]);
+  const generationNotice = useMemo(
+    () => getRoadmapGenerationNotice(roadmap?.generationMeta, roadmap?.status),
+    [roadmap?.generationMeta, roadmap?.status]
+  );
 
   return (
     <DashboardLayout>
@@ -320,6 +350,8 @@ const RoadmapDetailPage = () => {
             </div>
           </div>
         </section>
+
+        {generationNotice ? <GenerationNotice notice={generationNotice} /> : null}
 
         {loading ? (
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.4fr)_360px]">
@@ -690,6 +722,28 @@ const Panel = ({ title, icon: Icon, children, action = null }) => (
     {children}
   </div>
 );
+
+const GenerationNotice = ({ notice }) => {
+  const toneClass = notice?.tone === 'warning'
+    ? 'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/40 dark:bg-amber-900/15 dark:text-amber-100'
+    : 'border-blue-200 bg-blue-50 text-blue-900 dark:border-blue-900/40 dark:bg-blue-900/15 dark:text-blue-100';
+
+  const badgeClass = notice?.tone === 'warning'
+    ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200'
+    : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200';
+
+  return (
+    <section className={`rounded-[1.5rem] border px-5 py-4 ${toneClass}`}>
+      <div className="flex flex-wrap items-center gap-3">
+        <span className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${badgeClass}`}>
+          {notice?.tone === 'warning' ? 'Fallback Mode' : 'Repaired Output'}
+        </span>
+        <p className="text-sm font-semibold">{notice?.title}</p>
+      </div>
+      <p className="mt-2 text-sm leading-6 opacity-90">{notice?.description}</p>
+    </section>
+  );
+};
 
 const SectionCard = ({ title, icon: Icon, children }) => (
   <div className="h-full rounded-[1.2rem] border border-neutral-200 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-800">

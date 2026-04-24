@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, FileText, User, Mail, Phone, MapPin, 
   Briefcase, GraduationCap, Code, Award, Linkedin, 
-  Github, Globe, Calendar, Trash2, RefreshCw, Target,
+  Github, Globe, Calendar, Trash2, RefreshCw, Target, Eye,
   ChevronDown, ChevronUp
 } from 'lucide-react';
 import DashboardLayout from '../components/layout/DashboardLayout';
@@ -92,6 +92,11 @@ const ResumeDetailPage = () => {
         toast.error('Failed to delete resume');
       }
     }
+  };
+
+  const handleViewOriginalResume = () => {
+    const fileUrl = resumeService.getResumeFileUrl(id, resume?.fileUrl);
+    window.open(fileUrl, '_blank', 'noopener,noreferrer');
   };
 
   const toggleSection = (section) => {
@@ -208,6 +213,14 @@ const ResumeDetailPage = () => {
             >
               <Target className="w-4 h-4" />
               <span className="text-xs font-black uppercase tracking-widest">Analyze Gaps</span>
+            </button>
+
+            <button
+              onClick={handleViewOriginalResume}
+              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-white/5 text-white border border-white/10 rounded-xl hover:bg-white/10 transition-all"
+            >
+              <Eye className="w-4 h-4" />
+              <span className="text-xs font-black uppercase tracking-widest">View Original</span>
             </button>
 
             <button

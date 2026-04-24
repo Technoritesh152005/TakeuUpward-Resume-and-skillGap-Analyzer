@@ -58,6 +58,17 @@ class AuthService {
         }
     }
 
+    async deleteAccount(password) {
+        try {
+            const response = await api.delete('/user/delete-account', {
+                data: { password }
+            })
+            return response
+        } catch (error) {
+            throw error.response?.data || error
+        }
+    }
+
    async forgotPassword (email){
 
     try{

@@ -66,6 +66,7 @@ export const createRoadmap = asyncHandler(async (req, res) => {
             existingRoadmap.processingStartedAt = null
             existingRoadmap.completedAt = null
             existingRoadmap.processingTime = null
+            existingRoadmap.generationMeta = undefined
             await existingRoadmap.save()
             await clearRoadmapCache(analysisId, req.user._id)
 
@@ -130,6 +131,7 @@ export const createRoadmap = asyncHandler(async (req, res) => {
             totalItems: 0,
             milestones: [],
         },
+        generationMeta: undefined,
         status: ROADMAP_STATUS.QUEUED,
         processingStage: ROADMAP_PROCESSING_STAGE.QUEUED,
         queuedAt: new Date(),
@@ -222,7 +224,7 @@ export const getRoadmapStatus = asyncHandler(async (req, res) => {
         _id: req.params.id,
         user: req.user._id
         // we only transfer selected data not whole payload
-    }).select('_id analysis title status processingStage error queuedAt processingStartedAt completedAt processingTime userPreferences')
+    }).select('_id analysis title status processingStage error queuedAt processingStartedAt completedAt processingTime userPreferences generationMeta')
 
     if (!roadmap) {
         throw new ApiError(404, 'Roadmap not found');
@@ -257,6 +259,7 @@ export const retryRoadmap = asyncHandler(async (req, res) => {
     roadmap.processingStartedAt = null
     roadmap.completedAt = null
     roadmap.processingTime = null
+    roadmap.generationMeta = undefined
     await roadmap.save()
 
     // clear this roadmap from cache if added 

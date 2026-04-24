@@ -1,6 +1,7 @@
 import { generateContentWithFallback } from '../../config/gemini.js';
 import logger from '../../utils/logs.js';
 import { extractCandidateSkillSet, matchRoleSkill, getRoleSkillList } from './fallbackSkillMatcher.js';
+import { buildGenerationMeta, parseAiJsonResponse } from './aiJsonResponse.js';
 
 class AtsScoreGenerator {
     // buildOverview - basically shows debug error
@@ -360,27 +361,10 @@ ${invalidJson}
     }
 
     async parseAtsResponse(rawContent) {
-        const normalized = this.normalizeJsonString(rawContent);
-        const extracted = this.extractJsonBlock(normalized);
-
-        try {
-            return this.tryParseJson(extracted);
-        } catch (firstError) {
-            // The ATS prompt asks for JSON, but models still sometimes wrap it in prose or return malformed strings.
-            // Repair is a second AI call, so keep this as a recovery path instead of the normal path.
-            logger.warn(`Primary ATS JSON parse failed, attempting Gemini repair: ${firstError.message}`);
-            logger.warn(`ATS AI raw preview: ${this.buildDebugPreview(rawContent)}`);
-            logger.warn(`ATS AI extracted preview: ${this.buildDebugPreview(extracted)}`);
-
-            try {
-                const repaired = await this.repairJsonWithGemini(extracted);
-                logger.warn(`ATS AI repaired preview: ${this.buildDebugPreview(repaired)}`);
-                return this.tryParseJson(repaired);
-            } catch (repairError) {
-                logger.warn(`Falling back to deterministic ATS analysis due to unrecoverable AI JSON: ${repairError.message}`);
-                return null;
-            }
-        }
+        return parseAiJsonResponse({
+            label: 'ATS analysis',
+            rawContent,
+        });
     }
 
     // overview of resume data to pass to llm
@@ -618,9 +602,13 @@ Return ONLY the JSON object, no markdown formatting.
             // so if it gave improper format we can atleast provide our fallback data to that fields
             const fallbackData = this.buildFallbackAtsScore(resumeData, jobRole);
             // proper parsed data in js object
-            const parsedData = await this.parseAtsResponse(rawText);
-            const properData = this.normalizeAtsPayload(parsedData, fallbackData);
+            const { data: parsedData, meta } = await this.parseAtsResponse(rawText);
+            const properData = this.normalizeAtsPayload(parsedData || fallbackData, fallbackData);
             const deterministicKeywords = this.buildDeterministicKeywordSection(resumeData, jobRole);
+            let generationMeta = {
+                ...meta,
+                generatedAt: new Date(),
+            };
 
             // Keyword matching is intentionally recomputed from local data so ATS keyword coverage stays stable
             // even when the AI wording is noisy or inconsistent.
@@ -644,11 +632,40 @@ Return ONLY the JSON object, no markdown formatting.
             ])).slice(0, 3);
 
             if (!properData || properData.overallScore === undefined || properData.overallScore === null) {
-                throw new Error('Invalid ATS score response from AI');
+                generationMeta = {
+                    ...buildGenerationMeta({
+                        label: 'ATS analysis',
+                        mode: 'fallback',
+                        usedFallback: true,
+                        parseError: generationMeta.parseError,
+                        repairError: generationMeta.repairError,
+                        repairAttempted: generationMeta.repairAttempted,
+                        fallbackReason: 'ATS analysis output did not match the required structure after parsing.',
+                    }),
+                    generatedAt: new Date(),
+                };
+
+                const normalizedFallback = this.normalizeAtsPayload(fallbackData, fallbackData);
+
+                logger.warn('ATS score generated using deterministic fallback after invalid AI structure');
+                return {
+                    atsData: normalizedFallback,
+                    generationMeta,
+                };
             }
 
-            logger.info('ATS score generated successfully with Gemini');
-            return properData;
+            if (generationMeta.usedFallback) {
+                logger.warn('ATS score generated using deterministic fallback');
+            } else if (generationMeta.usedRepair) {
+                logger.info('ATS score generated with Gemini after JSON repair');
+            } else {
+                logger.info('ATS score generated successfully with Gemini');
+            }
+
+            return {
+                atsData: properData,
+                generationMeta,
+            };
             
         } catch (error) {
             logger.error(`ATS score generation failed: ${error.message}`);

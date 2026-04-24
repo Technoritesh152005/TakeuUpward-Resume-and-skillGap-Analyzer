@@ -1,6 +1,7 @@
 import { generateContentWithFallback } from '../../config/gemini.js';
 import logger from '../../utils/logs.js';
 import { extractCandidateSkillSet, matchRoleSkill, expandSkillVariants, skillsOverlap } from './fallbackSkillMatcher.js';
+import { buildGenerationMeta, parseAiJsonResponse } from './aiJsonResponse.js';
 
 class SkillGapAnalysis {
     normalizeUserPreferences(userPreferences = {}) {
@@ -601,19 +602,52 @@ Return ONLY the JSON object, no markdown formatting.
                     maxOutputTokens: 2500,
                 },
             });
-            const response =  result.response;
+            const response = await result.response;
             const rawText = response.text();
 
             const fallbackData = this.buildFallbackAnalysis(resumeData, jobRole, normalizedPreferences);
-            const parsedData = await this.parseJsonResponse(rawText, resumeData, jobRole, normalizedPreferences);
-            const structuredData = this.normalizeSkillGapPayload(parsedData, fallbackData, resumeData, jobRole);
+            const { data: parsedData, meta } = await this.parseJsonResponse(rawText);
+            const structuredData = this.normalizeSkillGapPayload(parsedData || fallbackData, fallbackData, resumeData, jobRole);
+            let generationMeta = {
+                ...meta,
+                generatedAt: new Date(),
+            };
 
             if (!structuredData || !structuredData.overallAssessment) {
-                throw new Error('Invalid response from AI');
+                generationMeta = {
+                    ...buildGenerationMeta({
+                        label: 'Skill gap analysis',
+                        mode: 'fallback',
+                        usedFallback: true,
+                        parseError: generationMeta.parseError,
+                        repairError: generationMeta.repairError,
+                        repairAttempted: generationMeta.repairAttempted,
+                        fallbackReason: 'Skill gap analysis output did not match the required structure after parsing.',
+                    }),
+                    generatedAt: new Date(),
+                };
+
+                const normalizedFallback = this.normalizeSkillGapPayload(fallbackData, fallbackData);
+
+                logger.warn('Skill gap analysis completed using deterministic fallback after invalid AI structure');
+                return {
+                    analysisData: normalizedFallback,
+                    generationMeta,
+                };
             }
 
-            logger.info('Skill gap analysis completed with Gemini');
-            return structuredData;
+            if (generationMeta.usedFallback) {
+                logger.warn('Skill gap analysis completed using deterministic fallback');
+            } else if (generationMeta.usedRepair) {
+                logger.info('Skill gap analysis completed with Gemini after JSON repair');
+            } else {
+                logger.info('Skill gap analysis completed with Gemini');
+            }
+
+            return {
+                analysisData: structuredData,
+                generationMeta,
+            };
         } catch (error) {
             logger.error(`Skill gap analysis failed: ${error.message}`);
             throw new Error(`Failed to perform skill gap analysis: ${error.message}`);
@@ -623,27 +657,11 @@ Return ONLY the JSON object, no markdown formatting.
 
     // it truws to parse the response from ai
     // 
-    async parseJsonResponse(rawContent, resumeData, jobRole, userPreferences = {}) {
-        const normalized = this.normalizeJsonString(rawContent);
-        const extracted = this.extractJsonBlock(normalized);
-
-        try {
-            return this.tryParseJson(extracted);
-            // if primary parse failed try deterministic or fallback
-        } catch (firstError) {
-            logger.warn(`Primary skill gap JSON parse failed, attempting Gemini repair: ${firstError.message}`);
-            logger.warn(`Skill gap AI raw preview: ${this.buildDebugPreview(rawContent)}`);
-            logger.warn(`Skill gap AI extracted preview: ${this.buildDebugPreview(extracted)}`);
-
-            try {
-                const repaired = await this.repairJsonWithGemini(extracted);
-                logger.warn(`Skill gap AI repaired preview: ${this.buildDebugPreview(repaired)}`);
-                return this.tryParseJson(repaired);
-            } catch (repairError) {
-                logger.warn(`Falling back to deterministic skill gap analysis due to unrecoverable AI JSON: ${repairError.message}`);
-                return this.buildFallbackAnalysis(resumeData, jobRole, userPreferences);
-            }
-        }
+    async parseJsonResponse(rawContent) {
+        return parseAiJsonResponse({
+            label: 'Skill gap analysis',
+            rawContent,
+        });
     }
 
     buildFallbackAnalysis(resumeData, jobRole, userPreferences = {}) {
