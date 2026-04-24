@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  AlertTriangle,
   Briefcase,
   Camera,
   CheckCircle2,
@@ -153,12 +155,15 @@ const buildPayload = (form) => {
 };
 
 const ProfilePage = () => {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const updateUser = useAuthStore((state) => state.updateUser);
+  const logout = useAuthStore((state) => state.logout);
   const authUser = useAuthStore((state) => state.user);
 
   const [form, setForm] = useState(createEmptyForm);
   const [avatarPreviewFailed, setAvatarPreviewFailed] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
 
   const profileQuery = useQuery({
     queryKey: ['profile'],
@@ -204,6 +209,24 @@ const ProfilePage = () => {
     },
   });
 
+  const deleteAccountMutation = useMutation({
+    mutationFn: async (password) => {
+      const response = await authService.deleteAccount(password);
+      return response?.data ?? null;
+    },
+    onSuccess: async () => {
+      toast.success('Account deleted successfully');
+      setDeletePassword('');
+      queryClient.clear();
+      await logout();
+      navigate('/login', { replace: true });
+    },
+    onError: (error) => {
+      const message = error?.message || error?.error || 'Failed to delete account';
+      toast.error(message);
+    },
+  });
+
   const handleTopLevelChange = (field) => (event) => {
     const value = event.target.value;
     setForm((current) => ({
@@ -226,6 +249,21 @@ const ProfilePage = () => {
   const handleSubmit = (event) => {
     event.preventDefault();
     saveProfileMutation.mutate(form);
+  };
+
+  const handleDeleteAccount = async () => {
+    const password = deletePassword.trim();
+
+    if (!password) {
+      toast.error('Enter your password to delete the account');
+      return;
+    }
+
+    if (!window.confirm('Are you sure you want to delete your account? This will deactivate your account and related data.')) {
+      return;
+    }
+
+    deleteAccountMutation.mutate(password);
   };
 
   if (profileQuery.isLoading) {
@@ -544,6 +582,43 @@ const ProfilePage = () => {
                 </button>
               </div>
             </div>
+
+            <Panel title="Danger Zone" subtitle="Delete the current account from the existing backend route." icon={AlertTriangle}>
+              <div className="rounded-3xl border border-red-200 bg-red-50 p-5 dark:border-red-900/40 dark:bg-red-900/10">
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm font-semibold text-red-800 dark:text-red-200">Delete account</p>
+                    <p className="mt-1 text-sm text-red-700 dark:text-red-300">
+                      This action requires your password and deactivates your account together with related resume and analysis records.
+                    </p>
+                  </div>
+
+                  <Field label="Confirm password">
+                    <input
+                      type="password"
+                      value={deletePassword}
+                      onChange={(event) => setDeletePassword(event.target.value)}
+                      placeholder="Enter your password"
+                      className="input"
+                    />
+                  </Field>
+
+                  <button
+                    type="button"
+                    onClick={handleDeleteAccount}
+                    disabled={deleteAccountMutation.isPending}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-red-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {deleteAccountMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <AlertTriangle className="h-4 w-4" />
+                    )}
+                    {deleteAccountMutation.isPending ? 'Deleting...' : 'Delete Account'}
+                  </button>
+                </div>
+              </div>
+            </Panel>
           </div>
         </form>
       </div>

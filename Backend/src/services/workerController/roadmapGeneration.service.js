@@ -18,6 +18,16 @@ const refundAiUsageSafely = async (userId) => {
     }
 }
 
+const buildRoadmapGenerationMeta = (generationMeta) => ({
+    provider: 'gemini',
+    mode: generationMeta?.mode || 'ai',
+    usedFallback: Boolean(generationMeta?.usedFallback),
+    usedRepair: Boolean(generationMeta?.usedRepair),
+    generatedAt: new Date(),
+    fallbackReason: generationMeta?.fallbackReason || '',
+    parser: generationMeta || null,
+})
+
 export const processRoadmapGenerationJob = async ({ analysisId, userId, roadmapId }) => {
     const roadmap = await roadmapModel.findOne({
         _id: roadmapId,
@@ -47,6 +57,7 @@ export const processRoadmapGenerationJob = async ({ analysisId, userId, roadmapI
     roadmap.processingStage = ROADMAP_PROCESSING_STAGE.PROCESSING
     roadmap.processingStartedAt = new Date()
     roadmap.error = undefined
+    roadmap.generationMeta = undefined
 
     await roadmap.save()
     // when generating new roadmap clear all the old data in cache of this analysis id and user id cause user neeeds to get new roadmap not old one
@@ -71,7 +82,9 @@ export const processRoadmapGenerationJob = async ({ analysisId, userId, roadmapI
             learningStyle: roadmap?.userPreferences?.learningStyle || 'mixed'
         }
 
-        const roadmapData = await performRoadmapInstance.performRoadmap(analysisData, prefernces)
+        const roadmapResult = await performRoadmapInstance.performRoadmap(analysisData, prefernces)
+        const roadmapData = roadmapResult?.roadmapData
+        const roadmapGenerationMeta = roadmapResult?.generationMeta
 
         if (!roadmapData) {
             throw new Error('Failed to generate roadmap for this analysis')
@@ -116,6 +129,7 @@ export const processRoadmapGenerationJob = async ({ analysisId, userId, roadmapI
         roadmap.quickwins = normalizedData.quickwins
         roadmap.projects = normalizedData.projects
         roadmap.certification = normalizedData.certification
+        roadmap.generationMeta = buildRoadmapGenerationMeta(roadmapGenerationMeta)
         roadmap.progress = {
             // to take nested object reference use ...
             // we all r changing to the copy of this progress. now we need to save this

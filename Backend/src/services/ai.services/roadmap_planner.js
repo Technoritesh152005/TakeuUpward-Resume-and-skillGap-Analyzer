@@ -1,5 +1,6 @@
-import { getModel } from '../../config/gemini.js';
+import { generateContentWithFallback } from '../../config/gemini.js';
 import logger from '../../utils/logs.js';
+import { buildGenerationMeta, parseAiJsonResponse } from './aiJsonResponse.js';
 
 class RoadmapAnalysis {
     toNumber(value, fallback = 0) {
@@ -153,6 +154,90 @@ class RoadmapAnalysis {
         };
     }
 
+    buildFallbackCertifications(skills = [], budget = 'free') {
+        const normalizedSkills = skills.map((skill) => String(skill || '').toLowerCase());
+        const certifications = [];
+
+        const addCertification = (certification) => {
+            if (!certification?.name) return;
+            const alreadyExists = certifications.some(
+                (item) => String(item?.name || '').toLowerCase() === String(certification.name).toLowerCase()
+            );
+
+            if (!alreadyExists) {
+                certifications.push(certification);
+            }
+        };
+
+        if (normalizedSkills.some((skill) => /(rest|api|express|node)/.test(skill))) {
+            addCertification({
+                name: 'Postman API Fundamentals Student Expert',
+                provider: 'Postman',
+                cost: 0,
+                duration: '1-2 weeks',
+                priority: 'high',
+                reasoning: 'Validates API design, testing, and collaboration skills that support backend and REST-focused roles.',
+            });
+        }
+
+        if (normalizedSkills.some((skill) => /(docker|kubernetes|ci\/cd|devops|deployment)/.test(skill))) {
+            addCertification({
+                name: 'Docker Foundations Professional Certificate',
+                provider: 'Docker',
+                cost: budget === 'free' ? 0 : 49,
+                duration: '2-4 weeks',
+                priority: 'high',
+                reasoning: 'Strengthens containerization and deployment credibility for roadmap gaps related to Docker and release workflows.',
+            });
+        }
+
+        if (normalizedSkills.some((skill) => /(aws|azure|gcp|cloud)/.test(skill))) {
+            addCertification({
+                name: 'AWS Certified Cloud Practitioner',
+                provider: 'AWS',
+                cost: budget === 'free' ? 0 : 100,
+                duration: '3-4 weeks',
+                priority: 'medium',
+                reasoning: 'Covers the cloud foundations commonly expected when roadmap gaps mention deployment, hosting, or cloud exposure.',
+            });
+        }
+
+        if (normalizedSkills.some((skill) => /(react|javascript|typescript|frontend)/.test(skill))) {
+            addCertification({
+                name: 'JavaScript Algorithms and Data Structures',
+                provider: 'freeCodeCamp',
+                cost: 0,
+                duration: '4-6 weeks',
+                priority: 'medium',
+                reasoning: 'Provides a free, resume-friendly signal for core JavaScript readiness when frontend skills remain part of the roadmap.',
+            });
+        }
+
+        if (normalizedSkills.some((skill) => /graphql/.test(skill))) {
+            addCertification({
+                name: 'Graph Developer Foundations',
+                provider: 'Apollo GraphQL',
+                cost: budget === 'free' ? 0 : 99,
+                duration: '2-3 weeks',
+                priority: 'medium',
+                reasoning: 'Adds a focused validation path for GraphQL fundamentals when the roadmap highlights API schema or graph-based services.',
+            });
+        }
+
+        if (!certifications.length) {
+            addCertification({
+                name: 'Career Essentials in Generative AI',
+                provider: 'Microsoft and LinkedIn',
+                cost: 0,
+                duration: '1-2 weeks',
+                priority: 'low',
+                reasoning: 'Provides a lightweight fallback certification when the roadmap cannot infer a stronger skill-specific credential.',
+            });
+        }
+
+        return certifications.slice(0, 3);
+    }
+
     // if there is a problem to generate a roadmap we must atleast have a fallback or a dummy type roadmap structure for system not to crash
     buildFallbackRoadmap(gapAnalysis, userpreference = {}) {
         const {
@@ -274,7 +359,7 @@ class RoadmapAnalysis {
                     importance: 'Demonstrates practical application for interviews and portfolio review',
                 },
             ],
-            recommendedCertifications: [],
+            recommendedCertifications: this.buildFallbackCertifications(selectedSkills, budget),
             milestones: [
                 {
                     week: 4,
@@ -403,26 +488,63 @@ Make it realistic, achievable, and motivating. Prioritize critical skills first.
 Return ONLY the JSON object, no markdown formatting.
 `;
 
-            const model = getModel();
-            const result = await model.generateContent(prompt);
+            const result = await generateContentWithFallback({
+                contents: [{ role: 'user', parts: [{ text: prompt }] }],
+                generationConfig: {
+                    responseMimeType: 'application/json',
+                    temperature: 0,
+                    maxOutputTokens: 2800,
+                },
+            });
             const response = await result.response;
             const rawText = response.text();
 
-            const cleanedContent = rawText
-                .replace(/```json\n?/g, '')
-                .replace(/```\n?/g, '')
-                .trim();
-
             const fallbackData = this.buildFallbackRoadmap(gapAnalysis, userpreference);
-            const parsedData = this.parseRoadmapResponse(cleanedContent);
-            const properData = this.normalizeRoadmapPayload(parsedData, fallbackData);
+            const { data: parsedData, meta } = await parseAiJsonResponse({
+                label: 'Roadmap',
+                rawContent: rawText,
+            });
+            const properData = this.normalizeRoadmapPayload(parsedData || fallbackData, fallbackData);
+            let generationMeta = {
+                ...meta,
+                generatedAt: new Date(),
+            };
 
             if (!properData || !Array.isArray(properData.phases) || properData.phases.length === 0) {
-                throw new Error('Invalid roadmap response from AI');
+                generationMeta = {
+                    ...buildGenerationMeta({
+                        label: 'Roadmap',
+                        mode: 'fallback',
+                        usedFallback: true,
+                        parseError: generationMeta.parseError,
+                        repairError: generationMeta.repairError,
+                        repairAttempted: generationMeta.repairAttempted,
+                        fallbackReason: 'Roadmap AI output did not match the required structure after parsing.',
+                    }),
+                    generatedAt: new Date(),
+                };
+
+                const normalizedFallback = this.normalizeRoadmapPayload(fallbackData, fallbackData);
+
+                logger.warn('Roadmap generated using deterministic fallback after invalid AI structure');
+                return {
+                    roadmapData: normalizedFallback,
+                    generationMeta,
+                };
             }
 
-            logger.info('Successfully generated roadmap with Gemini');
-            return properData;
+            if (generationMeta.usedFallback) {
+                logger.warn('Roadmap generated using deterministic fallback');
+            } else if (generationMeta.usedRepair) {
+                logger.info('Roadmap generated with Gemini after JSON repair');
+            } else {
+                logger.info('Successfully generated roadmap with Gemini');
+            }
+
+            return {
+                roadmapData: properData,
+                generationMeta,
+            };
 
         } catch (error) {
             logger.error(`Error creating roadmap: ${error.message}`);

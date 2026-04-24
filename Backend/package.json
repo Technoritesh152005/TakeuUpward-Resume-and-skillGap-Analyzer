@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "test": "jest --coverage",
+    "test": "node --test",
     "seed:roles": "node src/scripts/seed-job-roles.js",
     "seed:resources": "node src/scripts/seed-resources.js",
     "seed:all": "npm run seed:roles && npm run seed:resources"

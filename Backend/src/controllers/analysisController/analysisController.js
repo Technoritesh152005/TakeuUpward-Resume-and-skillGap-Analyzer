@@ -150,6 +150,7 @@ export const createAnalysis = asyncHandler(async (req, res) => {
         jobRole: jobRoleId,
         userPreferences: resolvedPreferences,
         matchScore: 0,
+        generationMeta: undefined,
         status: ANALYSIS_STATUS.QUEUED,
         processingStage: ANALYSIS_PROCESSING_STAGE.QUEUED,
         queuedAt: new Date(),
@@ -314,7 +315,7 @@ export const getAnalysisStatus = asyncHandler(async (req, res) => {
         user: req.user._id,
         _id: req.params.id,
         isActive: true
-    }).select('_id status processingStage error queuedAt processingStartedAt completedAt processingTime')
+    }).select('_id status processingStage error queuedAt processingStartedAt completedAt processingTime generationMeta')
 
     if (!analysis) {
         throw new ApiError(404, 'No analysis found of user')
@@ -550,6 +551,7 @@ export const regenerateAnalysis = asyncHandler(async (req, res) => {
     analysis.processingStartedAt = undefined;
     analysis.completedAt = undefined;
     analysis.processingTime = undefined;
+    analysis.generationMeta = undefined;
     analysis.version = Number(analysis.version || 1) + 1;
     analysis.userPreferences = {
       hoursPerWeek: preferences?.hoursPerWeek ?? analysis?.userPreferences?.hoursPerWeek ?? 8,

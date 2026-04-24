@@ -44,6 +44,7 @@ const emptyOverview = {
   aiSuggestion: { summary: '', recommendations: [], careerAdvice: '', competitiveAnalysis: null },
   applicationReadiness: { topReasons: [] },
   closestWinnableRole: null,
+  generationMeta: null,
 }
 
 const statusTone = {
@@ -51,6 +52,39 @@ const statusTone = {
   processing: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
   completed: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
   failed: 'bg-red-500/10 text-red-400 border-red-500/20',
+}
+
+const getAnalysisGenerationNotice = (generationMeta, status) => {
+  if (status !== 'completed' || !generationMeta) return null
+
+  const fallbackComponents = [
+    generationMeta?.components?.skillGap?.usedFallback ? 'skill gap analysis' : null,
+    generationMeta?.components?.ats?.usedFallback ? 'ATS analysis' : null,
+  ].filter(Boolean)
+  const repairedComponents = [
+    generationMeta?.components?.skillGap?.usedRepair ? 'skill gap analysis' : null,
+    generationMeta?.components?.ats?.usedRepair ? 'ATS analysis' : null,
+  ].filter(Boolean)
+
+  if (generationMeta?.usedFallback || String(generationMeta?.mode || '').includes('fallback')) {
+    return {
+      tone: 'warning',
+      title: 'Fallback Analysis',
+      description:
+        generationMeta?.fallbackReason ||
+        `Fallback mode was used for ${fallbackComponents.join(' and ') || 'part of this analysis'} because the AI response format was invalid. The result is usable, but may be less tailored.`,
+    }
+  }
+
+  if (generationMeta?.usedRepair) {
+    return {
+      tone: 'info',
+      title: 'AI Response Repaired',
+      description: `The AI response for ${repairedComponents.join(' and ') || 'this analysis'} needed automatic JSON repair before it could be shown.`,
+    }
+  }
+
+  return null
 }
 
 const scoreTone = (score) => {
@@ -127,6 +161,7 @@ const normalizeAnalysisDetail = (payload) => {
   return {
     ...emptyOverview,
     ...clean,
+    generationMeta: clean?.generationMeta || null,
     extractedSkills: asArray(clean?.extractedSkills),
     skillBreakdown: asArray(clean?.skillBreakdown),
     candidateStrength: asArray(clean?.candidateStrength),
@@ -279,6 +314,7 @@ const AnalysisDetailPage = ()=>{
         processingStartedAt: statusData?.processingStartedAt || current?.processingStartedAt,
         completedAt: statusData?.completedAt || current?.completedAt,
         processingTime: statusData?.processingTime || current?.processingTime,
+        generationMeta: statusData?.generationMeta ?? current?.generationMeta,
       }))
 
       if (statusData?.status === 'completed' || statusData?.status === 'failed') {
@@ -332,6 +368,10 @@ const AnalysisDetailPage = ()=>{
     weakPhrases: asArray(analysis?.atsScore?.content?.weakPhrases),
     rewriteSuggestions: asArray(analysis?.atsScore?.content?.rewriteSuggestions),
   }), [analysis])
+  const generationNotice = useMemo(
+    () => getAnalysisGenerationNotice(analysis?.generationMeta, analysis?.status),
+    [analysis?.generationMeta, analysis?.status]
+  )
 
   const handleDeleteAnalysis = async()=> {
     const confirmed = window.confirm('Delete this analysis? This will remove it from your active analysis history.')
@@ -364,6 +404,7 @@ const AnalysisDetailPage = ()=>{
         ...normalizeAnalysisDetail({
           ...current,
           ...clean,
+          generationMeta: clean?.generationMeta || null,
         }),
         status: clean?.status || 'queued',
         processingStage: clean?.processingStage || 'queued',
@@ -372,6 +413,7 @@ const AnalysisDetailPage = ()=>{
         processingStartedAt: clean?.processingStartedAt || null,
         completedAt: clean?.completedAt || null,
         processingTime: clean?.processingTime || null,
+        generationMeta: clean?.generationMeta || null,
       }))
       setRecommendedJobs([])
       setJobRecommendationMeta({ basedOn: [] })
@@ -497,6 +539,8 @@ const AnalysisDetailPage = ()=>{
           </div>
         ) : null}
       </motion.section>
+
+      {generationNotice ? <GenerationNotice notice={generationNotice} /> : null}
 
       {loading ? (
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
@@ -800,6 +844,28 @@ const Panel = ({ title, icon: Icon, description, children }) => (
     </div>
   </motion.div>
 );
+
+const GenerationNotice = ({ notice }) => {
+  const toneClass = notice?.tone === 'warning'
+    ? 'border-amber-500/20 bg-amber-500/10 text-amber-100'
+    : 'border-blue-500/20 bg-blue-500/10 text-blue-100'
+
+  const badgeClass = notice?.tone === 'warning'
+    ? 'bg-amber-500/15 text-amber-300 border-amber-500/20'
+    : 'bg-blue-500/15 text-blue-300 border-blue-500/20'
+
+  return (
+    <div className={`rounded-3xl border px-6 py-5 ${toneClass}`}>
+      <div className="flex flex-wrap items-center gap-3">
+        <span className={`rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] ${badgeClass}`}>
+          {notice?.tone === 'warning' ? 'Fallback Mode' : 'Repaired Output'}
+        </span>
+        <p className="text-sm font-semibold">{notice?.title}</p>
+      </div>
+      <p className="mt-3 text-sm leading-6 text-neutral-200">{notice?.description}</p>
+    </div>
+  )
+}
 
 const AnalysisProcessingState = ({ analysis }) => {
   const stages = [

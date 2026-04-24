@@ -313,6 +313,10 @@ const analysisSchema = mongoose.Schema(
         completedAt:Date,
         processingTime:Number,
         error:String,
+        generationMeta: {
+            type: mongoose.Schema.Types.Mixed,
+            default: undefined,
+        },
         
         // Metadata
         version: {

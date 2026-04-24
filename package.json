@@ -2,7 +2,7 @@
   "name": "resume-analyzer",
   "scripts": {
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "dev:backend": "npm run dev --prefix backend",
+    "dev:backend": "npm run dev --prefix Backend",
     "dev:frontend": "npm run dev --prefix frontend"
   },
   "devDependencies": {
