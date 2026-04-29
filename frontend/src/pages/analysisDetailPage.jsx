@@ -1040,7 +1040,7 @@ const AnalysisProcessingState = ({ analysis }) => {
         </Panel>
 
         <Panel title="What to Expect" icon={Clock3}>
-          <div className="space-y-4 text-xs font-medium leading-relaxed text-neutral-500">
+          <div className="space-y-4 text-sm font-medium leading-7 text-neutral-300">
             <p className="flex gap-2">
               <span className="text-primary-500">•</span>
               Match score and role-fit summary
@@ -1541,7 +1541,7 @@ const AtsListSection = ({ title, items, emptyText }) => (
 
 const InfoRow = ({ label, value }) => (
   <div className="flex items-center justify-between rounded-2xl bg-neutral-50 px-4 py-3 dark:bg-neutral-900/60">
-    <span className="text-neutral-500 dark:text-neutral-400">{label}</span>
+    <span className="text-neutral-600 dark:text-neutral-300">{label}</span>
     <span className="font-medium text-neutral-900 dark:text-white">{value}</span>
   </div>
 );
