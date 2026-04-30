@@ -1,10 +1,11 @@
 import {createClient} from 'redis'
 import logger from '../utils/logs.js' 
 
+const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379'
+
 const redisClient = createClient(
     {
-        // redis runs on 6379 default
-        url:'redis://localhost:6379'
+        url: redisUrl
     }
 )
 // .on is a listen event emitter
@@ -12,5 +13,6 @@ const redisClient = createClient(
 redisClient.on('error',(err)=>logger.error('Redis Error: ',err))
 
 await redisClient.connect();
+logger.info(`Redis connected using ${redisUrl}`)
 
 export default redisClient
