@@ -1,346 +1,460 @@
-# 🎯 Resume Analyzer - AI-Powered Career Guidance Platform
+# AI-Powered Resume Maker and Skill Gap Analyzer
 
-> Analyze your resume, identify skill gaps, and get a personalized 90-day learning roadmap to land your dream job.
+Full-stack career guidance platform that lets users upload resumes, parse and analyze them against target job roles, identify skill gaps, improve ATS readiness, generate structured learning roadmaps, and discover relevant jobs.
 
-![Status](https://img.shields.io/badge/status-active-success.svg)
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
+## Overview
 
----
+This project combines:
 
-## 📋 Table of Contents
+- A React frontend for resume upload, analysis review, roadmap tracking, dashboard insights, authentication, and profile management
+- An Express backend for auth, resume parsing, AI analysis, roadmap generation, dashboard APIs, and job role data
+- MongoDB for core application data
+- Redis + BullMQ for background processing of analysis and roadmap jobs
+- Gemini-based AI workflows for skill-gap analysis, ATS scoring, and roadmap generation
+- OCR fallback support for difficult resume files
 
-- [About](#about)
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Getting Started](#getting-started)
-- [Environment Variables](#environment-variables)
-- [Running the Project](#running-the-project)
-- [API Documentation](#api-documentation)
-- [Deployment](#deployment)
-- [Contributing](#contributing)
-- [License](#license)
+The main user flow is:
 
----
+1. User signs up or logs in
+2. User uploads a PDF or DOCX resume
+3. Backend parses the resume and stores structured data
+4. User selects a target job role and creates an analysis
+5. Analysis runs asynchronously through BullMQ workers
+6. User reviews match score, strengths, gaps, ATS score, readiness, and recommendations
+7. User generates a personalized roadmap and tracks progress over time
 
-## 🎯 About
+## Core Features
 
-**Resume Analyzer** is a full-stack AI-powered platform that helps students and job seekers:
-- **Analyze** their resume against target job roles
-- **Identify** critical skill gaps preventing them from getting hired
-- **Generate** personalized 90-day learning roadmaps
-- **Track** progress and improve ATS (Applicant Tracking System) scores
+- Resume upload with PDF and DOCX validation
+- Resume parsing with native extraction plus OCR fallback
+- AI-generated skill gap analysis against job roles
+- ATS scoring with keyword, structure, formatting, and content breakdown
+- Readiness scoring and closest winnable role suggestions
+- Multi-role comparison for a single resume
+- Personalized roadmap generation from completed analysis
+- Roadmap progress tracking and completion state
+- Dashboard summaries and recent activity
+- Job role catalog with category, slug, similar-role, and trending endpoints
+- Recommended live jobs based on completed analysis
+- Email-based password reset flow
+- Google OAuth login support
+- JWT auth with refresh-token flow and cookie-based session continuity
 
-**Target Users:** College students, recent graduates, career switchers
-
----
-
-## ✨ Features
-
-### Core Features
-- 📄 **Smart Resume Parsing** - Extract skills, experience, and education from PDF/DOCX
-- 🤖 **AI-Powered Analysis** - Claude AI analyzes resume vs job requirements
-- 📊 **Skill Gap Detection** - Identifies critical, important, and nice-to-have gaps
-- 🎯 **Match Score** - Shows percentage match with target role
-- 🗺️ **90-Day Roadmap** - Personalized learning path with resources
-- 📈 **ATS Score** - Optimize resume for applicant tracking systems
-- 🔄 **Progress Tracking** - Mark skills as learned, track improvement
-
-### Additional Features
-- 🔐 **Secure Authentication** - JWT-based auth with refresh tokens
-- 🔍 **Job Role Library** - Browse 50+ curated job roles
-- 📱 **Responsive Design** - Works on desktop, tablet, and mobile
-- 🎨 **Modern UI** - Clean, professional interface
-
----
-
-## 🛠️ Tech Stack
-
-### Backend
-- **Runtime:** Node.js 18+
-- **Framework:** Express.js
-- **Database:** MongoDB (Mongoose ODM)
-- **AI:** Anthropic Claude API (Sonnet 4.5)
-- **Authentication:** JWT (JSON Web Tokens)
-- **File Parsing:** pdf-parse, mammoth
-- **Validation:** Joi
-- **Logging:** Winston
+## Tech Stack
 
 ### Frontend
-- **Framework:** React 18
-- **Build Tool:** Vite
-- **Routing:** React Router v6
-- **State Management:** Zustand
-- **Server State:** React Query
-- **Styling:** Tailwind CSS
-- **UI Components:** Headless UI
-- **Charts:** Recharts
-- **Icons:** Lucide React
-- **Forms:** React Hook Form + Zod
-- **HTTP Client:** Axios
 
-### DevOps
-- **Version Control:** Git
-- **Backend Hosting:** Railway / Render
-- **Frontend Hosting:** Vercel
-- **Database:** MongoDB Atlas
+- React 18
+- Vite
+- React Router
+- Tailwind CSS
+- Zustand
+- TanStack Query
+- Axios
+- React Hook Form + Zod
+- Recharts
+- Framer Motion
+- Headless UI
+- Lucide React
 
----
+### Backend
 
-## 📁 Project Structure
+- Node.js
+- Express
+- MongoDB + Mongoose
+- Redis
+- BullMQ
+- Joi validation
+- Multer
+- Passport + Google OAuth 2.0
+- JWT
+- Winston + Morgan
+- Helmet
+- CORS
+- Compression
+- express-mongo-sanitize
 
+### AI and Parsing
+
+- Google Gemini (`@google/generative-ai`)
+- Anthropic SDK present in dependencies
+- Groq SDK present in dependencies
+- `pdf-parse` for PDF extraction
+- `mammoth` for DOCX extraction
+- Python OCR fallback script for scanned/poor-text resumes
+- `tesseract.js` and AWS Textract SDK packages are present in the project dependencies
+
+## Architecture
+
+### Frontend
+
+The frontend lives in `frontend/` and contains:
+
+- Public pages: landing, login, signup, forgot/reset password, OAuth callback
+- Protected pages: dashboard, resumes, upload, analysis, roadmap, job roles, profile
+- API service layer for auth, resume, analysis, roadmap, job role, and dashboard requests
+- React Query for server-state handling
+- Zustand stores for auth/theme state
+
+### Backend
+
+The backend lives in `Backend/` and contains:
+
+- Route layer for auth, resumes, analysis, roadmaps, job roles, user, dashboard, and Google auth
+- Controller layer for request handling
+- Service layer for AI workflows, parsing, OCR, quota control, job recommendations, and roadmap logic
+- MongoDB models for users, resumes, analyses, roadmaps, progress, tokens, resources, and job roles
+- BullMQ queues and workers for long-running AI tasks
+
+### Background Jobs
+
+Analysis and roadmap generation are asynchronous. The backend starts workers during server boot:
+
+- `analysis-generation`
+- `roadmap-generation`
+
+This means local development requires Redis to be running if you want analysis and roadmap creation to work.
+
+## Repository Structure
+
+```text
+.
+|-- Backend/
+|   |-- src/
+|   |   |-- app.js
+|   |   |-- server.js
+|   |   |-- config/
+|   |   |-- controllers/
+|   |   |-- db/
+|   |   |-- middleware/
+|   |   |-- models/
+|   |   |-- queues/
+|   |   |-- routes/
+|   |   |-- scripts/
+|   |   |-- services/
+|   |   |-- utils/
+|   |   |-- validation/
+|   |   `-- workers/
+|   `-- package.json
+|-- frontend/
+|   |-- public/
+|   |-- src/
+|   |   |-- assets/
+|   |   |-- communication/
+|   |   |-- components/
+|   |   |-- pages/
+|   |   |-- services/
+|   |   |-- store/
+|   |   `-- utils/
+|   `-- package.json
+|-- package.json
+`-- README.md
 ```
-resume-analyzer/
-├── backend/                 # Node.js backend
-│   ├── src/
-│   │   ├── config/         # Database, Redis, Claude config
-│   │   ├── controllers/    # Request handlers
-│   │   ├── middleware/     # Auth, error handling, uploads
-│   │   ├── models/         # MongoDB models
-│   │   ├── routes/         # API routes
-│   │   ├── services/       # Business logic (parsers, AI)
-│   │   ├── utils/          # Helper functions
-│   │   ├── validators/     # Request validation
-│   │   ├── app.js         # Express app
-│   │   └── server.js      # Server entry point
-│   ├── uploads/           # Resume uploads
-│   ├── logs/             # Application logs
-│   └── package.json
-│
-├── frontend/               # React frontend
-│   ├── src/
-│   │   ├── assets/        # Images, icons
-│   │   ├── components/    # React components
-│   │   ├── pages/         # Page components
-│   │   ├── services/      # API services
-│   │   ├── store/         # State management
-│   │   ├── hooks/         # Custom hooks
-│   │   ├── utils/         # Helper functions
-│   │   ├── App.jsx       # Main app
-│   │   └── main.jsx      # Entry point
-│   └── package.json
-│
-├── package.json           # Root scripts
-└── README.md             # This file
-```
 
----
-
-## 🚀 Getting Started
+## Local Setup
 
 ### Prerequisites
 
-- **Node.js:** v18.0.0 or higher
-- **npm:** v9.0.0 or higher
-- **MongoDB:** Local installation or MongoDB Atlas account
-- **Anthropic API Key:** Get from [console.anthropic.com](https://console.anthropic.com)
+- Node.js 18+
+- npm 9+
+- MongoDB instance
+- Redis instance
+- Gemini API key
 
-### Installation
+Optional but recommended depending on features used:
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/riteshkhilari/resume-analyzer.git
-   cd resume-analyzer
-   ```
+- Python installed and available on `PATH` for OCR fallback
+- Google OAuth credentials
+- Resend API key for password reset emails
+- Adzuna API credentials for job recommendations
 
-2. **Install all dependencies**
-   ```bash
-   # Install root dependencies
-   npm install
+### Install Dependencies
 
-   # Install backend dependencies
-   cd backend
-   npm install
+From the repository root:
 
-   # Install frontend dependencies
-   cd ../frontend
-   npm install
-   ```
-
-3. **Set up environment variables**
-
-   **Backend** (`backend/.env`):
-   ```env
-   NODE_ENV=development
-   PORT=5000
-   MONGODB_URI=mongodb://localhost:27017/resume_analyzer
-   JWT_SECRET=your-secret-key
-   JWT_REFRESH_SECRET=your-refresh-secret
-   ANTHROPIC_API_KEY=sk-ant-your-key-here
-   ```
-
-   **Frontend** (`frontend/.env`):
-   ```env
-   VITE_API_URL=http://localhost:5000/api/v1
-   ```
-
-4. **Create required folders**
-   ```bash
-   cd backend
-   mkdir -p uploads/resumes logs
-   ```
-
----
-
-## 🔧 Environment Variables
-
-### Backend (.env)
-
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `NODE_ENV` | Environment (development/production) | Yes |
-| `PORT` | Server port (default: 5000) | Yes |
-| `MONGODB_URI` | MongoDB connection string | Yes |
-| `JWT_SECRET` | Secret for access tokens | Yes |
-| `JWT_REFRESH_SECRET` | Secret for refresh tokens | Yes |
-| `ANTHROPIC_API_KEY` | Claude API key | Yes |
-| `CLAUDE_MODEL` | Claude model name | No |
-| `MAX_FILE_SIZE` | Max upload size in bytes | No |
-
-### Frontend (.env)
-
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `VITE_API_URL` | Backend API URL | Yes |
-
----
-
-## 💻 Running the Project
-
-### Development Mode
-
-**Run both frontend and backend:**
 ```bash
-# From root directory
+npm install
+cd Backend && npm install
+cd ../frontend && npm install
+```
+
+## Environment Variables
+
+Create `Backend/.env` and `frontend/.env`.
+
+### Backend `.env`
+
+```env
+NODE_ENV=development
+PORT=5000
+API_VERSION=v1
+
+DATABASE_URL=mongodb://127.0.0.1:27017/resume_analyzer
+REDIS_URL=redis://127.0.0.1:6379
+
+CLIENT_URL=http://localhost:3000
+FRONTEND_URL=http://localhost:3000
+BACKEND_URL=http://localhost:5000
+
+ACCESS_TOKEN_SECRET=replace_with_secure_value
+ACCESS_TOKEN_EXPIRY=15m
+REFRESH_TOKEN_SECRET=replace_with_secure_value
+REFRESH_TOKEN_EXPIRY=7d
+
+GEMINI_API_KEY=your_primary_key
+GEMINI_API_KEY_2=your_secondary_key_optional
+GEMINI_API_KEY_3=your_fallback_key_optional
+GEMINI_MODEL=gemini-2.5-flash
+GEMINI_FALLBACK_MODEL=
+
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_CALLBACK_URL=http://localhost:5000/api/v1/auth/google/callback
+
+RESEND_API_KEY=
+MAIL_FROM=your-name <noreply@example.com>
+
+ADZUNA_APP_ID=
+ADZUNA_API_KEY=
+ADZUNA_COUNTRY=in
+
+MAX_FILE_SIZE=10485760
+OCR_FALLBACK_ENABLED=false
+PYTHON_PATH=python
+LOG_LEVEL=info
+```
+
+### Frontend `.env`
+
+```env
+VITE_API_URL=http://localhost:5000
+```
+
+Notes:
+
+- The frontend normalizes `VITE_API_URL` automatically to `/api/v1`, so `http://localhost:5000` is valid.
+- `frontend/vite.config.js` also proxies `/api` to `http://localhost:5000` during local development.
+- If Google OAuth is not configured, Google sign-in routes remain unavailable.
+- If `OCR_FALLBACK_ENABLED=true`, ensure Python is installed and `Backend/src/scripts/ocr_resume.py` can run successfully.
+
+## Running the Project
+
+### Start Both Frontend and Backend
+
+From the root:
+
+```bash
 npm run dev
 ```
 
-**Run individually:**
-```bash
-# Backend only (from backend/)
-npm run dev
+This runs:
 
-# Frontend only (from frontend/)
+- Backend via `npm run dev --prefix Backend`
+- Frontend via `npm run dev --prefix frontend`
+
+### Run Individually
+
+Backend:
+
+```bash
+cd Backend
 npm run dev
 ```
 
-### Production Mode
+Frontend:
 
-**Build:**
 ```bash
+cd frontend
+npm run dev
+```
+
+### Default Local URLs
+
+- Frontend: `http://localhost:3000`
+- Backend root: `http://localhost:5000`
+- Health check: `http://localhost:5000/health`
+- API base: `http://localhost:5000/api/v1`
+
+## Build and Production
+
+The root `package.json` only provides development orchestration. Production build commands are run per app.
+
+Frontend build:
+
+```bash
+cd frontend
 npm run build
+npm run preview
 ```
 
-**Start:**
+Backend production start:
+
 ```bash
+cd Backend
 npm start
 ```
 
-### Accessing the Application
+## Seed Scripts
 
-- **Frontend:** http://localhost:3000
-- **Backend API:** http://localhost:5000/api/v1
-- **API Health Check:** http://localhost:5000/health
+The backend includes seed scripts for job roles and learning resources:
 
----
+```bash
+cd Backend
+npm run seed:roles
+npm run seed:resources
+npm run seed:all
+```
 
-## 📚 API Documentation
+These require `DATABASE_URL` to be configured.
 
-### Authentication
-- `POST /api/v1/auth/signup` - Register new user
-- `POST /api/v1/auth/login` - Login user
-- `POST /api/v1/auth/logout` - Logout user
-- `POST /api/v1/auth/refresh-token` - Refresh access token
-- `GET /api/v1/auth/me` - Get current user
+## API Overview
+
+Base prefix: `/api/v1`
+
+### Auth
+
+- `POST /auth/signup`
+- `POST /auth/login`
+- `POST /auth/logout`
+- `POST /auth/refresh-token`
+- `POST /auth/forgot-password`
+- `POST /auth/reset-password`
+- `POST /auth/change-password`
+- `GET /auth/me`
+- `GET /auth/google`
+- `GET /auth/google/callback`
+- `GET /auth/google/failure`
 
 ### Resumes
-- `POST /api/v1/resumes/upload` - Upload resume
-- `GET /api/v1/resumes` - Get all user resumes
-- `GET /api/v1/resumes/:id` - Get single resume
-- `DELETE /api/v1/resumes/:id` - Delete resume
+
+- `POST /resumes/upload`
+- `GET /resumes`
+- `GET /resumes/:id`
+- `GET /resumes/:id/file`
+- `GET /resumes/:id/summary-skills`
+- `PUT /resumes/:id/resume-reparse`
+- `DELETE /resumes/:id`
 
 ### Analysis
-- `POST /api/v1/analysis/analyze` - Analyze resume vs job role
-- `POST /api/v1/analysis/compare-roles` - Compare multiple job roles
-- `GET /api/v1/analysis` - Get all analyses
-- `GET /api/v1/analysis/:id` - Get single analysis
 
-### Roadmap
-- `POST /api/v1/roadmap/generate` - Generate learning roadmap
-- `GET /api/v1/roadmap/:id` - Get roadmap
-- `PUT /api/v1/roadmap/:id/complete-item` - Mark item complete
+- `POST /analysis/create-analysis`
+- `POST /analysis/compare-roles`
+- `GET /analysis/all-analysis`
+- `GET /analysis/:id/status`
+- `GET /analysis/:id/recommended-jobs`
+- `GET /analysis/:id`
+- `PUT /analysis/:id`
+- `DELETE /analysis/:id`
+
+### Roadmaps
+
+- `POST /roadmap`
+- `GET /roadmap`
+- `GET /roadmap/analysis/:analysisId`
+- `GET /roadmap/:id/status`
+- `GET /roadmap/:id`
+- `POST /roadmap/:id/retry`
+- `GET /roadmap/:id/progress`
+- `PUT /roadmap/:id/mark-item-complete`
+- `PUT /roadmap/:id/reset-progress`
+- `PUT /roadmap/:id/update-preference`
+- `DELETE /roadmap/:id`
 
 ### Job Roles
-- `GET /api/v1/job-roles` - Get all job roles
-- `GET /api/v1/job-roles/search` - Search job roles
-- `GET /api/v1/job-roles/:id` - Get job role details
 
----
+- `GET /job-roles`
+- `GET /job-roles/search`
+- `GET /job-roles/trending-job-roles`
+- `GET /job-roles/categories-list`
+- `GET /job-roles/job-from-category/:category`
+- `GET /job-roles/slug/:slug`
+- `GET /job-roles/:id`
+- `GET /job-roles/:id/similar-job-roles`
 
-## 🚢 Deployment
+### Dashboard
 
-### Backend (Railway/Render)
+- `GET /dashboard`
+- `GET /dashboard/activities`
 
-1. Push code to GitHub
-2. Connect to Railway/Render
-3. Set environment variables
-4. Deploy
+## Key Implementation Details
 
-### Frontend (Vercel)
+### Resume Processing
 
-1. Push code to GitHub
-2. Import project to Vercel
-3. Set environment variables
-4. Deploy
+- Uploads are stored on disk under `Backend/uploads/resume`
+- Supported file types are PDF and DOCX
+- File upload size defaults to `10MB` unless overridden
+- Parsing uses native extractors first, then OCR fallback when text quality is poor
 
-### Database (MongoDB Atlas)
+### AI Analysis
 
-1. Create free cluster
-2. Get connection string
-3. Add to backend `.env`
+- Analysis jobs run in the background
+- Skill-gap analysis and ATS scoring are generated together
+- The backend stores strengths, extracted skills, skill gaps, match score, readiness, ATS details, and recommendations
+- Gemini key rotation/fallback logic is implemented in the backend config layer
 
----
+### Roadmaps
 
-## 🤝 Contributing
+- Roadmaps are generated only after analysis is completed
+- Roadmap items are normalized and enriched with resources
+- If a direct resource is not found, the system generates fallback search links
+- User progress is tracked separately and synced with roadmap state
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+### Auth and Security
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+- Access token + refresh token flow
+- Cookie-aware frontend requests using `withCredentials`
+- Helmet, Mongo sanitize, compression, and centralized error handling enabled
+- Protected frontend routes and protected backend APIs
 
----
+## Common Setup Issues
 
-## 📝 License
+### Analysis or Roadmap jobs are stuck or failing
 
-This project is licensed under the MIT License.
+Check:
 
----
+- MongoDB is running
+- Redis is running
+- Gemini API keys are configured
+- Backend workers started successfully
 
-## 👨‍💻 Author
+### Google login is not working
 
-**Ritesh Khilari**
-- Portfolio: [riteshkhilari.in](https://riteshkhilari.in)
-- GitHub: [@riteshkhilari](https://github.com/riteshkhilari)
-- LinkedIn: [riteshkhilari](https://linkedin.com/in/riteshkhilari)
+Check:
 
----
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
+- `GOOGLE_CALLBACK_URL`
+- authorized redirect URI in Google Cloud matches the backend callback URL exactly
 
-## 🙏 Acknowledgments
+### Password reset is failing
 
-- [Anthropic](https://anthropic.com) for Claude AI API
-- [MongoDB](https://mongodb.com) for database
-- [Vercel](https://vercel.com) for frontend hosting
-- [Railway](https://railway.app) for backend hosting
+Check:
 
----
+- `RESEND_API_KEY`
+- `MAIL_FROM`
 
-## 📧 Support
+### OCR fallback is failing
 
-For support, email riteshkhilari4@example.com or open an issue in the repository.
+Check:
 
----
+- `OCR_FALLBACK_ENABLED=true`
+- Python is installed
+- `PYTHON_PATH` points to a valid Python executable
 
-Made by Ritesh Khilari
+## Future Improvement Areas
+
+- Add `.env.example` files for frontend and backend
+- Add automated tests for API and UI flows
+- Add containerized setup with Docker
+- Add CI pipeline for linting, testing, and build verification
+- Add deployment documentation for frontend, backend, MongoDB, and Redis
+
+## Author
+
+Ritesh Khilari
+
+- GitHub: <https://github.com/riteshkhilari>
+
+## License
+
+MIT
